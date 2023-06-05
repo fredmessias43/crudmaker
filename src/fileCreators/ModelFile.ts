@@ -8,7 +8,7 @@ export class ModelFile extends PhpFile {
   constructor(entity: Entity) {
     super(entity);
 
-    this.namespace = "Brasidata\\" + "Homefy" + "\\Models";
+    this.namespace = "Brasidata\\Homefy\\Models";
     this.imports = [
       "Illuminate\\Database\\Eloquent\\Factories\\HasFactory",
       "Illuminate\\Database\\Eloquent\\Model"

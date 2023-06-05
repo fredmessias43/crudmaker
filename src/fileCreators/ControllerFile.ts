@@ -11,7 +11,7 @@ export class ControllerFile extends PhpFile {
   constructor(entity: Entity) {
     super(entity);
 
-    this.namespace = "Brasidata\\" + "Homefy" + "\\Http\\Controllers\\Api";
+    this.namespace = "Brasidata\\Homefy\\Http\\Controllers\\Api";
     this.imports = [
       "App\\Http\\Controllers\\Controller",
       "Brasidata\\Homefy\\Models\\" + this.entity.getEntityName("pascalCase") + "",

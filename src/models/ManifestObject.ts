@@ -8,20 +8,16 @@ type DateType = "date";
 type DoubleType = "double";
 type IntegerType = "integer";
 
-type FieldType = {
+type Field = {
   [name: string]: UuidType | StringType | DateType | DoubleType | IntegerType | EnumType
 }
 
-type RelationshipType = {
+type Relationship = {
   [key in "belongsTo" | "hasMany" | "hasOne"]: string[];
 };
 
 
-export class ManifestObject {
-  public fields: FieldType;
-  public relationship = 
-  
-  constructor() {
-    
-  }
+export type ManifestObject = {
+  fields: Field;
+  relationship: Relationship;
 }

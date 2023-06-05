@@ -1,4 +1,4 @@
-import { ModelFile, ResourceFile, CollectionFile, ControllerFile } from "./fileCreators"
+import { ModelFile, ResourceFile, CollectionFile, ControllerFile, RequestFile } from "./fileCreators"
 import { Entity } from "./models/Entity";
 import { ManifestObject } from "./types";
 
@@ -37,7 +37,7 @@ const manifestObject = {
   }
 };
 
-const entity = new Entity("leaseAgreement", manifestObject["leaseAgreement"] as ManifestObject);
+const entity = new Entity("leaseAgreement", manifestObject["leaseAgreement"]);
 
 const modelFileClass = new ModelFile(entity);
 const modelFileString = modelFileClass.mountFile();
@@ -54,3 +54,7 @@ fs.writeFileSync(`./generated/${collectionFileClass.className}.php`, collectionF
 const controllerFileClass = new ControllerFile(entity);
 const controllerFileString = controllerFileClass.mountFile();
 fs.writeFileSync(`./generated/${controllerFileClass.className}.php`, controllerFileString);
+
+const requestFileClass = new RequestFile(entity);
+const requestFileString = requestFileClass.mountFile();
+fs.writeFileSync(`./generated/${requestFileClass.className}.php`, requestFileString);

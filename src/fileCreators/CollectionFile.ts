@@ -7,7 +7,7 @@ export class CollectionFile extends PhpFile {
   constructor(entity: Entity) {
     super(entity);
 
-    this.namespace = "Brasidata\\" + "Homefy" + "\\Http\\Resources";
+    this.namespace = "Brasidata\\Homefy\\Http\\Resources";
     this.imports = [
       "Illuminate\\Http\\Resources\\Json\\ResourceCollection",
       "App",

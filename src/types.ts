@@ -1,19 +1,18 @@
-export type UuidType = "uuid";
-export type StringType = "string";
-export type DateType = "date";
-export type DoubleType = "double";
-export type IntegerType = "integer";
-export type EnumType = {
-  type: "enum",
-  enumItems: string[]
+export type ObjectType = {
+  type: "uuid" | "string" | "date" | "double" | "integer" | "enum",
+  required?: boolean,
+  enumItems?: string[]
 }
 
-export type FieldType = {
-  [key: string]: UuidType | StringType | DateType | DoubleType | IntegerType | EnumType
+export type FieldName = string;
+export type FieldType = "uuid" | "string" | "date" | "double" | "integer" | ObjectType;
+
+export type Field = {
+  [key: FieldName]: FieldType
 }
 
 export type RelationshipKeys = "belongsTo" | "hasMany" | "hasOne";
-export type RelationshipType = {
+export type Relationship = {
   [key in RelationshipKeys]?: string[];
 };
 
@@ -23,7 +22,11 @@ export type IndexType = {
 }
 
 export type ManifestObject = {
-  fields: FieldType,
-  relationship: RelationshipType,
+  fields: Field,
+  relationship: Relationship,
   indexes: IndexType[],
+}
+
+export function isObjectType(value: any): value is ObjectType {
+  return value?.constructor === Object && value.hasOwnProperty("type");
 }
