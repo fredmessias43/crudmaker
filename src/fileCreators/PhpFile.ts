@@ -32,7 +32,9 @@ export abstract class PhpFile {
 
     return result;
   };
+
   protected getNamespaceLine(): string { return `namespace ${this.namespace};` };
+
   protected getImportLines(): string {
     let result = "";
 
@@ -43,6 +45,11 @@ export abstract class PhpFile {
     }
     return result;
   };
+
+  protected getFileName() : string
+  {
+    return this.namespace + this.className;
+  }
 
   protected getContentLine()
   {

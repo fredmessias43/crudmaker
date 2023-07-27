@@ -1,6 +1,5 @@
 import { ModelFile, ResourceFile, CollectionFile, ControllerFile, RequestFile } from "./fileCreators"
 import { Entity } from "./models/Entity";
-import { ManifestObject } from "./types";
 
 import fs from "fs";
 
