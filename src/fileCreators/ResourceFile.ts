@@ -1,5 +1,6 @@
 import { Entity } from "../models/Entity";
 import { PhpFile } from "./PhpFile";
+import { pascalCase } from "change-case";
 
 export class ResourceFile extends PhpFile {
   protected toArrayFnLine: string[];
@@ -7,7 +8,7 @@ export class ResourceFile extends PhpFile {
   constructor(entity: Entity) {
     super(entity);
 
-    this.namespace = "Brasidata\\Homefy\\Http\\Resources";
+    this.namespace =  pascalCase(this.systemCode) + "\\" + pascalCase(this.pkgCode) + "\\Http\\Resources";
     this.imports = [
       "Illuminate\\Http\\Resources\\Json\\JsonResource",
       "App"

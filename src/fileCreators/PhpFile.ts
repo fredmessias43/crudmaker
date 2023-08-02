@@ -1,9 +1,13 @@
 import { Entity } from "../models/Entity";
+import fs from "fs";
+import path from "path";
 
 export abstract class PhpFile {
   protected tab = "  ";
   protected lineBreak = "\n";
   public entity: Entity;
+  public systemCode: string;
+  public pkgCode: string;
 
   protected namespace: string = "";
   protected imports: string[] = [];
@@ -11,8 +15,12 @@ export abstract class PhpFile {
   protected implementClauses: string[] = [];
   protected extendsClauses: string[] = [];
 
+  public fileMounted: string = "";
+
   constructor(entity: Entity) {
     this.entity = entity;
+    this.systemCode = "fredmessias";
+    this.pkgCode = "generated";
     this.className = this.entity.getEntityName("pascalCase");
   }
 
@@ -72,6 +80,25 @@ export abstract class PhpFile {
     result.push("}");
     result.push("");
 
-    return result.join(this.lineBreak);
+    this.fileMounted = result.join(this.lineBreak)
+    return this.fileMounted;
+  }
+
+  public writeFile(): string {
+    const basePath = path.join(__dirname, "../../generated/src", this.namespace ).replaceAll("\\", "/");
+
+    if (!fs.existsSync(basePath)) {
+      fs.mkdirSync(basePath, { recursive: true });
+    }
+    
+    const fileName = `${basePath}/${this.className}.php`;
+    fs.writeFileSync(fileName, this.fileMounted);
+
+    return fileName;
+  }
+
+  public mountAndWriteFile(): void {
+    this.mountFile();
+    this.writeFile();
   }
 }

@@ -1,6 +1,7 @@
 import { Entity } from "../models/Entity";
-import { FieldName, FieldType, isObjectType } from "../types";
+import { Field } from "../types";
 import { PhpFile } from "./PhpFile";
+import { pascalCase } from "change-case";
 
 export class RequestFile extends PhpFile {
   protected authorizeFunction: string[];
@@ -10,10 +11,10 @@ export class RequestFile extends PhpFile {
   constructor(entity: Entity) {
     super(entity);
 
-    this.namespace = "Brasidata\\Homefy\\Http\\Requests";
+    this.namespace =  pascalCase(this.systemCode) + "\\" + pascalCase(this.pkgCode) + "\\Http\\Requests";
     this.imports = [
       "Illuminate\\Foundation\\Http\\FormRequest",
-      "Brasidata\\Homefy\\Models\\" + this.entity.getEntityName("pascalCase") + "",
+       pascalCase(this.systemCode) + "\\" + pascalCase(this.pkgCode) + "\\Models\\" + this.entity.getEntityName("pascalCase") + "",
     ];
     this.extendsClauses = ["FormRequest"];
     this.className = this.entity.getEntityName("pascalCase") + "Request";
@@ -93,8 +94,8 @@ export class RequestFile extends PhpFile {
     const entityFieldArray = Object.entries(this.entity.fields);
     for (let i = 0; i < entityFieldArray.length; i++)
     {
-      const [name, type] = entityFieldArray[i];
-      const ruleResult = this.fillRuleForField(name, type);
+      const [fieldKey, fieldValue] = entityFieldArray[i];
+      const ruleResult = this.fillRuleForField(fieldValue);
       result = result.concat(ruleResult.map(e => this.tab + this.tab + this.tab + e));
     }
     result.push(this.tab + this.tab + "];");
@@ -102,35 +103,36 @@ export class RequestFile extends PhpFile {
     return result;
   }
 
-  fillRuleForField(fieldName: FieldName, fieldType: FieldType)
+  fillRuleForField(field: Field)
   {
     let result: string[] = [];
-    if (["uuid", "string", "date", "double", "integer"].includes(fieldType.toString()))
+    result.push("'" + field.name + "' => array(");
+    result.push(this.tab + "'bail',");
+    result.push(this.tab + "'" + (field.required ? "required" : "nullable") + "',");
+
+    if (["uuid", "string", "text", "double", "integer", "boolean"].includes(field.type.toString()))
     {
-      result.push("'"+fieldName+"' => array(");
-      result.push(this.tab + "'bail',");
-      result.push(this.tab + "'required',");
-      result.push(this.tab + "'"+fieldType+"',");
-      result.push("),");
+      result.push(this.tab + "'"+field.type+"',");
     }
-    else if (isObjectType(fieldType) && fieldType.type === "enum")
+    else if (field.type === "json")
+    {
+      result.push(this.tab + "'array'");
+    }
+    else if (field.type === "date")
+    {
+      result.push(this.tab + "'date_format:Y-m-d'");
+    }
+    else if (field.type === "datetime")
+    {
+      result.push(this.tab + "'date_format:Y-m-d H:i'");
+    }
+    else if (field.type === "enum")
     {
       this.imports.push("Illuminate\\Validation\\Rule");
+      result.push(this.tab + "Rule::in(array(" + field.enumItems.map(e => `'${e}'`).join() + "))");
+    }
 
-      result.push("'"+fieldName+"' => array(");
-      result.push(this.tab + "'bail',");
-      result.push(this.tab + "'required',");
-      result.push(this.tab + "Rule::in(array(" + fieldType.enumItems?.map(e => `'${e}'`).join() + "))");
-      result.push("),");
-    }
-    else if (isObjectType(fieldType))
-    {
-      result.push("'"+fieldName+"' => array(");
-      result.push(this.tab + "'bail',");
-      result.push(this.tab + "'" + (fieldType.required ? "required" : "nullable") + "',");
-      result.push(this.tab + "'"+fieldType.type+"',");
-      result.push("),");
-    }
+    result.push("),");
     return result;
   }
 

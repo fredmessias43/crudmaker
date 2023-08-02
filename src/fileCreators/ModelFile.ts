@@ -1,5 +1,6 @@
 import { Entity } from "../models/Entity";
 import { PhpFile } from "./PhpFile";
+import { pascalCase } from "change-case";
 
 export class ModelFile extends PhpFile {
   protected relationShipFunctions: Array<Array<string>>;
@@ -8,7 +9,7 @@ export class ModelFile extends PhpFile {
   constructor(entity: Entity) {
     super(entity);
 
-    this.namespace = "Brasidata\\Homefy\\Models";
+    this.namespace =  pascalCase(this.systemCode) + "\\" + pascalCase(this.pkgCode) + "\\Models";
     this.imports = [
       "Illuminate\\Database\\Eloquent\\Factories\\HasFactory",
       "Illuminate\\Database\\Eloquent\\Model"
@@ -28,7 +29,7 @@ export class ModelFile extends PhpFile {
   {
     let result: Array<Array<string>> = [];
 
-    this.entity.relationships;
+    // this.entity.relationships;
 
     return result;
   }

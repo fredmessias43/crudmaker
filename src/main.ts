@@ -1,59 +1,34 @@
 import { ModelFile, ResourceFile, CollectionFile, ControllerFile, RequestFile } from "./fileCreators"
 import { Entity } from "./models/Entity";
-
+import { Manifest } from "./models/ManifestObject";
+import { ManifestEntity } from "./types";
 import fs from "fs";
 
-const manifestObject = {
-  leaseAgreement: {
-    fields: {
-      id: "uuid",
-      business_id: "string",
-      agreement_date: "date",
-      start_date: "date",
-      end_date: "date",
-      amount: "double",
-      period_type: {
-        type: "enum",
-        enumItems: [
-          "morning",
-          "afternoon",
-          "night"
-        ]
-      }
-    },
-    relationship: {
-      belongsTo: [
-        "property",
-        "tenant"
-      ]
-    },
-    indexes: [
-      {
-        type: "unique",
-        fields: "business_id"
-      }
-    ]
-  }
-};
+const manifestObj = JSON.parse(fs.readFileSync(
+  "./generated/manifets/homefy.json",
+  { encoding: "utf8" }
+));
 
-const entity = new Entity("leaseAgreement", manifestObject["leaseAgreement"]);
+const manifestClass = new Manifest(manifestObj)
 
-const modelFileClass = new ModelFile(entity);
-const modelFileString = modelFileClass.mountFile();
-fs.writeFileSync(`./generated/${modelFileClass.className}.php`, modelFileString);
+manifestClass.lockManifest();
 
-const resourceFileClass = new ResourceFile(entity);
-const resourceFileString = resourceFileClass.mountFile();
-fs.writeFileSync(`./generated/${resourceFileClass.className}Resource.php`, resourceFileString);
+for (const key in manifestClass.entities) {
+  const manifestEntity = manifestClass.entities[key];
+  
+  const entity = new Entity(key, manifestEntity);
+  
+  const modelFileClass = new ModelFile(entity);
+  const resourceFileClass = new ResourceFile(entity);
+  const collectionFileClass = new CollectionFile(entity);
+  const controllerFileClass = new ControllerFile(entity);
+  const requestFileClass = new RequestFile(entity);
 
-const collectionFileClass = new CollectionFile(entity);
-const collectionFileString = collectionFileClass.mountFile();
-fs.writeFileSync(`./generated/${collectionFileClass.className}.php`, collectionFileString);
+  //
 
-const controllerFileClass = new ControllerFile(entity);
-const controllerFileString = controllerFileClass.mountFile();
-fs.writeFileSync(`./generated/${controllerFileClass.className}.php`, controllerFileString);
-
-const requestFileClass = new RequestFile(entity);
-const requestFileString = requestFileClass.mountFile();
-fs.writeFileSync(`./generated/${requestFileClass.className}.php`, requestFileString);
+  modelFileClass.mountAndWriteFile();
+  resourceFileClass.mountAndWriteFile();
+  collectionFileClass.mountAndWriteFile();
+  controllerFileClass.mountAndWriteFile();
+  requestFileClass.mountAndWriteFile();
+}

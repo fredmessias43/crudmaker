@@ -1,29 +1,17 @@
 import * as changeCase from "change-case";
-import { Field, Relationship, ManifestObject } from "../types";
+import { Fields, Relationships, ManifestEntity } from "../types";
 
 export class Entity {
   public entityName: string;
-  public fields: Field;
-  public relationships: Relationship;
+  public fields: Fields;
+  public relationships: Relationships;
 
-  constructor(entityName: string, manifestObject: Object)
+  constructor(entityName: string, manifestEntity: ManifestEntity)
   {
     this.entityName = changeCase.camelCase(entityName);
 
-    if ("fields" in manifestObject) {
-      this.fields = manifestObject.fields as Field;
-    }
-    else
-    {
-      throw new Error("");
-    }
-    if ("relationship" in manifestObject) {
-      this.relationships = manifestObject.relationship as Relationship;
-    }
-    else
-    {
-      throw new Error("");
-    }
+    this.fields = manifestEntity.fields;
+    this.relationships = manifestEntity.relationships;
   }
 
   public getEntityName(casing: keyof typeof changeCase, options?: changeCase.Options & number )

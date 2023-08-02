@@ -1,5 +1,6 @@
 import { Entity } from "../models/Entity";
 import { PhpFile } from "./PhpFile";
+import { pascalCase as pascalCaseFn } from "change-case";
 
 export class ControllerFile extends PhpFile {
   protected indexFunction: string[];
@@ -11,14 +12,14 @@ export class ControllerFile extends PhpFile {
   constructor(entity: Entity) {
     super(entity);
 
-    this.namespace = "Brasidata\\Homefy\\Http\\Controllers\\Api";
+    this.namespace = pascalCaseFn(this.systemCode) + "\\" + pascalCaseFn(this.pkgCode) + "\\Http\\Controllers\\Api";
     this.imports = [
       "App\\Http\\Controllers\\Controller",
-      "Brasidata\\Homefy\\Models\\" + this.entity.getEntityName("pascalCase") + "",
-      "Brasidata\\Homefy\\Http\\Requests\\" + this.entity.getEntityName("pascalCase") + "Request",
-      "Brasidata\\Homefy\\Http\\Resources\\" + this.entity.getEntityName("pascalCase") + "Collection",
-      "Brasidata\\Homefy\\Http\\Resources\\" + this.entity.getEntityName("pascalCase") + " as " + this.entity.getEntityName("pascalCase") + "Resource",
-      "Brasidata\\Base\\Exceptions\\FatalSystemControllerError",
+      pascalCaseFn(this.systemCode) + "\\" + pascalCaseFn(this.pkgCode) + "\\Models\\" + this.entity.getEntityName("pascalCase") + "",
+      pascalCaseFn(this.systemCode) + "\\" + pascalCaseFn(this.pkgCode) + "\\Http\\Requests\\" + this.entity.getEntityName("pascalCase") + "Request",
+      pascalCaseFn(this.systemCode) + "\\" + pascalCaseFn(this.pkgCode) + "\\Http\\Resources\\" + this.entity.getEntityName("pascalCase") + "Collection",
+      pascalCaseFn(this.systemCode) + "\\" + pascalCaseFn(this.pkgCode) + "\\Http\\Resources\\" + this.entity.getEntityName("pascalCase") + " as " + this.entity.getEntityName("pascalCase") + "Resource",
+      pascalCaseFn(this.systemCode) + "\\Base\\Exceptions\\FatalSystemControllerError",
     ];
     this.extendsClauses = ["Controller"];
     this.className = this.entity.getEntityName("pascalCase") + "Controller";
@@ -68,7 +69,7 @@ export class ControllerFile extends PhpFile {
     result.push("/**");
     result.push(" * Store a newly created resource in storage.");
     result.push(" *");
-    result.push(" * @param  \\Brasidata\\Homefy\\Http\\Requests\\" + pascalCase + "Request $request");
+    result.push(" * @param  \\" + pascalCaseFn(this.systemCode) + "\\" + pascalCaseFn(this.pkgCode) + "\\Http\\Requests\\" + pascalCase + "Request $request");
     result.push(" *");
     result.push(" * @return \\Illuminate\\Http\\Response");
     result.push(" */");
@@ -110,7 +111,7 @@ export class ControllerFile extends PhpFile {
     result.push("/**");
     result.push(" * Display the specified resource.");
     result.push(" *");
-    result.push(" * @param  \\Brasidata\\Homefy\\Models\\"+pascalCase+" $"+camelCase+"");
+    result.push(" * @param  \\" + pascalCaseFn(this.systemCode) + "\\" + pascalCaseFn(this.pkgCode) + "\\Models\\"+pascalCase+" $"+camelCase+"");
     result.push(" *");
     result.push(" * @return \\Illuminate\\Http\\Response");
     result.push(" */");
@@ -139,7 +140,7 @@ export class ControllerFile extends PhpFile {
     result.push("/**");
     result.push(" * Update the specified resource in storage.");
     result.push(" *");
-    result.push(" * @param  \\Brasidata\\Homefy\\Http\\Requests\\" + pascalCase + "Request $request");
+    result.push(" * @param  \\" + pascalCaseFn(this.systemCode) + "\\" + pascalCaseFn(this.pkgCode) + "\\Http\\Requests\\" + pascalCase + "Request $request");
     result.push(" *");
     result.push(" * @return \\Illuminate\\Http\\Response");
     result.push(" */");
@@ -180,7 +181,7 @@ export class ControllerFile extends PhpFile {
     result.push("/**");
     result.push(" * Remove the specified resource from storage.");
     result.push(" *");
-    result.push(" * @param  \\Brasidata\\Homefy\\Models\\"+pascalCase+" $"+camelCase+"");
+    result.push(" * @param  \\" + pascalCaseFn(this.systemCode) + "\\" + pascalCaseFn(this.pkgCode) + "\\Models\\"+pascalCase+" $"+camelCase+"");
     result.push(" *");
     result.push(" * @return \\Illuminate\\Http\\Response");
     result.push(" */");
