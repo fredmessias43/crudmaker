@@ -11,10 +11,10 @@ export class RequestFile extends PhpFile {
   constructor(entity: Entity) {
     super(entity);
 
-    this.namespace =  pascalCase(this.systemCode) + "\\" + pascalCase(this.pkgCode) + "\\Http\\Requests";
+    this.namespace =  this.baseNamespace + "\\Http\\Requests";
     this.imports = [
       "Illuminate\\Foundation\\Http\\FormRequest",
-       pascalCase(this.systemCode) + "\\" + pascalCase(this.pkgCode) + "\\Models\\" + this.entity.getEntityName("pascalCase") + "",
+       this.baseNamespace + "\\Models\\" + this.entity.getEntityName("pascalCase") + "",
     ];
     this.extendsClauses = ["FormRequest"];
     this.className = this.entity.getEntityName("pascalCase") + "Request";

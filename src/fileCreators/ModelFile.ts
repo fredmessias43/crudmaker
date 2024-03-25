@@ -9,7 +9,7 @@ export class ModelFile extends PhpFile {
   constructor(entity: Entity) {
     super(entity);
 
-    this.namespace =  pascalCase(this.systemCode) + "\\" + pascalCase(this.pkgCode) + "\\Models";
+    this.namespace =  this.baseNamespace + "\\Models";
     this.imports = [
       "Illuminate\\Database\\Eloquent\\Factories\\HasFactory",
       "Illuminate\\Database\\Eloquent\\Model"

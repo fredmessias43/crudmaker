@@ -8,7 +8,7 @@ export class ResourceFile extends PhpFile {
   constructor(entity: Entity) {
     super(entity);
 
-    this.namespace =  pascalCase(this.systemCode) + "\\" + pascalCase(this.pkgCode) + "\\Http\\Resources";
+    this.namespace =  this.baseNamespace + "\\Http\\Resources";
     this.imports = [
       "Illuminate\\Http\\Resources\\Json\\JsonResource",
       "App"

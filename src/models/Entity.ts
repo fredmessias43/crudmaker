@@ -18,8 +18,13 @@ export class Entity {
   {
     const changeCaseFn = changeCase[casing];
 
-    if (changeCaseFn instanceof Function) return changeCaseFn(this.entityName, options || 1);
+    if (changeCaseFn instanceof Function) return changeCaseFn(this.entityName, options ?? 1);
 
     return this.entityName;
+  }
+
+  public getTableName()
+  {
+    return this.getEntityName("snakeCase");
   }
 }

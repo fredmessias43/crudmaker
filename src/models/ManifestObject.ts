@@ -1,4 +1,6 @@
-import { Field, Fields, ManifestEntities, ManifestEntity, RelationshipKeys } from "../types";
+import path from "path";
+import { camelCase } from "change-case";
+import { Field, ManifestEntities, ManifestEntity } from "../types";
 import fs from "fs";
 
 export class Manifest {
@@ -154,6 +156,13 @@ export class Manifest {
   }
 
   public lockManifest() {
-    fs.writeFileSync("./generated/manifest-lock.json", this.manifestToString());
+    const basePath = path.join(__dirname, "../../generated/" + camelCase(this.pkgCode)).replaceAll("\\", "/");
+
+    if (!fs.existsSync(basePath)) {
+      fs.mkdirSync(basePath, { recursive: true });
+    }
+
+    const fileName = `${basePath}/manifest-lock.json`;
+    fs.writeFileSync(fileName, this.manifestToString());
   }
 }

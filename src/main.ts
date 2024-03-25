@@ -1,11 +1,11 @@
-import { ModelFile, ResourceFile, CollectionFile, ControllerFile, RequestFile } from "./fileCreators"
+import { ModelFile, ResourceFile, CollectionFile, ControllerFile, RequestFile, MigrationFile } from "./fileCreators"
 import { Entity } from "./models/Entity";
 import { Manifest } from "./models/ManifestObject";
 import { ManifestEntity } from "./types";
 import fs from "fs";
 
 const manifestObj = JSON.parse(fs.readFileSync(
-  "./generated/manifets/homefy.json",
+  "./generated/fredmessias/manifest.json",
   { encoding: "utf8" }
 ));
 
@@ -23,6 +23,7 @@ for (const key in manifestClass.entities) {
   const collectionFileClass = new CollectionFile(entity);
   const controllerFileClass = new ControllerFile(entity);
   const requestFileClass = new RequestFile(entity);
+  const migrationFileClass = new MigrationFile(entity);
 
   //
 
@@ -31,4 +32,5 @@ for (const key in manifestClass.entities) {
   collectionFileClass.mountAndWriteFile();
   controllerFileClass.mountAndWriteFile();
   requestFileClass.mountAndWriteFile();
+  migrationFileClass.mountAndWriteFile();
 }

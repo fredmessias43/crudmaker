@@ -1,14 +1,16 @@
+import { camelCase, pascalCase } from "change-case";
 import { Entity } from "../models/Entity";
 import fs from "fs";
 import path from "path";
 
 export abstract class PhpFile {
-  protected tab = "  ";
+  protected tab = "\t";
   protected lineBreak = "\n";
   public entity: Entity;
   public systemCode: string;
   public pkgCode: string;
 
+  protected baseNamespace: string = "App";
   protected namespace: string = "";
   protected imports: string[] = [];
   public className: string = "";
@@ -19,9 +21,10 @@ export abstract class PhpFile {
 
   constructor(entity: Entity) {
     this.entity = entity;
-    this.systemCode = "fredmessias";
-    this.pkgCode = "generated";
+    this.systemCode = "generated";
+    this.pkgCode = "fredmessias";
     this.className = this.entity.getEntityName("pascalCase");
+    // this.baseNamespace = pascalCase(this.systemCode) + "\\" + pascalCase(this.pkgCode);
   }
 
   protected getClassNameLine(): string {
@@ -56,7 +59,7 @@ export abstract class PhpFile {
 
   protected getFileName() : string
   {
-    return this.namespace + this.className;
+    return this.className + ".php";
   }
 
   protected getContentLine()
@@ -85,15 +88,16 @@ export abstract class PhpFile {
   }
 
   public writeFile(): string {
-    const basePath = path.join(__dirname, "../../generated/src", this.namespace ).replaceAll("\\", "/");
+    const basePath = path.join(__dirname, "../../generated/", camelCase(this.pkgCode), this.namespace ).replaceAll("\\", "/");
 
     if (!fs.existsSync(basePath)) {
       fs.mkdirSync(basePath, { recursive: true });
     }
-    
-    const fileName = `${basePath}/${this.className}.php`;
+
+    const fileName = `${basePath}/${this.getFileName()}`;
     fs.writeFileSync(fileName, this.fileMounted);
 
+    // console.log("File Created: " + `${this.namespace}\\${this.className}.php`);
     return fileName;
   }
 
