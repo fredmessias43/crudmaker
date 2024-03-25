@@ -11,7 +11,7 @@ export class CollectionFile extends PhpFile {
     this.namespace = this.baseNamespace + "\\Http\\Resources";
     this.imports = [
       "Illuminate\\Http\\Resources\\Json\\ResourceCollection",
-      "App",
+      "Illuminate\\Support\\Facades\\App",
     ];
     this.extendsClauses = ["ResourceCollection"];
     this.className = this.entity.getEntityName("pascalCase") + "Collection";

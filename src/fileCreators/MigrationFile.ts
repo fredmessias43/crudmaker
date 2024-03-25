@@ -11,9 +11,9 @@ export class MigrationFile extends PhpFile {
 
     this.namespace = "database\\migrations";
     this.imports = [
-      "Illuminate\\Database\\Migrations\\Migration;",
-      "Illuminate\\Database\\Schema\\Blueprint;",
-      "Illuminate\\Support\\Facades\\Schema;",
+      "Illuminate\\Database\\Migrations\\Migration",
+      "Illuminate\\Database\\Schema\\Blueprint",
+      "Illuminate\\Support\\Facades\\Schema",
     ];
     this.extendsClauses = [
       "Migration"
@@ -44,13 +44,14 @@ export class MigrationFile extends PhpFile {
     result.push("public function up()");
     result.push("{");
     result.push(this.tab + "Schema::create('" + this.entity.getTableName() + "', function (Blueprint $table) {");
-    result.push(this.tab + this.tab + "$table->id();");
 
     const entityFieldArray = Object.values(this.entity.fields);
     for (const field of entityFieldArray) {
       result.push(this.tab + this.tab + "$table->" + field.type + "('" + field.name + "');");
     }
 
+    result.push(this.tab + this.tab + "$table->timestamps();");
+    result.push(this.tab + this.tab + "$table->softDeletes();");
     result.push(this.tab + "});");
     result.push("}");
     return result;

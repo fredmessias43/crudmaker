@@ -1,5 +1,6 @@
 import * as changeCase from "change-case";
 import { Fields, Relationships, ManifestEntity } from "../types";
+import plurarize from "pluralize";
 
 export class Entity {
   public entityName: string;
@@ -25,6 +26,6 @@ export class Entity {
 
   public getTableName()
   {
-    return this.getEntityName("snakeCase");
+    return plurarize.plural(this.getEntityName("snakeCase"));
   }
 }

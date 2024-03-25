@@ -12,13 +12,14 @@ export class ModelFile extends PhpFile {
     this.namespace =  this.baseNamespace + "\\Models";
     this.imports = [
       "Illuminate\\Database\\Eloquent\\Factories\\HasFactory",
+      "Illuminate\\Database\\Eloquent\\SoftDeletes",
       "Illuminate\\Database\\Eloquent\\Model"
     ];
     this.extendsClauses = ["Model"];
-
+    this.traits = ["HasFactory", "SoftDeletes"];
     //
     this.propertiesLines = [
-      "protected $connection = \"tenant\";",
+      // "protected $connection = \"tenant\";",
       "protected $keyType = \"string\";",
       "public $incrementing = false;",
     ];

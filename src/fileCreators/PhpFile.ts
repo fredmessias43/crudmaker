@@ -13,6 +13,7 @@ export abstract class PhpFile {
   protected baseNamespace: string = "App";
   protected namespace: string = "";
   protected imports: string[] = [];
+  protected traits: string[] = [];
   public className: string = "";
   protected implementClauses: string[] = [];
   protected extendsClauses: string[] = [];

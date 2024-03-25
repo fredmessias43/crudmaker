@@ -19,7 +19,7 @@ export class ControllerFile extends PhpFile {
       this.baseNamespace + "\\Http\\Requests\\" + this.entity.getEntityName("pascalCase") + "Request",
       this.baseNamespace + "\\Http\\Resources\\" + this.entity.getEntityName("pascalCase") + "Collection",
       this.baseNamespace + "\\Http\\Resources\\" + this.entity.getEntityName("pascalCase") + " as " + this.entity.getEntityName("pascalCase") + "Resource",
-      this.baseNamespace + "\\Exceptions\\FatalSystemControllerError",
+      // this.baseNamespace + "\\Exceptions\\Exception",
     ];
     this.extendsClauses = ["Controller"];
     this.className = this.entity.getEntityName("pascalCase") + "Controller";
@@ -53,9 +53,9 @@ export class ControllerFile extends PhpFile {
     result.push(this.tab + this.tab + this.tab + "'data' => new " + pascalCaseEntity + "Collection($" + camelCaseEntity + "),");
     result.push(this.tab + this.tab + "], 200);");
     result.push(this.tab + "}");
-    result.push(this.tab + "catch(Throwable $th)");
+    result.push(this.tab + "catch(\\Throwable $th)");
     result.push(this.tab + "{");
-    result.push(this.tab + this.tab + "throw new FatalSystemControllerError($th, '" + pascalCaseEntity + " can not be listed.');");
+    result.push(this.tab + this.tab + "throw new Exception(" + pascalCaseEntity + " can not be listed.', 500);");
     result.push(this.tab + "}");
     result.push("}");
     return result;
@@ -97,7 +97,7 @@ export class ControllerFile extends PhpFile {
     result.push(this.tab + "}");
     result.push(this.tab + "catch (Throwable $th)");
     result.push(this.tab + "{");
-    result.push(this.tab + this.tab + "throw new FatalSystemControllerError($th, '" + pascalCaseEntity + " can not be created.');");
+    result.push(this.tab + this.tab + "throw new Exception(" + pascalCaseEntity + " can not be created.', 500);");
     result.push(this.tab + "}");
     result.push("}");
     return result;
@@ -124,9 +124,9 @@ export class ControllerFile extends PhpFile {
     result.push(this.tab + this.tab + this.tab + "'data' => new "+pascalCaseEntity+"Resource($"+camelCaseEntity+"),");
     result.push(this.tab + this.tab + "], 200);");
     result.push(this.tab + "}");
-    result.push(this.tab + "catch(Throwable $th)");
+    result.push(this.tab + "catch(\\Throwable $th)");
     result.push(this.tab + "{");
-    result.push(this.tab + this.tab + "throw new FatalSystemControllerError($th, '"+pascalCaseEntity+" can not be shown.');");
+    result.push(this.tab + this.tab + "throw new Exception("+pascalCaseEntity+" can not be shown.', 500);");
     result.push(this.tab + "}");
     result.push("}");
     return result;
@@ -167,7 +167,7 @@ export class ControllerFile extends PhpFile {
     result.push(this.tab + "}");
     result.push(this.tab + "catch (Throwable $th)");
     result.push(this.tab + "{");
-    result.push(this.tab + this.tab + "throw new FatalSystemControllerError($th, '" + pascalCaseEntity + " can not be updated.');");
+    result.push(this.tab + this.tab + "throw new Exception(" + pascalCaseEntity + " can not be updated.', 500);");
     result.push(this.tab + "}");
     result.push("}");
     return result;
@@ -197,9 +197,9 @@ export class ControllerFile extends PhpFile {
     result.push(this.tab + this.tab + this.tab + "'data' => new "+pascalCaseEntity+"Resource($"+camelCaseEntity+"),");
     result.push(this.tab + this.tab + "], 204);");
     result.push(this.tab + "}");
-    result.push(this.tab + "catch(Throwable $th)");
+    result.push(this.tab + "catch(\\Throwable $th)");
     result.push(this.tab + "{");
-    result.push(this.tab + this.tab + "throw new FatalSystemControllerError($th, '"+pascalCaseEntity+" can not be deleted.');");
+    result.push(this.tab + this.tab + "throw new Exception("+pascalCaseEntity+" can not be deleted.', 500);");
     result.push(this.tab + "}");
     result.push("}");
     return result;

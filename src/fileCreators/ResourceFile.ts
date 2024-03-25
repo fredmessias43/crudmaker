@@ -11,7 +11,7 @@ export class ResourceFile extends PhpFile {
     this.namespace =  this.baseNamespace + "\\Http\\Resources";
     this.imports = [
       "Illuminate\\Http\\Resources\\Json\\JsonResource",
-      "App"
+      "Illuminate\\Support\\Facades\\App"
     ];
     this.extendsClauses = ["JsonResource"];
 
