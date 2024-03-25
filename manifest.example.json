@@ -1,0 +1,58 @@
+{
+  "system": {
+    "title": "Crudmaker",
+    "code": "crudmaker"
+  },
+  "pkg": {
+    "code": "freela-proj",
+    "entities": {
+      "entityCamelCase": {
+        "fields": {
+          "id": "uuid",
+          "field_2": "string",
+          "field_3": "text",
+          "field_4": "date",
+          "field_5": "datetime",
+          "field_6": "double",
+          "field_7": "integer",
+          "field_8": "boolean",
+          "field_9": "json",
+          "field_10": {
+            "type": "enum",
+            "enumItems": [
+              "itemOne",
+              "itemTwo",
+              "itemThree"
+            ]
+          }
+        },
+        "relationship": {
+          "belongsTo": [
+            "entity"
+          ],
+          "hasMany": [
+            "entity"
+          ],
+          "hasOne": [
+            "entity"
+          ],
+          "ownOne": [
+            "entity"
+          ],
+          "ownMany": [
+            "entity"
+          ],
+          "owned": [
+            "entity"
+          ]
+        },
+        "indexes": [
+          {
+            "type": "unique",
+            "fields": "code"
+          }
+        ]
+      }
+    }
+  }
+}
