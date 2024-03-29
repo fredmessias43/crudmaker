@@ -41,7 +41,7 @@ export abstract class PhpFile {
       result += importLine;
       if (this.imports.length - 1 !== i) result += this.lineBreak;
     }
-    return result + this.lineBreak;
+    return result ? result + this.lineBreak : result;
   };
 
   protected getClassDecorator(): string {
@@ -74,8 +74,9 @@ export abstract class PhpFile {
     for (let i = 0; i < this.traits.length; i++) {
       const traitLine = this.tab + `use ${this.traits[i]};`;
       result += traitLine;
+      if (this.traits.length - 1 !== i) result += this.lineBreak;
     }
-    return result + this.lineBreak;
+    return result ? result + this.lineBreak : result;
   }
 
   protected getFileName() : string

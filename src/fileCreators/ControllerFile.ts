@@ -55,7 +55,7 @@ export class ControllerFile extends PhpFile {
     result.push(this.tab + "}");
     result.push(this.tab + "catch(\\Throwable $th)");
     result.push(this.tab + "{");
-    result.push(this.tab + this.tab + "throw new Exception('" + pascalCaseEntity + " can not be listed.', 500);");
+    result.push(this.tab + this.tab + "throw new \\Exception('" + pascalCaseEntity + " can not be listed.' . $th->getMessage(), 500);");
     result.push(this.tab + "}");
     result.push("}");
     return result;
@@ -97,7 +97,7 @@ export class ControllerFile extends PhpFile {
     result.push(this.tab + "}");
     result.push(this.tab + "catch (\\Throwable $th)");
     result.push(this.tab + "{");
-    result.push(this.tab + this.tab + "throw new \\Exception('" + pascalCaseEntity + " can not be created.', 500);");
+    result.push(this.tab + this.tab + "throw new \\Exception('" + pascalCaseEntity + " can not be created.' . $th->getMessage(), 500);");
     result.push(this.tab + "}");
     result.push("}");
     return result;
@@ -126,7 +126,7 @@ export class ControllerFile extends PhpFile {
     result.push(this.tab + "}");
     result.push(this.tab + "catch(\\Throwable $th)");
     result.push(this.tab + "{");
-    result.push(this.tab + this.tab + "throw new \\Exception('"+pascalCaseEntity+" can not be shown.', 500);");
+    result.push(this.tab + this.tab + "throw new \\Exception('"+pascalCaseEntity+" can not be shown.' . $th->getMessage(), 500);");
     result.push(this.tab + "}");
     result.push("}");
     return result;
@@ -168,7 +168,7 @@ export class ControllerFile extends PhpFile {
     result.push(this.tab + "}");
     result.push(this.tab + "catch (\\Throwable $th)");
     result.push(this.tab + "{");
-    result.push(this.tab + this.tab + "throw new \\Exception('" + pascalCaseEntity + " can not be updated.', 500);");
+    result.push(this.tab + this.tab + "throw new \\Exception('" + pascalCaseEntity + " can not be updated.' . $th->getMessage(), 500);");
     result.push(this.tab + "}");
     result.push("}");
     return result;
@@ -200,7 +200,7 @@ export class ControllerFile extends PhpFile {
     result.push(this.tab + "}");
     result.push(this.tab + "catch(\\Throwable $th)");
     result.push(this.tab + "{");
-    result.push(this.tab + this.tab + "throw new \\Exception('"+pascalCaseEntity+" can not be deleted.', 500);");
+    result.push(this.tab + this.tab + "throw new \\Exception('"+pascalCaseEntity+" can not be deleted.' . $th->getMessage(), 500);");
     result.push(this.tab + "}");
     result.push("}");
     return result;
