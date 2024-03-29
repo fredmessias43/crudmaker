@@ -156,7 +156,7 @@ export class Manifest {
   }
 
   public lockManifest() {
-    const basePath = path.join(__dirname, "../../generated/" + camelCase(this.pkgCode)).replaceAll("\\", "/");
+    const basePath = path.join(__dirname, "../../generated/" + this.pkgCode).replaceAll("\\", "/");
 
     if (!fs.existsSync(basePath)) {
       fs.mkdirSync(basePath, { recursive: true });

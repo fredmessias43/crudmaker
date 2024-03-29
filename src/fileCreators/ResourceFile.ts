@@ -5,8 +5,8 @@ import { pascalCase } from "change-case";
 export class ResourceFile extends PhpFile {
   protected toArrayFnLine: string[];
 
-  constructor(entity: Entity) {
-    super(entity);
+  constructor(entity: Entity, pkgCode: string, systemCode: string) {
+    super(entity, pkgCode, systemCode);
 
     this.namespace =  this.baseNamespace + "\\Http\\Resources";
     this.imports = [

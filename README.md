@@ -9,8 +9,8 @@
 - [ ] ver se é melhor mudar o write file pra uma classe
   - [ ] pensar se é possivel instanciar dinamicamente por essa classe
 - [ ] colocar cada um em uma pasta especifica
-- [ ] criar observer
-  - [ ] arranjar um jeito de registrar os observer
+- [x] criar observer
+  - [x] arranjar um jeito de registrar os observer
 - [ ] arquivo de rotas
-- [ ] PhpFile usar o trait e escrever nos arquivos
-- [ ] arranjar um jeito da classe da migration ser diferente  
+- [x] PhpFile usar o trait e escrever nos arquivos
+- [x] arranjar um jeito da classe da migration ser diferente  

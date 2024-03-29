@@ -8,8 +8,8 @@ export class RequestFile extends PhpFile {
   protected prepareForValidationFunction: string[];
   protected rulesFunction: string[];
 
-  constructor(entity: Entity) {
-    super(entity);
+  constructor(entity: Entity, pkgCode: string, systemCode: string) {
+    super(entity, pkgCode, systemCode);
 
     this.namespace =  this.baseNamespace + "\\Http\\Requests";
     this.imports = [
@@ -66,7 +66,7 @@ export class RequestFile extends PhpFile {
       const [name, type] = entityFieldArray[i];
       result.push(this.tab + this.tab + this.tab + this.tab + "if ( ! $this->has('" + name + "'))");
       result.push(this.tab + this.tab + this.tab + this.tab + "{");
-      result.push(this.tab + this.tab + this.tab + this.tab + this.tab + this.tab + "$this->merge(['" + name + "' => $address->" + name + "]);");
+      result.push(this.tab + this.tab + this.tab + this.tab + this.tab + this.tab + "$this->merge(['" + name + "' => $" + camelCase + "->" + name + "]);");
       result.push(this.tab + this.tab + this.tab + this.tab + "}");
       result.push("");
     }

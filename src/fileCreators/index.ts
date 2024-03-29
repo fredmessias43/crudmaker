@@ -4,6 +4,7 @@ import { CollectionFile } from "./CollectionFile";
 import { ControllerFile } from "./ControllerFile";
 import { RequestFile } from "./RequestFile";
 import { MigrationFile } from "./MigrationFile";
+import { ObserverFile } from "./ObserverFile";
 
 export { 
   ModelFile, 
@@ -12,4 +13,5 @@ export {
   ControllerFile,
   RequestFile,
   MigrationFile,
+  ObserverFile,
 }

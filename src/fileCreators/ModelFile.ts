@@ -6,24 +6,49 @@ export class ModelFile extends PhpFile {
   protected relationShipFunctions: Array<Array<string>>;
   protected propertiesLines: string[];
 
-  constructor(entity: Entity) {
-    super(entity);
+  constructor(entity: Entity, pkgCode: string, systemCode: string) {
+    super(entity, pkgCode, systemCode);
 
     this.namespace =  this.baseNamespace + "\\Models";
     this.imports = [
       "Illuminate\\Database\\Eloquent\\Factories\\HasFactory",
       "Illuminate\\Database\\Eloquent\\SoftDeletes",
-      "Illuminate\\Database\\Eloquent\\Model"
+      "Illuminate\\Database\\Eloquent\\Model",
+      "Illuminate\\Database\\Eloquent\\Attributes\\ObservedBy",
+      "App\\Observers\\" + entity.getEntityName("pascalCase") + "Observer"
     ];
     this.extendsClauses = ["Model"];
     this.traits = ["HasFactory", "SoftDeletes"];
+    this.classDecorator = "#[ObservedBy([" + entity.getEntityName("pascalCase") + "Observer::class])]";
     //
-    this.propertiesLines = [
-      // "protected $connection = \"tenant\";",
-      "protected $keyType = \"string\";",
-      "public $incrementing = false;",
-    ];
+    this.propertiesLines = this.fillPropertiesLines();
     this.relationShipFunctions = this.fillRelationShipFunctions();
+  }
+
+  protected fillPropertiesLines()
+  {
+    let result: Array<string> = [];
+
+    // result.push("protected $connection = \"tenant\";");
+    result.push("protected $keyType = \"string\";");
+    result.push("public $incrementing = false;");
+    result.push("");
+    result.push("/**");
+    result.push(" * The attributes that are mass assignable.");
+    result.push(" *");
+    result.push(" * @var array");
+    result.push(" */");
+    result.push("protected $fillable = [");
+
+    const entityFieldArray = Object.entries(this.entity.fields);
+    for (const entity of entityFieldArray) {
+      const [name, type] = entity;
+      result.push(this.tab + "'" + name + "',");
+    }
+
+    result.push("];");
+
+    return result;
   }
 
   protected fillRelationShipFunctions()

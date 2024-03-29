@@ -6,8 +6,8 @@ export class MigrationFile extends PhpFile {
   protected upFunction: string[];
   protected downFunction: string[];
 
-  constructor(entity: Entity) {
-    super(entity);
+  constructor(entity: Entity, pkgCode: string, systemCode: string) {
+    super(entity, pkgCode, systemCode);
 
     this.namespace = "database\\migrations";
     this.imports = [

@@ -9,8 +9,8 @@ export class ControllerFile extends PhpFile {
   protected updateFunction: string[];
   protected destroyFunction: string[];
 
-  constructor(entity: Entity) {
-    super(entity);
+  constructor(entity: Entity, pkgCode: string, systemCode: string) {
+    super(entity, pkgCode, systemCode);
 
     this.namespace = this.baseNamespace + "\\Http\\Controllers\\Api";
     this.imports = [
@@ -55,7 +55,7 @@ export class ControllerFile extends PhpFile {
     result.push(this.tab + "}");
     result.push(this.tab + "catch(\\Throwable $th)");
     result.push(this.tab + "{");
-    result.push(this.tab + this.tab + "throw new Exception(" + pascalCaseEntity + " can not be listed.', 500);");
+    result.push(this.tab + this.tab + "throw new Exception('" + pascalCaseEntity + " can not be listed.', 500);");
     result.push(this.tab + "}");
     result.push("}");
     return result;
@@ -77,9 +77,9 @@ export class ControllerFile extends PhpFile {
     result.push("{");
     result.push(this.tab + "try");
     result.push(this.tab + "{");
-    result.push(this.tab + this.tab + "$" + camelCaseEntity + " = new " + pascalCaseEntity + ";");
+    result.push(this.tab + this.tab + "$" + camelCaseEntity + " = " + pascalCaseEntity + "::create($request->all());");
 
-    const entityFieldArray = Object.entries(this.entity.fields);
+    /* const entityFieldArray = Object.entries(this.entity.fields);
     for (const element of entityFieldArray)
     {
       const [name, type] = element;
@@ -87,7 +87,7 @@ export class ControllerFile extends PhpFile {
       result.push(this.tab + this.tab + "$" + camelCaseEntity + "->" + name + " = $request->input('" + name + "');");
     }
 
-    result.push(this.tab + this.tab + "$" + camelCaseEntity + "->save();");
+    result.push(this.tab + this.tab + "$" + camelCaseEntity + "->save();"); */
     result.push("");
     result.push(this.tab + this.tab + "return response()->json([");
     result.push(this.tab + this.tab + this.tab + "'status' => 201,");
@@ -95,9 +95,9 @@ export class ControllerFile extends PhpFile {
     result.push(this.tab + this.tab + this.tab + "'data' => new " + pascalCaseEntity + "Resource($" + camelCaseEntity + "),");
     result.push(this.tab + this.tab + "], 201);");
     result.push(this.tab + "}");
-    result.push(this.tab + "catch (Throwable $th)");
+    result.push(this.tab + "catch (\\Throwable $th)");
     result.push(this.tab + "{");
-    result.push(this.tab + this.tab + "throw new Exception(" + pascalCaseEntity + " can not be created.', 500);");
+    result.push(this.tab + this.tab + "throw new \\Exception('" + pascalCaseEntity + " can not be created.', 500);");
     result.push(this.tab + "}");
     result.push("}");
     return result;
@@ -126,7 +126,7 @@ export class ControllerFile extends PhpFile {
     result.push(this.tab + "}");
     result.push(this.tab + "catch(\\Throwable $th)");
     result.push(this.tab + "{");
-    result.push(this.tab + this.tab + "throw new Exception("+pascalCaseEntity+" can not be shown.', 500);");
+    result.push(this.tab + this.tab + "throw new \\Exception('"+pascalCaseEntity+" can not be shown.', 500);");
     result.push(this.tab + "}");
     result.push("}");
     return result;
@@ -148,8 +148,9 @@ export class ControllerFile extends PhpFile {
     result.push("{");
     result.push(this.tab + "try");
     result.push(this.tab + "{");
+    result.push(this.tab + this.tab + "$" + camelCaseEntity + "->update($request->all());");
 
-    const entityFieldArray = Object.entries(this.entity.fields);
+    /* const entityFieldArray = Object.entries(this.entity.fields);
     for (const entity of entityFieldArray)
     {
       const [name, type] = entity;
@@ -157,7 +158,7 @@ export class ControllerFile extends PhpFile {
       result.push(this.tab + this.tab + "$" + camelCaseEntity + "->" + name + " = $request->input('" + name + "');");
     }
 
-    result.push(this.tab + this.tab + "$" + camelCaseEntity + "->save();");
+    result.push(this.tab + this.tab + "$" + camelCaseEntity + "->save();"); */
     result.push("");
     result.push(this.tab + this.tab + "return response()->json([");
     result.push(this.tab + this.tab + this.tab + "'status' => 201,");
@@ -165,9 +166,9 @@ export class ControllerFile extends PhpFile {
     result.push(this.tab + this.tab + this.tab + "'data' => new " + pascalCaseEntity + "Resource($" + camelCaseEntity + "),");
     result.push(this.tab + this.tab + "], 201);");
     result.push(this.tab + "}");
-    result.push(this.tab + "catch (Throwable $th)");
+    result.push(this.tab + "catch (\\Throwable $th)");
     result.push(this.tab + "{");
-    result.push(this.tab + this.tab + "throw new Exception(" + pascalCaseEntity + " can not be updated.', 500);");
+    result.push(this.tab + this.tab + "throw new \\Exception('" + pascalCaseEntity + " can not be updated.', 500);");
     result.push(this.tab + "}");
     result.push("}");
     return result;
@@ -199,7 +200,7 @@ export class ControllerFile extends PhpFile {
     result.push(this.tab + "}");
     result.push(this.tab + "catch(\\Throwable $th)");
     result.push(this.tab + "{");
-    result.push(this.tab + this.tab + "throw new Exception("+pascalCaseEntity+" can not be deleted.', 500);");
+    result.push(this.tab + this.tab + "throw new \\Exception('"+pascalCaseEntity+" can not be deleted.', 500);");
     result.push(this.tab + "}");
     result.push("}");
     return result;

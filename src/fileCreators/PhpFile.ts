@@ -14,18 +14,36 @@ export abstract class PhpFile {
   protected namespace: string = "";
   protected imports: string[] = [];
   protected traits: string[] = [];
+  protected classDecorator: string = "";
   public className: string = "";
   protected implementClauses: string[] = [];
   protected extendsClauses: string[] = [];
 
   public fileMounted: string = "";
 
-  constructor(entity: Entity) {
+  constructor(entity: Entity, pkgCode: string, systemCode: string) {
     this.entity = entity;
-    this.systemCode = "generated";
-    this.pkgCode = "fredmessias";
+    this.systemCode = systemCode;
+    this.pkgCode = pkgCode;
     this.className = this.entity.getEntityName("pascalCase");
     // this.baseNamespace = pascalCase(this.systemCode) + "\\" + pascalCase(this.pkgCode);
+  }
+
+  protected getNamespaceLine(): string { return `namespace ${this.namespace};` };
+
+  protected getImportLines(): string {
+    let result = "";
+
+    for (let i = 0; i < this.imports.length; i++) {
+      const importLine = `use ${this.imports[i]};`;
+      result += importLine;
+      if (this.imports.length - 1 !== i) result += "\n"
+    }
+    return result;
+  };
+
+  protected getClassDecorator(): string {
+    return this.classDecorator;
   }
 
   protected getClassNameLine(): string {
@@ -45,18 +63,16 @@ export abstract class PhpFile {
     return result;
   };
 
-  protected getNamespaceLine(): string { return `namespace ${this.namespace};` };
-
-  protected getImportLines(): string {
+  protected getTraitLines(): string {
     let result = "";
 
-    for (let i = 0; i < this.imports.length; i++) {
-      const importLine = `use ${this.imports[i]};`;
-      result += importLine;
-      if (this.imports.length - 1 !== i) result += "\n"
+    for (let i = 0; i < this.traits.length; i++) {
+      const traitLine = this.tab + `use ${this.traits[i]};`;
+      result += traitLine;
+      if (this.traits.length - 1 !== i) result += "\n"
     }
     return result;
-  };
+  }
 
   protected getFileName() : string
   {
@@ -78,8 +94,11 @@ export abstract class PhpFile {
     result.push(this.getImportLines());
     result.push("");
     result.push("");
+    result.push(this.getClassDecorator());
     result.push(this.getClassNameLine());
     result.push("{");
+    result.push(this.getTraitLines());
+    result.push("");
     result.push(this.getContentLine());
     result.push("}");
     result.push("");
@@ -89,8 +108,9 @@ export abstract class PhpFile {
   }
 
   public writeFile(): string {
-    const basePath = path.join(__dirname, "../../generated/", camelCase(this.pkgCode), this.namespace ).replaceAll("\\", "/");
+    const basePath = path.join(__dirname, "../../generated/", this.pkgCode, this.namespace ).replaceAll("\\", "/");
 
+    console.log("File Created: " + `${basePath}\\${this.className}.php`);
     if (!fs.existsSync(basePath)) {
       fs.mkdirSync(basePath, { recursive: true });
     }
@@ -98,7 +118,6 @@ export abstract class PhpFile {
     const fileName = `${basePath}/${this.getFileName()}`;
     fs.writeFileSync(fileName, this.fileMounted);
 
-    // console.log("File Created: " + `${this.namespace}\\${this.className}.php`);
     return fileName;
   }
 

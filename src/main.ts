@@ -1,11 +1,11 @@
-import { ModelFile, ResourceFile, CollectionFile, ControllerFile, RequestFile, MigrationFile } from "./fileCreators"
+import { ModelFile, ResourceFile, CollectionFile, ControllerFile, RequestFile, MigrationFile, ObserverFile } from "./fileCreators"
 import { Entity } from "./models/Entity";
 import { Manifest } from "./models/ManifestObject";
 import { ManifestEntity } from "./types";
 import fs from "fs";
 
 const manifestObj = JSON.parse(fs.readFileSync(
-  "./generated/fredmessias/manifest.json",
+  "./generated/une-api/manifest.json",
   { encoding: "utf8" }
 ));
 
@@ -18,12 +18,13 @@ for (const key in manifestClass.entities) {
   
   const entity = new Entity(key, manifestEntity);
   
-  const modelFileClass = new ModelFile(entity);
-  const resourceFileClass = new ResourceFile(entity);
-  const collectionFileClass = new CollectionFile(entity);
-  const controllerFileClass = new ControllerFile(entity);
-  const requestFileClass = new RequestFile(entity);
-  const migrationFileClass = new MigrationFile(entity);
+  const modelFileClass = new ModelFile(entity, manifestClass.pkgCode, manifestClass.systemCode);
+  const resourceFileClass = new ResourceFile(entity, manifestClass.pkgCode, manifestClass.systemCode);
+  const collectionFileClass = new CollectionFile(entity, manifestClass.pkgCode, manifestClass.systemCode);
+  const controllerFileClass = new ControllerFile(entity, manifestClass.pkgCode, manifestClass.systemCode);
+  const requestFileClass = new RequestFile(entity, manifestClass.pkgCode, manifestClass.systemCode);
+  const migrationFileClass = new MigrationFile(entity, manifestClass.pkgCode, manifestClass.systemCode);
+  const observerFileClass = new ObserverFile(entity, manifestClass.pkgCode, manifestClass.systemCode);
 
   //
 
@@ -33,4 +34,5 @@ for (const key in manifestClass.entities) {
   controllerFileClass.mountAndWriteFile();
   requestFileClass.mountAndWriteFile();
   migrationFileClass.mountAndWriteFile();
+  observerFileClass.mountAndWriteFile();
 }
