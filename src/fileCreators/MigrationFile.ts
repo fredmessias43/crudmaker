@@ -18,7 +18,7 @@ export class MigrationFile extends PhpFile {
     this.extendsClauses = [
       "Migration"
     ];
-    
+    this.anonymousClass = true;
     //
     
     this.className = "Create" + this.entity.getEntityName("pascalCase") + "Table";

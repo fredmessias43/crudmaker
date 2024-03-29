@@ -18,7 +18,7 @@ export abstract class PhpFile {
   public className: string = "";
   protected implementClauses: string[] = [];
   protected extendsClauses: string[] = [];
-
+  protected anonymousClass: boolean  = false;
   public fileMounted: string = "";
 
   constructor(entity: Entity, pkgCode: string, systemCode: string) {
@@ -29,7 +29,9 @@ export abstract class PhpFile {
     // this.baseNamespace = pascalCase(this.systemCode) + "\\" + pascalCase(this.pkgCode);
   }
 
-  protected getNamespaceLine(): string { return `namespace ${this.namespace};` };
+  protected getNamespaceLine(): string {
+    return this.anonymousClass ? "" : `namespace ${this.namespace};${this.lineBreak}`
+  };
 
   protected getImportLines(): string {
     let result = "";
@@ -37,9 +39,9 @@ export abstract class PhpFile {
     for (let i = 0; i < this.imports.length; i++) {
       const importLine = `use ${this.imports[i]};`;
       result += importLine;
-      if (this.imports.length - 1 !== i) result += "\n"
+      if (this.imports.length - 1 !== i) result += this.lineBreak;
     }
-    return result;
+    return result + this.lineBreak;
   };
 
   protected getClassDecorator(): string {
@@ -47,8 +49,11 @@ export abstract class PhpFile {
   }
 
   protected getClassNameLine(): string {
-    let result = ""; 
-    result = `class ${this.className}`;
+    let result = `class ${this.className}`;
+
+    if (this.anonymousClass) {
+      result = "return new class";
+    }
     
     if ( this.implementClauses.length > 0 )
     {
@@ -69,9 +74,8 @@ export abstract class PhpFile {
     for (let i = 0; i < this.traits.length; i++) {
       const traitLine = this.tab + `use ${this.traits[i]};`;
       result += traitLine;
-      if (this.traits.length - 1 !== i) result += "\n"
     }
-    return result;
+    return result + this.lineBreak;
   }
 
   protected getFileName() : string
@@ -90,17 +94,13 @@ export abstract class PhpFile {
     result.push("<?php");
     result.push("");
     result.push(this.getNamespaceLine());
-    result.push("");
     result.push(this.getImportLines());
-    result.push("");
-    result.push("");
     result.push(this.getClassDecorator());
     result.push(this.getClassNameLine());
     result.push("{");
     result.push(this.getTraitLines());
-    result.push("");
     result.push(this.getContentLine());
-    result.push("}");
+    result.push("};");
     result.push("");
 
     this.fileMounted = result.join(this.lineBreak)

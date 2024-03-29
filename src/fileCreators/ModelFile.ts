@@ -68,7 +68,7 @@ export class ModelFile extends PhpFile {
     {
       const importLine = this.propertiesLines[i];
       result += this.tab + importLine;
-      if ( this.propertiesLines.length - 1 !== i ) result += "\n"
+      if ( this.propertiesLines.length - 1 !== i ) result += this.lineBreak;
     }
     return result;
   }
@@ -81,7 +81,7 @@ export class ModelFile extends PhpFile {
     {
       const importLine = this.relationShipFunctions[i];
       result += this.tab + importLine;
-      if ( this.relationShipFunctions.length - 1 !== i ) result += "\n"
+      if ( this.relationShipFunctions.length - 1 !== i ) result += this.lineBreak;
     }
     return result;
   }
