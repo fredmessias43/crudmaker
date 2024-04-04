@@ -114,19 +114,19 @@ export class RequestFile extends PhpFile {
     {
       result.push(this.tab + "'"+field.type+"',");
     }
-    else if (field.type === "json")
+    else if (field.type.toString() === "json")
     {
       result.push(this.tab + "'array'");
     }
-    else if (field.type === "date")
+    else if (field.type.toString() === "date")
     {
       result.push(this.tab + "'date_format:Y-m-d'");
     }
-    else if (field.type === "datetime")
+    else if (field.type.toString() === "datetime")
     {
       result.push(this.tab + "'date_format:Y-m-d H:i'");
     }
-    else if (field.type === "enum")
+    else if (field.type.toString() === "enum")
     {
       this.imports.push("Illuminate\\Validation\\Rule");
       result.push(this.tab + "Rule::in(array(" + field.enumItems.map(e => `'${e}'`).join() + "))");

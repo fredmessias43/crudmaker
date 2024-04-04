@@ -1,6 +1,8 @@
 import { format } from "date-fns";
 import { Entity } from "../models/Entity";
 import { PhpFile } from "./PhpFile";
+import fs from "fs";
+import path from "path";
 
 export class MigrationFile extends PhpFile {
   protected upFunction: string[];
@@ -29,9 +31,21 @@ export class MigrationFile extends PhpFile {
 
   protected getFileName() : string
   {
+    const basePath = path.join(__dirname, "../../generated/", this.pkgCode, this.namespace.replace("App", "app")).replaceAll("\\", "/");
+    const fileName = "_create_" + this.entity.getTableName() + "_table" + ".php";
+
+    const files = fs.readdirSync(basePath);
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      
+      if (file.endsWith(fileName)) {
+        return file;
+      }
+    }
+
     const date = format(new Date(), "yyyy_MM_dd_HHmmss");
 
-    return date +  "_create_" +  this.entity.getTableName() + "_table" + ".php";
+    return date +  fileName;
   }
 
   fillUpFunction() {
@@ -47,7 +61,12 @@ export class MigrationFile extends PhpFile {
 
     const entityFieldArray = Object.values(this.entity.fields);
     for (const field of entityFieldArray) {
-      result.push(this.tab + this.tab + "$table->" + field.type + "('" + field.name + "');");
+      let line = this.tab + this.tab + "$table->" + field.type + "('" + field.name + "')";
+      if (!field.required) {
+        line += "->nullable()";
+      }
+      line += ";";
+      result.push(line);
     }
 
     result.push(this.tab + this.tab + "$table->timestamps();");
