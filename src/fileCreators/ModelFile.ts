@@ -28,24 +28,41 @@ export class ModelFile extends PhpFile {
   protected fillPropertiesLines()
   {
     let result: Array<string> = [];
+    const entityFieldArray = Object.entries(this.entity.fields);
 
     // result.push("protected $connection = \"tenant\";");
     result.push("protected $keyType = \"string\";");
     result.push("public $incrementing = false;");
     result.push("");
+    
+    result.push("/**");
+    result.push(" * The attributes that should be cast.");
+    result.push(" *");
+    result.push(" * @var array");
+    result.push(" */");
+    result.push("protected $casts = [");
+    for (const entity of entityFieldArray) {
+      const [name, field] = entity;
+      if (field.type === "boolean") {
+        result.push(this.tab + "'" + field.name + "' => '" + field.type +  "',");
+      }
+      if (field.type === "json") {
+        result.push(this.tab + "'" + field.name + "' => 'array',");
+      }
+    }
+    result.push("];");
+    result.push("");
+
     result.push("/**");
     result.push(" * The attributes that are mass assignable.");
     result.push(" *");
     result.push(" * @var array");
     result.push(" */");
     result.push("protected $fillable = [");
-
-    const entityFieldArray = Object.entries(this.entity.fields);
     for (const entity of entityFieldArray) {
-      const [name, type] = entity;
+      const [name, field] = entity;
       result.push(this.tab + "'" + name + "',");
     }
-
     result.push("];");
 
     return result;
@@ -62,28 +79,12 @@ export class ModelFile extends PhpFile {
   
   protected getPropertiesLines()
   {
-    let result = "";
-
-    for (let i = 0; i < this.propertiesLines.length; i++)
-    {
-      const importLine = this.propertiesLines[i];
-      result += this.tab + importLine;
-      if ( this.propertiesLines.length - 1 !== i ) result += this.lineBreak;
-    }
-    return result;
+    return this.propertiesLines.reduce((previous, current, index, array) => previous + this.tab + current + this.lineBreak, "");
   }
 
   protected getRelationShipFunctions()
   {
-    let result = "";
-
-    for (let i = 0; i < this.relationShipFunctions.length; i++)
-    {
-      const importLine = this.relationShipFunctions[i];
-      result += this.tab + importLine;
-      if ( this.relationShipFunctions.length - 1 !== i ) result += this.lineBreak;
-    }
-    return result;
+    return this.relationShipFunctions.reduce((previous, current, index, array) => previous + this.tab + current + this.lineBreak, "");
   }
 
   protected getContentLine()

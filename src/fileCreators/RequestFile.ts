@@ -95,6 +95,7 @@ export class RequestFile extends PhpFile {
     for (let i = 0; i < entityFieldArray.length; i++)
     {
       const [fieldKey, fieldValue] = entityFieldArray[i];
+      if (fieldValue.name === "id") continue;
       const ruleResult = this.fillRuleForField(fieldValue);
       result = result.concat(ruleResult.map(e => this.tab + this.tab + this.tab + e));
     }

@@ -111,7 +111,7 @@ export abstract class PhpFile {
   public writeFile(): string {
     const basePath = path.join(__dirname, "../../generated/", this.pkgCode, this.namespace.replace("App", "app") ).replaceAll("\\", "/");
 
-    console.log("File Created: " + `${basePath}\\${this.className}.php`);
+    console.log("File Created: " + `${basePath}/${this.className}.php`);
     if (!fs.existsSync(basePath)) {
       fs.mkdirSync(basePath, { recursive: true });
     }
