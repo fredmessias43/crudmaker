@@ -33,3 +33,4 @@
   - [ ] criar rotas de relacionamento
   - [ ] criar controller de relactionamento
 - [ ] quando for enum criar um arquivo de enum e validar na request
+- [ ] adicionar opção de selecionar o base path
