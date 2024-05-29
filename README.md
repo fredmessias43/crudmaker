@@ -26,6 +26,10 @@
 ### imediato
 - [ ] arquivo de rotas
 - [ ] levar em conta o relationship
+  - [ ] talvez alterar o modo ou sendo `belongsTo.0.model` ou `model.type.belongsTo`
   - [ ] não precisar colocar o campo _id
   - [ ] poder ser nullable
+  - [ ] criar funcoes de relacionamento na model
+  - [ ] criar rotas de relacionamento
+  - [ ] criar controller de relactionamento
 - [ ] quando for enum criar um arquivo de enum e validar na request

@@ -5,7 +5,7 @@ import { ManifestEntity } from "./types";
 import fs from "fs";
 
 const manifestObj = JSON.parse(fs.readFileSync(
-  "./generated/une-api/manifest.json",
+  "./generated/une-api/laravel/manifest.json",
   { encoding: "utf8" }
 ));
 

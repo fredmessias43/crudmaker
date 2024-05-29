@@ -31,8 +31,8 @@ export class ObserverFile extends PhpFile {
     result.push(" * @return void");
     result.push(" */");
     result.push("public function creating(" + pascalCase + " $" + camelCase + ") {");
-    result.push("  if (!Str:: isUuid($" + camelCase + " -> id)) {");
-    result.push("    $" + camelCase + " -> id = (string) Str:: uuid();");
+    result.push("  if (!Str::isUuid($" + camelCase + "->id)) {");
+    result.push("    $" + camelCase + "->id = (string) Str::uuid();");
     result.push("  }");
     result.push("}");
     

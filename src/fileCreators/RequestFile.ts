@@ -44,6 +44,7 @@ export class RequestFile extends PhpFile {
   {
     const camelCase = this.entity.getEntityName("camelCase");
     const pascalCase = this.entity.getEntityName("pascalCase");
+    const snakeCase = this.entity.getEntityName("snakeCase");
 
     let result: string[] = [];
     result.push("/**");
@@ -53,7 +54,7 @@ export class RequestFile extends PhpFile {
     result.push(" */");
     result.push("protected function prepareForValidation()");
     result.push("{");
-    result.push(this.tab + this.tab + "$" + camelCase + " = $this->route('" + camelCase + "');");
+    result.push(this.tab + this.tab + "$" + camelCase + " = $this->route('" + snakeCase + "');");
     result.push("");
     result.push(this.tab + this.tab + "if ($" + camelCase + " instanceof " + pascalCase + ")");
     result.push(this.tab + this.tab + "{");

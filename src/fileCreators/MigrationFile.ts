@@ -31,7 +31,7 @@ export class MigrationFile extends PhpFile {
 
   protected getFileName() : string
   {
-    const basePath = path.join(__dirname, "../../generated/", this.pkgCode, this.namespace.replace("App", "app")).replaceAll("\\", "/");
+    const basePath = path.join(__dirname, "../../generated/", this.pkgCode, "laravel",this.namespace.replace("App", "app")).replaceAll("\\", "/");
     const fileName = "_create_" + this.entity.getTableName() + "_table" + ".php";
 
     const files = fs.readdirSync(basePath);
