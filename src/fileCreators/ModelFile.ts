@@ -1,9 +1,9 @@
 import { Entity } from "../models/Entity";
 import { PhpFile } from "./PhpFile";
-import { pascalCase } from "change-case";
+import { camelCase, pascalCase } from "change-case";
 
 export class ModelFile extends PhpFile {
-  protected relationShipFunctions: Array<Array<string>>;
+  protected relationShipFunctions: Array<string>;
   protected propertiesLines: string[];
 
   constructor(entity: Entity, pkgCode: string, systemCode: string) {
@@ -70,9 +70,15 @@ export class ModelFile extends PhpFile {
 
   protected fillRelationShipFunctions()
   {
-    let result: Array<Array<string>> = [];
+    let result: Array<string> = [];
 
-    // this.entity.relationships;
+    for (const relationship of Object.values(this.entity.relationships).flat()) {
+      this.imports.push("Illuminate\\Database\\Eloquent\\Relations\\"+pascalCase(relationship.relationship));
+      result.push("public function " + camelCase(relationship.entity) + "(): "+pascalCase(relationship.relationship)+"");
+      result.push("{");
+      result.push(this.tab + "return $this->"+camelCase(relationship.relationship)+"(" + pascalCase(relationship.entity) + "::class);");
+      result.push("}");
+    }
 
     return result;
   }

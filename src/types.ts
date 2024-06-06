@@ -1,6 +1,7 @@
-export type RelationshipKeys = "belongsTo" | "hasMany" | "hasOne" | "ownOne" | "ownMany" | "owned";
+export type RelationshipKeys = "belongsTo" | "hasMany" | "hasOne" | "morphTo" |"ownOne" | "ownMany" | "owned" | "morphOne" | "morphMany" | "morphed";
 export type RelationshipValue = {
   entity: string,
+  field: string,
   relationship: RelationshipKeys
 };
 export type Relationships = {
@@ -12,7 +13,8 @@ export type Field = {
   name: string,
   required: boolean,
   unique: boolean,
-  enumItems: string[]
+  enumItems: string[],
+  relationship?: boolean
 };
 
 export type Fields = {

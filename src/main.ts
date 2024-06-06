@@ -1,6 +1,6 @@
 import { ModelFile, ResourceFile, CollectionFile, ControllerFile, RequestFile, MigrationFile, ObserverFile } from "./fileCreators"
 import { Entity } from "./models/Entity";
-import { Manifest } from "./models/ManifestObject";
+import { Manifest } from "./models/Manifest";
 import { ManifestEntity } from "./types";
 import fs from "fs";
 
@@ -12,6 +12,8 @@ const manifestObj = JSON.parse(fs.readFileSync(
 const manifestClass = new Manifest(manifestObj)
 
 manifestClass.lockManifest();
+console.log(manifestClass.entities['user'].fields);
+
 
 for (const key in manifestClass.entities) {
   const manifestEntity = manifestClass.entities[key];

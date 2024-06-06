@@ -45,13 +45,7 @@
           "owned": [
             "entity"
           ]
-        },
-        "indexes": [
-          {
-            "type": "unique",
-            "fields": "code"
-          }
-        ]
+        }
       }
     }
   }
