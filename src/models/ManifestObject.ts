@@ -44,6 +44,7 @@ export class Manifest {
           type: "",
           name: "",
           required: true,
+          unique: false,
           enumItems: []
         };
         
@@ -52,6 +53,7 @@ export class Manifest {
             type: fieldValue,
             name: fieldKey,
             required: true,
+            unique: false,
             enumItems: []
           }
         }
@@ -60,6 +62,7 @@ export class Manifest {
             type: fieldValue.type,
             name: fieldValue.hasOwnProperty("name") ? fieldValue.name : fieldKey,
             required: fieldValue.hasOwnProperty("required") ? fieldValue.required : true,
+            unique: fieldValue.hasOwnProperty("unique") ? fieldValue.unique : false,
             enumItems: fieldValue.hasOwnProperty("enumItems") ? fieldValue.enumItems : []
           }
         }
@@ -84,6 +87,7 @@ export class Manifest {
             type: 'uuid',
             name: 'owner_id',
             required: true,
+            unique: false,
             enumItems: []
           }
 
@@ -91,6 +95,7 @@ export class Manifest {
             type: 'string',
             name: 'owner_class',
             required: true,
+            unique: false,
             enumItems: []
           }
         }

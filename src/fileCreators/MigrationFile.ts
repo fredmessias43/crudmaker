@@ -71,6 +71,13 @@ export class MigrationFile extends PhpFile {
 
     result.push(this.tab + this.tab + "$table->timestamps();");
     result.push(this.tab + this.tab + "$table->softDeletes();");
+
+    for (const field of entityFieldArray) {
+      if (field.unique) {
+        result.push(this.tab + this.tab + "$table->unique('" + field.name + "');");
+      }
+    }
+
     result.push(this.tab + "});");
     result.push("}");
     return result;

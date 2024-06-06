@@ -112,26 +112,36 @@ export class RequestFile extends PhpFile {
     result.push(this.tab + "'bail',");
     result.push(this.tab + "'" + (field.required ? "required" : "nullable") + "',");
 
-    if (["uuid", "string", "text", "double", "integer", "boolean"].includes(field.type.toString()))
+    if (["uuid", "string", "double", "integer", "boolean"].includes(field.type.toString()))
     {
       result.push(this.tab + "'"+field.type+"',");
     }
+    else if (field.type.toString() === "text")
+    {
+      result.push(this.tab + "'string',");
+    }
     else if (field.type.toString() === "json")
     {
-      result.push(this.tab + "'array'");
+      result.push(this.tab + "'array',");
     }
     else if (field.type.toString() === "date")
     {
-      result.push(this.tab + "'date_format:Y-m-d'");
+      result.push(this.tab + "'date_format:Y-m-d',");
     }
     else if (field.type.toString() === "datetime")
     {
-      result.push(this.tab + "'date_format:Y-m-d H:i'");
+      result.push(this.tab + "'date_format:Y-m-d H:i',");
     }
     else if (field.type.toString() === "enum")
     {
       this.imports.push("Illuminate\\Validation\\Rule");
-      result.push(this.tab + "Rule::in(array(" + field.enumItems.map(e => `'${e}'`).join() + "))");
+      result.push(this.tab + "Rule::in(array(" + field.enumItems.map(e => `'${e}'`).join() + ")),");
+    }
+
+    if (field.unique)
+    {
+      this.imports.push("Illuminate\\Validation\\Rule");
+      result.push(this.tab + "Rule::unique('" + this.baseNamespace + "\\Models\\" + this.entity.getEntityName("pascalCase") +"', '"+field.name+"')->ignore($this->input('"+field.name+"'), '"+field.name+"'),");
     }
 
     result.push("),");

@@ -11,6 +11,7 @@ export type Field = {
   type: "uuid" | "string" | "text" | "date" | "datetime" | "double" | "integer" | "boolean" | "json" | "enum",
   name: string,
   required: boolean,
+  unique: boolean,
   enumItems: string[]
 };
 
