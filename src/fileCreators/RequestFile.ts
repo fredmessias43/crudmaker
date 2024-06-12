@@ -141,7 +141,7 @@ export class RequestFile extends PhpFile {
     if (field.unique)
     {
       this.imports.push("Illuminate\\Validation\\Rule");
-      result.push(this.tab + "Rule::unique('" + this.baseNamespace + "\\Models\\" + this.entity.getEntityName("pascalCase") +"', '"+field.name+"')->ignore($this->input('"+field.name+"'), '"+field.name+"'),");
+      result.push(this.tab + "Rule::unique('" + this.baseNamespace + "\\Models\\" + this.entity.getEntityName("pascalCase") + "', '" + field.name + "')->ignore($this->input('id') ? $this->input('"+field.name+"') : '', '"+field.name+"'),");
     }
 
     result.push("),");

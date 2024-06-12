@@ -62,6 +62,9 @@ export class MigrationFile extends PhpFile {
     const entityFieldArray = Object.values(this.entity.fields);
     for (const field of entityFieldArray) {
       let line = this.tab + this.tab + "$table->" + field.type + "('" + field.name + "')";
+      if (field.name === "id") {
+        line += "->primary()";
+      }
       if (!field.required) {
         line += "->nullable()";
       }
