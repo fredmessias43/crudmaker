@@ -2,6 +2,7 @@ export type RelationshipKeys = "belongsTo" | "hasMany" | "hasOne" | "morphTo" |"
 export type RelationshipValue = {
   entity: string,
   field: string,
+  required: boolean,
   relationship: RelationshipKeys
 };
 export type Relationships = {

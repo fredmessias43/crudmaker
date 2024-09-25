@@ -113,11 +113,12 @@ export class Manifest {
             for (let i = 0; i < relationships.length; i++) {
               const element = relationships[i];
               let newRelation: RelationshipValue;
-
+              
               if (typeof element === "string" || element instanceof String) {
                 newRelation = {
                   entity: element.toString(),
                   field: element.toString() + "_id",
+                  required: true,
                   relationship: relation,
                 };
               }
@@ -126,7 +127,8 @@ export class Manifest {
                 const targetEntity = element.hasOwnProperty("entity") ? element.entity : element;
                 newRelation = {
                   entity: targetEntity,
-                  field: element.hasOwnProperty("field") ? element.field : snakeCase(element.toString()) + "_id",
+                  field: element.hasOwnProperty("field") ? element.field : snakeCase(targetEntity) + "_id",
+                  required: element.hasOwnProperty("required") ? element.required : true,
                   relationship: element.hasOwnProperty("relationship") ? element.relationship : relation,
                 };
               }
@@ -162,7 +164,7 @@ export class Manifest {
               const newField = {
                 type: "uuid" as "uuid",
                 name: relation.field,
-                required: true,
+                required: relation.required,
                 unique: false,
                 enumItems: [],
                 relationship: true

@@ -65,6 +65,11 @@ export class MigrationFile extends PhpFile {
       if (field.name === "id") {
         line += "->primary()";
       }
+      if (field.type === "enum") {
+        line = line.substring(0, line.length - 1);
+        line += ", " + JSON.stringify(field.enumItems).replaceAll("\"",'\'') + ")";
+        line += "->default('" + field.enumItems[0] + "')";
+      }
       if (!field.required) {
         line += "->nullable()";
       }

@@ -2,6 +2,7 @@ import { camelCase, pascalCase } from "change-case";
 import { Entity } from "../models/Entity";
 import fs from "fs";
 import path from "path";
+import { uniq } from "lodash";
 
 export abstract class PhpFile {
   protected tab = "\t";
@@ -35,11 +36,11 @@ export abstract class PhpFile {
 
   protected getImportLines(): string {
     let result = "";
-
-    for (let i = 0; i < this.imports.length; i++) {
-      const importLine = `use ${this.imports[i]};`;
+    const imports = uniq(this.imports);
+    for (let i = 0; i < imports.length; i++) {
+      const importLine = `use ${imports[i]};`;
       result += importLine;
-      if (this.imports.length - 1 !== i) result += this.lineBreak;
+      if (imports.length - 1 !== i) result += this.lineBreak;
     }
     return result ? result + this.lineBreak : result;
   };

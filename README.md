@@ -26,15 +26,19 @@
 ### imediato
 - [ ] arquivo de rotas
 - [-] levar em conta o relationship
-  - [ ] talvez alterar o modo ou sendo `belongsTo.0.model` ou `model.type.belongsTo`
-  - [ ] não precisar colocar o campo _id
-  - [ ] poder ser nullable
-  - [ ] criar funcoes de relacionamento na model
+  - [-] talvez alterar o modo ou sendo `belongsTo.0.model` ou `model.type.belongsTo`
+  - [x] não precisar colocar o campo _id
+  - [x] poder ser nullable
+  - [x] criar funcoes de relacionamento na model
   - [ ] criar rotas de relacionamento
   - [ ] criar controller de relactionamento
   - [-] fix
     - [ ] belongsTo propiedades
     - [ ] nome do campos diferentes do nome da entidade, erro no nome da funcão model
     - [ ] arrumar o address
-- [ ] quando for enum criar um arquivo de enum e validar na request
+- [ ] quando for enum 
+  - [ ] criar um arquivo de enum
+  - [ ] validar na request
+  - [ ] traduzir na resource
 - [ ] adicionar opção de selecionar o base path
+- [ ] mudar resource para ser EntityResource

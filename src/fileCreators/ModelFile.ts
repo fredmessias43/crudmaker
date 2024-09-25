@@ -1,3 +1,4 @@
+import { snakeCase } from "lodash";
 import { Entity } from "../models/Entity";
 import { PhpFile } from "./PhpFile";
 import { camelCase, pascalCase } from "change-case";
@@ -74,10 +75,23 @@ export class ModelFile extends PhpFile {
 
     for (const relationship of Object.values(this.entity.relationships).flat()) {
       this.imports.push("Illuminate\\Database\\Eloquent\\Relations\\"+pascalCase(relationship.relationship));
-      result.push("public function " + camelCase(relationship.entity) + "(): "+pascalCase(relationship.relationship)+"");
-      result.push("{");
-      result.push(this.tab + "return $this->"+camelCase(relationship.relationship)+"(" + pascalCase(relationship.entity) + "::class);");
-      result.push("}");
+
+      const fieldIsDiferent = relationship.field !== snakeCase(relationship.entity) + "_id";
+
+      if (!fieldIsDiferent) {
+        result.push("public function " + camelCase(relationship.entity) + "(): "+pascalCase(relationship.relationship)+"");
+        result.push("{");
+        result.push(this.tab + "return $this->"+camelCase(relationship.relationship)+"(" + pascalCase(relationship.entity) + "::class);");
+        result.push("}");
+      } else {
+        const parcialFieldName = relationship.field.replace("_id", "");
+
+        result.push("public function " + camelCase(parcialFieldName) + "(): "+pascalCase(relationship.relationship)+"");
+        result.push("{");
+        result.push(this.tab + "return $this->"+camelCase(relationship.relationship)+"(" + pascalCase(relationship.entity) + "::class, 'id', '"+relationship.field+"');");
+        result.push("}");
+      }
+
     }
 
     return result;
