@@ -5,14 +5,13 @@ import { ManifestEntity } from "./types";
 import fs from "fs";
 
 const manifestObj = JSON.parse(fs.readFileSync(
-  "./generated/une-api/laravel/manifest.json",
+  "./generated/bus-company/manifest.json",
   { encoding: "utf8" }
 ));
 
 const manifestClass = new Manifest(manifestObj)
 
 manifestClass.lockManifest();
-console.log(manifestClass.entities['user'].fields);
 
 
 for (const key in manifestClass.entities) {

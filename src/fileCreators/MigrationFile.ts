@@ -31,7 +31,7 @@ export class MigrationFile extends PhpFile {
 
   protected getFileName() : string
   {
-    const basePath = path.join(__dirname, "../../generated/", this.pkgCode, "laravel",this.namespace.replace("App", "app")).replaceAll("\\", "/");
+    const basePath = path.join(__dirname, "../../generated/", this.pkgCode, this.namespace.replace("App", "app")).replaceAll("\\", "/");
     const fileName = "_create_" + this.entity.getTableName() + "_table" + ".php";
 
     const files = fs.readdirSync(basePath);
@@ -76,6 +76,15 @@ export class MigrationFile extends PhpFile {
       line += ";";
       result.push(line);
     }
+    result.push("");
+
+    const entityBelongsTo = this.entity.relationships?.belongsTo; 
+    if (entityBelongsTo instanceof Array && entityBelongsTo.length > 0) {
+      for (const relationship of entityBelongsTo) {
+        result.push(this.tab + this.tab + "$table->foreign('" + relationship.field + "')->references('id')->on('" + relationship.entity + "');");
+      }
+    }
+    result.push("");
 
     result.push(this.tab + this.tab + "$table->timestamps();");
     result.push(this.tab + this.tab + "$table->softDeletes();");

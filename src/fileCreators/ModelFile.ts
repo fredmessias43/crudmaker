@@ -92,6 +92,7 @@ export class ModelFile extends PhpFile {
         result.push("}");
       }
 
+      result.push("");
     }
 
     return result;
