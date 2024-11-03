@@ -3,6 +3,7 @@ import { Entity } from "../models/Entity";
 import { PhpFile } from "./PhpFile";
 import fs from "fs";
 import path from "path";
+import { plural } from "pluralize";
 
 export class MigrationFile extends PhpFile {
   protected upFunction: string[];
@@ -81,7 +82,7 @@ export class MigrationFile extends PhpFile {
     const entityBelongsTo = this.entity.relationships?.belongsTo; 
     if (entityBelongsTo instanceof Array && entityBelongsTo.length > 0) {
       for (const relationship of entityBelongsTo) {
-        result.push(this.tab + this.tab + "$table->foreign('" + relationship.field + "')->references('id')->on('" + relationship.entity + "');");
+        result.push(this.tab + this.tab + "$table->foreign('" + relationship.field + "')->references('id')->on('" + plural(relationship.entity) + "');");
       }
     }
     result.push("");

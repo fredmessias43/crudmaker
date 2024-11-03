@@ -33,8 +33,8 @@
   - [ ] criar rotas de relacionamento
   - [ ] criar controller de relactionamento
   - [-] fix
-    - [ ] belongsTo propiedades
-    - [ ] nome do campos diferentes do nome da entidade, erro no nome da funcão model
+    - [x] belongsTo propiedades
+    - [x] nome do campos diferentes do nome da entidade, erro no nome da funcão model
     - [ ] arrumar o address
 - [ ] quando for enum 
   - [ ] criar um arquivo de enum
