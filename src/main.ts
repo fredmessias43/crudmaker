@@ -25,7 +25,7 @@ for (const key in manifestClass.entities) {
   const controllerFileClass = new ControllerFile(entity, manifestClass.pkgCode, manifestClass.systemCode);
   const requestFileClass = new RequestFile(entity, manifestClass.pkgCode, manifestClass.systemCode);
   const migrationFileClass = new MigrationFile(entity, manifestClass.pkgCode, manifestClass.systemCode);
-  const observerFileClass = new ObserverFile(entity, manifestClass.pkgCode, manifestClass.systemCode);
+  // const observerFileClass = new ObserverFile(entity, manifestClass.pkgCode, manifestClass.systemCode);
 
   //
 
@@ -35,5 +35,5 @@ for (const key in manifestClass.entities) {
   controllerFileClass.mountAndWriteFile();
   requestFileClass.mountAndWriteFile();
   migrationFileClass.mountAndWriteFile();
-  observerFileClass.mountAndWriteFile();
+  // observerFileClass.mountAndWriteFile();
 }

@@ -10,24 +10,21 @@ export class ModelFile extends PhpFile {
   constructor(entity: Entity, pkgCode: string, systemCode: string) {
     super(entity, pkgCode, systemCode);
 
-    this.namespace =  this.baseNamespace + "\\Models";
+    this.namespace = this.baseNamespace + "\\Models";
     this.imports = [
       "Illuminate\\Database\\Eloquent\\Factories\\HasFactory",
       "Illuminate\\Database\\Eloquent\\SoftDeletes",
       "Illuminate\\Database\\Eloquent\\Model",
-      "Illuminate\\Database\\Eloquent\\Attributes\\ObservedBy",
-      "App\\Observers\\" + entity.getEntityName("pascalCase") + "Observer"
+      "Illuminate\\Support\\Str"
     ];
     this.extendsClauses = ["Model"];
     this.traits = ["HasFactory", "SoftDeletes"];
-    this.classDecorator = "#[ObservedBy([" + entity.getEntityName("pascalCase") + "Observer::class])]";
     //
     this.propertiesLines = this.fillPropertiesLines();
     this.relationShipFunctions = this.fillRelationShipFunctions();
   }
 
-  protected fillPropertiesLines()
-  {
+  protected fillPropertiesLines() {
     let result: Array<string> = [];
     const entityFieldArray = Object.entries(this.entity.fields);
 
@@ -35,7 +32,7 @@ export class ModelFile extends PhpFile {
     result.push("protected $keyType = \"string\";");
     result.push("public $incrementing = false;");
     result.push("");
-    
+
     result.push("/**");
     result.push(" * The attributes that should be cast.");
     result.push(" *");
@@ -45,7 +42,7 @@ export class ModelFile extends PhpFile {
     for (const entity of entityFieldArray) {
       const [name, field] = entity;
       if (field.type === "boolean") {
-        result.push(this.tab + "'" + field.name + "' => '" + field.type +  "',");
+        result.push(this.tab + "'" + field.name + "' => '" + field.type + "',");
       }
       if (field.type === "json") {
         result.push(this.tab + "'" + field.name + "' => 'array',");
@@ -66,29 +63,40 @@ export class ModelFile extends PhpFile {
     }
     result.push("];");
 
+    result.push("");
+
+    result.push("/**");
+    result.push(" * The \"booted\" method of the model.");
+    result.push(" */");
+    result.push("protected static function booted(): void");
+    result.push("{");
+    result.push(this.tab + "static::creating(function ($" + camelCase(this.entity.entityName) + ") {");
+    result.push(this.tab + this.tab + "$" + camelCase(this.entity.entityName) + "->id = Str::uuid();");
+    result.push(this.tab + "});");
+    result.push("}");
+
     return result;
   }
 
-  protected fillRelationShipFunctions()
-  {
+  protected fillRelationShipFunctions() {
     let result: Array<string> = [];
 
     for (const relationship of Object.values(this.entity.relationships).flat()) {
-      this.imports.push("Illuminate\\Database\\Eloquent\\Relations\\"+pascalCase(relationship.relationship));
+      this.imports.push("Illuminate\\Database\\Eloquent\\Relations\\" + pascalCase(relationship.relationship));
 
       const fieldIsDiferent = relationship.field !== snakeCase(relationship.entity) + "_id";
 
       if (!fieldIsDiferent) {
-        result.push("public function " + camelCase(relationship.entity) + "(): "+pascalCase(relationship.relationship)+"");
+        result.push("public function " + camelCase(relationship.entity) + "(): " + pascalCase(relationship.relationship) + "");
         result.push("{");
-        result.push(this.tab + "return $this->"+camelCase(relationship.relationship)+"(" + pascalCase(relationship.entity) + "::class);");
+        result.push(this.tab + "return $this->" + camelCase(relationship.relationship) + "(" + pascalCase(relationship.entity) + "::class);");
         result.push("}");
       } else {
         const parcialFieldName = relationship.field.replace("_id", "");
 
-        result.push("public function " + camelCase(parcialFieldName) + "(): "+pascalCase(relationship.relationship)+"");
+        result.push("public function " + camelCase(parcialFieldName) + "(): " + pascalCase(relationship.relationship) + "");
         result.push("{");
-        result.push(this.tab + "return $this->"+camelCase(relationship.relationship)+"(" + pascalCase(relationship.entity) + "::class, 'id', '"+relationship.field+"');");
+        result.push(this.tab + "return $this->" + camelCase(relationship.relationship) + "(" + pascalCase(relationship.entity) + "::class, 'id', '" + relationship.field + "');");
         result.push("}");
       }
 
@@ -97,19 +105,16 @@ export class ModelFile extends PhpFile {
 
     return result;
   }
-  
-  protected getPropertiesLines()
-  {
+
+  protected getPropertiesLines() {
     return this.propertiesLines.reduce((previous, current, index, array) => previous + this.tab + current + this.lineBreak, "");
   }
 
-  protected getRelationShipFunctions()
-  {
+  protected getRelationShipFunctions() {
     return this.relationShipFunctions.reduce((previous, current, index, array) => previous + this.tab + current + this.lineBreak, "");
   }
 
-  protected getContentLine()
-  {
+  protected getContentLine() {
     let result: string[] = [];
     result.push(this.getPropertiesLines());
     result.push(this.getRelationShipFunctions());
