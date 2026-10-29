@@ -67,8 +67,7 @@
           }
         },
         "relationships": {
-          "hasMany": ["class_lesson", "student"],
-          "hasOne": ["teacher"]
+          "hasMany": ["class_lesson", "student"]
         }
       },
       "class_lesson": {

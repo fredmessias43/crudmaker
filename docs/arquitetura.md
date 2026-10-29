@@ -9,7 +9,7 @@ crudmaker generate <manifest> --out <dir> [--dry-run]     src/bin.ts → src/cli
     │  readManifest(caminho)      lê e faz o parse do JSON
     ▼
 generate(manifest, { now, existingMigrations })     função pura, sem acesso ao disco
-    │  Manifest        valida e normaliza campos e relacionamentos
+    │  Manifest        schema (zod) → validação entre entidades → normalização
     │  Entity          (uma por entidade) nome + casings + nome da tabela
     │  geradores       (PhpFile) Model, Resource, Collection, Controller, Request, Migration
     ▼
@@ -53,15 +53,18 @@ O `--dry-run` e a escrita real usam o mesmo plano, então nunca divergem. `write
 ## Módulos
 
 ### `models/Manifest`
-Recebe o objeto cru do manifest e produz `entities` normalizadas:
+Recebe o objeto cru do manifest e produz `entities` normalizadas, em três etapas:
 
-- campo na forma curta (`"name": "string"`) vira `{ type, name, required: true, unique: false, enumItems: [] }`;
-- aliases são resolvidos (`int` → `integer`, `displayName` → campo `display_name` do tipo `string`);
-- cada relacionamento vira `{ entity, field, required, relationship }`;
-- `belongsTo` adiciona o campo de FK (`uuid`, com `relationship: true`) aos `fields`;
-- `owned`/`morphed` adicionam `owner_id` e `owner_class`.
+1. **Schema** (`src/manifestSchema.ts`, zod): estrutura do manifest de entrada (formas curta e longa, aliases `int`/`displayName`, tipos conhecidos, chaves obrigatórias). É a fonte do JSON Schema publicado em `schema/manifest.schema.json` (`npm run schema`, via `z.toJSONSchema` do zod 4 com `io: "input"`, que descreve o que se escreve no manifest e não o resultado das transformações). Chaves desconhecidas são toleradas e descartadas.
+2. **Validação entre entidades** (`src/validateManifest.ts`): relacionamento para entidade inexistente e `enum` sem itens. As issues do zod são convertidas em `{ path, message }` em português, com o caminho real no arquivo; qualquer falha lança `ManifestValidationError` (subclasse de `UserError`) com todos os problemas da etapa. A CLI a imprime com um problema por linha.
+3. **Normalização** (`normalizeEntity` em `src/models/Manifest.ts`), só com a entrada já válida:
+   - campo na forma curta (`"name": "string"`) vira `{ type, name, required: true, unique: false, enumItems: [] }`;
+   - aliases são resolvidos (`int` → `integer`, `displayName` → campo `display_name` do tipo `string`);
+   - cada relacionamento vira `{ entity, field, required, relationship }`;
+   - `belongsTo` adiciona o campo de FK (`uuid`, com `relationship: true`) aos `fields`;
+   - `owned`/`morphed` adicionam `owner_id` e `owner_class`.
 
-`manifestToString()` serializa o resultado normalizado; `generate` o devolve como o arquivo `manifest-lock.json`.
+`manifestToString()` serializa o resultado normalizado; `generate` o devolve como o arquivo `manifest-lock.json`. Os tipos do modelo normalizado continuam em `src/types.ts`.
 
 ### `models/Entity`
 Envolve uma entidade normalizada. `getEntityName(casing)` devolve o nome em qualquer formato do `change-case` (`pascalCase`, `snakeCase`...), e `getTableName()` devolve o snake_case no plural.
@@ -96,10 +99,13 @@ O PHP é montado concatenando strings linha a linha, com `\t` como indentação.
 | `pluralize` | nome das tabelas e dos métodos `hasMany` |
 | `lodash` | `snakeCase`, `uniq` |
 | `date-fns` | timestamp do nome da migration |
+| `zod` | schema e validação do manifest, e o JSON Schema publicado |
 
 ## Testes
 
 `tests/cli.test.ts` cobre a CLI: chama `run(argv, io)` em diretórios temporários (criação, regeração, `--dry-run`, `init`, erros, ajuda) e tem um teste que roda o binário em subprocesso.
+
+`tests/validate.test.ts` cobre a validação (fixtures válidos, manifests inválidos com caminho e mensagem, vários erros de uma vez) e confere que `schema/manifest.schema.json` está em dia com o schema zod.
 
 `tests/generate.test.ts` chama `generate` para os três manifests de `tests/fixtures/` com data fixa e sem migrations existentes. O conteúdo de cada arquivo é comparado com um snapshot em `tests/__snapshots__/<fixture>/<path>`, e a lista de caminhos com `_paths.txt`. Os snapshots registram a saída atual, inclusive bugs conhecidos.
 

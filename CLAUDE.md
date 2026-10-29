@@ -8,6 +8,7 @@ Gerador de API Laravel a partir de um manifest JSON: lê entidades, campos e rel
 - `npm run cli -- generate <manifest> --out <dir> [--dry-run]`: roda a CLI pelo código-fonte (`tsx`). `init [arquivo]` cria um manifest de exemplo. Não existe mais caminho fixo nem `npm run dev`.
 - `npm run build`: compila para `dist/` (o `bin` `crudmaker` aponta para `dist/bin.js`; `npm link` ou `npx .` o expõem).
 - `npm test`: roda a suíte (vitest): snapshots de `generate` e testes da CLI em diretório temporário. Os snapshots ficam em `tests/__snapshots__/` e as fixtures em `tests/fixtures/`. Se uma mudança de saída for intencional, revise o diff e atualize com `npx vitest run -u`.
+- `npm run schema`: regenera `schema/manifest.schema.json` a partir do schema zod. **Depois de mudar `src/manifestSchema.ts`, rode `npm run schema`** e versione o resultado (um teste falha se o arquivo estiver desatualizado).
 - `npx tsc --noEmit`: checagem de tipos. Passa sem erros. Ainda não há lint.
 
 ## Onde está cada coisa
@@ -18,7 +19,9 @@ Gerador de API Laravel a partir de um manifest JSON: lê entidades, campos e rel
 - `src/writeFiles.ts`: `planWrites` classifica cada arquivo (criado/sobrescrito/sem mudança/preservado) sem escrever; `applyPlan` grava. O `--dry-run` e a escrita real usam o mesmo plano.
 - `src/initTemplate.ts`: manifest de exemplo do `init`.
 - `src/generate.ts`: `generate(manifest, { now, existingMigrations })`, função pura (sem disco) que devolve a lista de arquivos `{ path, content, policy }`, com `path` relativo à raiz do projeto Laravel.
-- `src/models/Manifest.ts`: validação e normalização do manifest.
+- `src/manifestSchema.ts`: schema zod do manifest (fonte do JSON Schema em `schema/manifest.schema.json`, publicado no pacote).
+- `src/validateManifest.ts`: validação (schema + entre entidades) e `ManifestValidationError` com `{ path, message }` por problema.
+- `src/models/Manifest.ts`: valida via `validateManifest` e normaliza (formas curtas, aliases, campos de FK).
 - `src/models/Entity.ts`: nome da entidade em vários casings e nome da tabela.
 - `src/fileCreators/PhpFile.ts`: classe base dos geradores (casca do arquivo PHP e caminho relativo; não escreve no disco).
 - `src/fileCreators/*File.ts`: um gerador por tipo de arquivo PHP.

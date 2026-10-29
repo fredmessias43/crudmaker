@@ -110,12 +110,26 @@ describe("crudmaker generate", () => {
     expect(stderr).toContain("JSON inválido");
   });
 
-  it("falha com a mensagem do Manifest se faltam chaves obrigatórias", () => {
-    const empty = path.join(tmp, "vazio.json");
-    fs.writeFileSync(empty, "{}");
+  it("lista cada problema do manifest inválido numa linha e não escreve nada", () => {
+    const bad = path.join(tmp, "invalido.json");
+    fs.writeFileSync(bad, JSON.stringify({
+      system: { code: "s" },
+      pkg: {
+        entities: {
+          client: { fields: { id: "uuid", email: "strng" } },
+        },
+      },
+    }));
 
-    expect(run(["generate", empty, "--out", out], io())).not.toBe(0);
-    expect(stderr).toMatch(/^Erro: Manifest must have/);
+    expect(run(["generate", bad, "--out", out], io())).toBe(1);
+    expect(stdout).toBe("");
+    expect(stderr.split("\n")).toEqual([
+      "Erro: manifest inválido (2 problemas):",
+      "  pkg.code: campo obrigatório ausente",
+      expect.stringMatching(/^  pkg\.entities\.client\.fields\.email: tipo "strng" desconhecido \(use um de: uuid, string, /),
+      "",
+    ]);
+    expect(fs.existsSync(out)).toBe(false);
   });
 
   it("falha sem o argumento do manifest e com opção desconhecida", () => {

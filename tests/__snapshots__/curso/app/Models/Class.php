@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 
@@ -39,11 +38,6 @@ class Class extends Model
 		'description',
 	];
 
-	public function teacher(): HasOne
-	{
-		return $this->hasOne(Teacher::class);
-	}
-	
 	public function classLessons(): HasMany
 	{
 		return $this->hasMany(ClassLesson::class);

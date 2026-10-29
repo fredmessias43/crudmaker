@@ -211,14 +211,6 @@
         }
       },
       "relationships": {
-        "hasOne": [
-          {
-            "entity": "teacher",
-            "field": "teacher_id",
-            "required": true,
-            "relationship": "hasOne"
-          }
-        ],
         "hasMany": [
           {
             "entity": "class_lesson",

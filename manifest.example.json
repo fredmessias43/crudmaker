@@ -1,4 +1,5 @@
 {
+  "$schema": "./schema/manifest.schema.json",
   "system": {
     "title": "Crudmaker",
     "code": "crudmaker"
@@ -45,6 +46,12 @@
           "owned": [
             "entity"
           ]
+        }
+      },
+      "entity": {
+        "fields": {
+          "id": "uuid",
+          "name": "string"
         }
       }
     }
