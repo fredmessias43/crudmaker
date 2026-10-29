@@ -1,6 +1,6 @@
 # Como usar
 
-Este guia descreve o fluxo atual do crudmaker, pela CLI `crudmaker`. YAML e as demais melhorias estão planejados em [specs/crudmaker-v2.md](specs/crudmaker-v2.md).
+Este guia descreve o fluxo atual do crudmaker, pela CLI `crudmaker`. O manifest pode ser YAML ou JSON. As demais melhorias estão planejadas em [specs/crudmaker-v2.md](specs/crudmaker-v2.md).
 
 ## Pré-requisitos
 
@@ -18,11 +18,12 @@ Sem build, dá para rodar direto do código-fonte: `npm run cli -- <comando> ...
 ## 1. Escrever o manifest
 
 ```bash
-crudmaker init                # cria manifest.json de exemplo (recusa se já existir)
-crudmaker init outro.json     # ou com outro nome
+crudmaker init                # cria manifest.yaml de exemplo, comentado (recusa se já existir)
+crudmaker init outro.yaml     # ou com outro nome (.yaml ou .yml)
+crudmaker init manifest.json  # a extensão escolhe o formato: .json cria o exemplo em JSON
 ```
 
-Edite o arquivo conforme o formato descrito em [manifest.md](manifest.md).
+Edite o arquivo conforme o formato descrito em [manifest.md](manifest.md). YAML é o formato recomendado (aceita comentários); JSON continua funcionando. O formato é detectado pela extensão (`.yaml`, `.yml` ou `.json`); qualquer outra dá erro. Para ter autocomplete no VS Code, veja [Autocomplete no editor](manifest.md#autocomplete-no-editor-json-schema).
 
 ## 2. Ter o projeto Laravel de destino
 
@@ -36,7 +37,7 @@ O destino é a raiz desse projeto. Os arquivos gerados caem direto em `app/` e `
 ## 3. Conferir com `--dry-run`
 
 ```bash
-crudmaker generate manifest.json --out ../minha-api --dry-run
+crudmaker generate manifest.yaml --out ../minha-api --dry-run
 ```
 
 Não escreve nada. Lista cada arquivo com o que aconteceria:
@@ -51,10 +52,10 @@ Não escreve nada. Lista cada arquivo com o que aconteceria:
 ## 4. Gerar
 
 ```bash
-crudmaker generate manifest.json --out ../minha-api
+crudmaker generate manifest.yaml --out ../minha-api
 ```
 
-`--out` é a raiz do projeto Laravel e, se omitido, vale o diretório atual. No fim a CLI imprime o resumo: a lista de arquivos por classificação e as contagens (`Total: 13 arquivos (13 criados, 0 sobrescritos, 0 sem mudança, 0 preservados)`). Erros (manifest inexistente, JSON inválido, manifest inválido) vão para o stderr com exit code 1.
+`--out` é a raiz do projeto Laravel e, se omitido, vale o diretório atual. No fim a CLI imprime o resumo: a lista de arquivos por classificação e as contagens (`Total: 13 arquivos (13 criados, 0 sobrescritos, 0 sem mudança, 0 preservados)`). Erros (manifest inexistente, extensão não suportada, JSON ou YAML inválido, manifest inválido) vão para o stderr com exit code 1.
 
 Para cada entidade são escritos:
 

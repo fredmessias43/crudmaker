@@ -1,8 +1,24 @@
 # Referência do manifest
 
-O manifest é um JSON que descreve as entidades da API. O crudmaker o valida, normaliza (formas curtas viram formas completas, campos de FK são derivados dos relacionamentos) e gera o PHP a partir do resultado.
+O manifest descreve as entidades da API. Pode ser escrito em **YAML** (`.yaml`/`.yml`, formato recomendado: aceita comentários) ou em **JSON** (`.json`); o formato é detectado pela extensão e os dois são equivalentes (o mesmo conteúdo gera exatamente a mesma saída). Qualquer outra extensão é recusada com um erro. `crudmaker init` cria um exemplo comentado.
+
+O manifest O crudmaker o valida, normaliza (formas curtas viram formas completas, campos de FK são derivados dos relacionamentos) e gera o PHP a partir do resultado.
 
 ## Estrutura
+
+```yaml
+system:
+  title: Crudmaker
+  code: crudmaker
+pkg:
+  code: minha-api
+  entities:
+    client:
+      fields: { ... }
+      relationships: { ... }
+```
+
+Em JSON:
 
 ```json
 {
@@ -18,6 +34,8 @@ O manifest é um JSON que descreve as entidades da API. O crudmaker o valida, no
   }
 }
 ```
+
+Os demais exemplos deste documento estão em JSON; a tradução para YAML é direta (`"chave": valor` vira `chave: valor`, listas viram `- item` ou `[a, b]`).
 
 | Chave | Obrigatória | Uso |
 |---|---|---|
@@ -126,6 +144,40 @@ Quando `field` é diferente de `<entidade>_id`, o método da model recebe o nome
 - `owned` e `morphed` adicionam os campos `owner_id` e `owner_class`, mas `ownOne`, `ownMany`, `morphOne`, `morphMany` e `morphTo` ainda **não** geram métodos válidos na model. Não use.
 - `indexes` (por entidade) e `pkg.enums` são aceitos no manifest, mas ignorados.
 
+## Escrevendo em YAML
+
+YAML 1.2, um único documento, com um mapa na raiz (`system`, `pkg`...). Vantagens sobre o JSON: comentários (`#`), sem aspas e sem vírgulas. O `crudmaker init` gera um exemplo comentado que cobre a forma curta × longa, `required`, `unique`, `enum`, `belongsTo` e `hasMany`.
+
+```yaml
+fields:
+  id: uuid                      # forma curta: só o tipo
+  email:                        # forma completa
+    type: string
+    unique: true
+  status: { type: enum, enumItems: [active, blocked] }
+```
+
+Erros específicos de YAML (todos com exit code 1, sem gerar nada):
+
+| Situação | Mensagem |
+|---|---|
+| Sintaxe inválida | `YAML inválido em <arquivo>:<linha>:<coluna>: <motivo>` (também para chave duplicada) |
+| Arquivo vazio ou só com comentários | `O manifest <arquivo> está vazio.` |
+| Lista ou texto na raiz | `O manifest <arquivo> deve ser um mapa (system, pkg...) na raiz, mas é uma lista.` |
+| Mais de um documento (`---`) | `<arquivo> tem 2 documentos YAML (separados por "---"); o manifest deve ter um só.` |
+| Extensão diferente de `.yaml`, `.yml`, `.json` | `Extensão ".toml" não suportada em <arquivo>. Use um destes: .yaml, .yml, .json.` |
+
+Depois do parse, o YAML passa pela mesma validação do JSON, com as mesmas mensagens e caminhos.
+
+### Pegadinhas do YAML
+
+- **Indentação com espaços**, nunca tabs. Uma indentação errada muda a estrutura (um campo vira filho de outro) e costuma aparecer como erro de validação, não de sintaxe.
+- **`no`, `yes`, `on`, `off` são texto**, não booleano (YAML 1.2). Só `true` e `false` são booleanos, então `required: false` funciona como esperado. Para o nome de uma entidade ou campo, prefira não usar essas palavras mesmo assim, para o arquivo continuar legível em outras ferramentas (YAML 1.1).
+- **Números**: `01` vira o número 1 e `1.0` vira 1. Os valores do manifest são nomes de tipo e flags, então isso não afeta o formato atual; se um dia precisar do texto literal, use aspas (`"01"`).
+- **Texto com `:` ou `#`** precisa de aspas (`label: "a: b"`).
+- **Chaves duplicadas** no mesmo mapa são erro, não "vale a última".
+- **Âncoras e aliases** (`&a`, `*a`) funcionam, mas tags customizadas (`!!js/...`) não são interpretadas: nada no manifest executa código.
+
 ## Validação e JSON Schema
 
 O manifest passa por três etapas antes de gerar qualquer arquivo: **estrutura** (schema zod: chaves obrigatórias, tipos de valor, tipo de campo conhecido), **consistência entre entidades** e **normalização**. Todos os problemas de uma etapa são reportados de uma vez, com o caminho real no arquivo. Se a estrutura estiver errada, a consistência entre entidades só é checada depois que ela for corrigida.
@@ -173,9 +225,59 @@ Também funciona por configuração, sem mexer no manifest (`.vscode/settings.js
 { "json.schemas": [{ "fileMatch": ["manifest.json"], "url": "./node_modules/crudmaker/schema/manifest.schema.json" }] }
 ```
 
-Para manifests em YAML, a associação ao schema será feita pela extensão YAML do VS Code (comentário `# yaml-language-server: $schema=...`); isso entra junto com o suporte a YAML (ticket 03).
+#### Em YAML
+
+Instale a extensão **YAML** da Red Hat. Ela lê um comentário no topo do arquivo (é o que o `crudmaker init` escreve):
+
+```yaml
+# yaml-language-server: $schema=./node_modules/crudmaker/schema/manifest.schema.json
+system:
+  code: minha-api
+```
+
+O caminho é relativo ao arquivo do manifest e supõe o crudmaker instalado em `node_modules` ao lado dele (como no exemplo JSON acima). Se o manifest estiver em outra pasta, ou o crudmaker estiver instalado de outra forma, ajuste o caminho (pode ser absoluto ou uma URL). Também funciona por configuração, sem mexer no manifest (`.vscode/settings.json`):
+
+```json
+{ "yaml.schemas": { "./node_modules/crudmaker/schema/manifest.schema.json": ["manifest.yaml", "manifest.yml"] } }
+```
+
+O crudmaker ignora esse comentário (e a chave `$schema` no JSON).
 
 ## Exemplo completo
+
+```yaml
+system:
+  title: Crudmaker
+  code: crudmaker
+pkg:
+  code: vende-que-vende-api
+  entities:
+    client:
+      fields:
+        id: uuid
+        name: string
+        email: { type: string, unique: true }
+        phone: string
+      relationships:
+        hasOne: [address]
+        hasMany: [alert]
+    alert:
+      fields:
+        id: uuid
+        message: string
+        alertDate: datetime
+      relationships:
+        belongsTo: [client]
+    address:
+      fields:
+        id: uuid
+        street: string
+        city: string
+      relationships:
+        belongsTo: [client]
+```
+
+O mesmo manifest em JSON:
 
 ```json
 {

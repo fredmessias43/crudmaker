@@ -1,0 +1,45 @@
+system:
+  title: Crudmaker
+  code: crudmaker
+pkg:
+  code: vende-que-vende-api
+  entities:
+    client:
+      fields:
+        id: uuid
+        name: string
+        email: string
+        phone: string
+        document: string
+      relationships:
+        hasOne:
+          - note
+          - address
+        hasMany:
+          - alert
+    note:
+      fields:
+        id: uuid
+        content: text
+      relationships:
+        belongsTo:
+          - client
+    alert:
+      fields:
+        id: uuid
+        message: string
+        alertDate: datetime
+      relationships:
+        belongsTo:
+          - client
+    address:
+      fields:
+        id: uuid
+        street: string
+        city: string
+        state: string
+        zip: string
+      relationships:
+        belongsTo:
+          - client
+  enums: {}

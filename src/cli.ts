@@ -3,7 +3,7 @@ import path from "path";
 import { parseArgs } from "util";
 import { generate } from "./generate";
 import { exampleManifestText } from "./initTemplate";
-import { readManifest, UserError } from "./readManifest";
+import { acceptedExtensionsText, manifestFormat, readManifest, UserError } from "./readManifest";
 import { applyPlan, planWrites, PlannedWrite, WriteAction } from "./writeFiles";
 
 export type CliIo = {
@@ -51,7 +51,8 @@ Use --dry-run primeiro e mantenha o projeto de destino sob controle de versão.
 
 const initHelp = `Uso: crudmaker init [arquivo]
 
-Cria um manifest de exemplo (padrão: manifest.json no diretório atual).
+Cria um manifest de exemplo (padrão: manifest.yaml no diretório atual).
+O formato vem da extensão: .yaml/.yml (com comentários explicativos) ou .json.
 Recusa se o arquivo já existir.
 
 Opções:
@@ -142,15 +143,21 @@ function runInit(args: string[], io: CliIo): number {
   }
   if (positionals.length > 1) throw new UserError("Informe no máximo um arquivo: crudmaker init [arquivo]");
 
-  const target = path.resolve(io.cwd, positionals[0] ?? "manifest.json");
+  const name = positionals[0] ?? "manifest.yaml";
+  const format = manifestFormat(name);
+  if (!format) {
+    throw new UserError(`Extensão não suportada em ${name}. Use um destes: ${acceptedExtensionsText}.`);
+  }
+
+  const target = path.resolve(io.cwd, name);
   if (fs.existsSync(target)) {
     throw new UserError(`${target} já existe; não vou sobrescrever. Escolha outro nome: crudmaker init <arquivo>`);
   }
 
   fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.writeFileSync(target, exampleManifestText);
+  fs.writeFileSync(target, exampleManifestText(format));
 
-  io.stdout(`Manifest de exemplo criado em ${target}\nPróximo passo: crudmaker generate ${positionals[0] ?? "manifest.json"} --out <projeto-laravel> --dry-run\n`);
+  io.stdout(`Manifest de exemplo criado em ${target}\nPróximo passo: crudmaker generate ${name} --out <projeto-laravel> --dry-run\n`);
   return 0;
 }
 

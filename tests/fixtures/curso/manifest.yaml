@@ -1,0 +1,110 @@
+system:
+  title: Crudmaker
+  code: crudmaker
+pkg:
+  code: curso
+  entities:
+    course:
+      fields:
+        id: uuid
+        name: string
+        description:
+          required: false
+          type: text
+      relationships:
+        hasMany:
+          - course_content
+    course_content:
+      fields:
+        id: uuid
+        course_id: uuid
+        name: string
+        description:
+          required: false
+          type: text
+        link: string
+        pdf: string
+      relationships:
+        belongsTo:
+          - course
+    user:
+      fields:
+        id: uuid
+        name: string
+        email: string
+        password: string
+      relationships:
+        hasMany:
+          - user_course
+    user_course:
+      fields:
+        id: uuid
+        status: string
+        user_id: uuid
+        course_id: uuid
+      relationships:
+        belongsTo:
+          - user
+          - course
+    class:
+      fields:
+        id: uuid
+        name: string
+        description:
+          required: false
+          type: text
+      relationships:
+        hasMany:
+          - class_lesson
+          - student
+    class_lesson:
+      fields:
+        id: uuid
+        class_id: uuid
+        name: string
+        description:
+          required: false
+          type: text
+        link: string
+        pdf: string
+      relationships:
+        hasMany:
+          - class_lesson_comment
+        belongsTo:
+          - class
+    class_lesson_comment:
+      fields:
+        id: uuid
+        class_lesson_id: uuid
+        name: string
+        description:
+          required: false
+          type: text
+        link: string
+        pdf: string
+      relationships:
+        belongsTo:
+          - class_lesson
+          - user
+        hasMany:
+          - class_lesson_comment
+    class_lesson_attendee:
+      fields:
+        id: uuid
+        class_lesson_id: uuid
+        user_id: uuid
+      relationships:
+        belongsTo:
+          - class_lesson
+          - user
+    student:
+      fields:
+        id: uuid
+        status: string
+        class_id: uuid
+        user_id: uuid
+      relationships:
+        belongsTo:
+          - class
+          - user
+  enums: {}

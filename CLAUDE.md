@@ -1,11 +1,11 @@
 # crudmaker
 
-Gerador de API Laravel a partir de um manifest JSON: lê entidades, campos e relacionamentos e escreve Model, Migration, Controller, Request, Resource e Collection. Escrito em TypeScript, roda com `tsx`.
+Gerador de API Laravel a partir de um manifest YAML ou JSON: lê entidades, campos e relacionamentos e escreve Model, Migration, Controller, Request, Resource e Collection. Escrito em TypeScript, roda com `tsx`.
 
 ## Comandos
 
 - `npm install`
-- `npm run cli -- generate <manifest> --out <dir> [--dry-run]`: roda a CLI pelo código-fonte (`tsx`). `init [arquivo]` cria um manifest de exemplo. Não existe mais caminho fixo nem `npm run dev`.
+- `npm run cli -- generate <manifest> --out <dir> [--dry-run]`: roda a CLI pelo código-fonte (`tsx`). `init [arquivo]` cria um manifest de exemplo (padrão `manifest.yaml`; o formato vem da extensão). Não existe mais caminho fixo nem `npm run dev`.
 - `npm run build`: compila para `dist/` (o `bin` `crudmaker` aponta para `dist/bin.js`; `npm link` ou `npx .` o expõem).
 - `npm test`: roda a suíte (vitest): snapshots de `generate` e testes da CLI em diretório temporário. Os snapshots ficam em `tests/__snapshots__/` e as fixtures em `tests/fixtures/`. Se uma mudança de saída for intencional, revise o diff e atualize com `npx vitest run -u`.
 - `npm run schema`: regenera `schema/manifest.schema.json` a partir do schema zod. **Depois de mudar `src/manifestSchema.ts`, rode `npm run schema`** e versione o resultado (um teste falha se o arquivo estiver desatualizado).
@@ -15,9 +15,9 @@ Gerador de API Laravel a partir de um manifest JSON: lê entidades, campos e rel
 
 - `src/bin.ts`: entrada do binário (shebang); chama `run` de `src/cli.ts`.
 - `src/cli.ts`: `run(argv, io)` devolve o exit code; comandos `generate` e `init`, ajuda e versão. Casca fina em volta de `generate`.
-- `src/readManifest.ts`: único ponto de leitura do manifest (caminho → objeto) e `UserError`.
+- `src/readManifest.ts`: único ponto de leitura do manifest (caminho → objeto; YAML ou JSON pela extensão) e `UserError`.
 - `src/writeFiles.ts`: `planWrites` classifica cada arquivo (criado/sobrescrito/sem mudança/preservado) sem escrever; `applyPlan` grava. O `--dry-run` e a escrita real usam o mesmo plano.
-- `src/initTemplate.ts`: manifest de exemplo do `init`.
+- `src/initTemplate.ts`: manifest de exemplo do `init` (YAML comentado e JSON; devem gerar o mesmo objeto).
 - `src/generate.ts`: `generate(manifest, { now, existingMigrations })`, função pura (sem disco) que devolve a lista de arquivos `{ path, content, policy }`, com `path` relativo à raiz do projeto Laravel.
 - `src/manifestSchema.ts`: schema zod do manifest (fonte do JSON Schema em `schema/manifest.schema.json`, publicado no pacote).
 - `src/validateManifest.ts`: validação (schema + entre entidades) e `ManifestValidationError` com `{ path, message }` por problema.

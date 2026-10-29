@@ -1,12 +1,12 @@
 # Arquitetura
 
-O crudmaker é uma CLI TypeScript (`crudmaker`, compilada para `dist/` ou rodada com `tsx`) que transforma um manifest JSON em arquivos PHP de uma API Laravel.
+O crudmaker é uma CLI TypeScript (`crudmaker`, compilada para `dist/` ou rodada com `tsx`) que transforma um manifest YAML ou JSON em arquivos PHP de uma API Laravel.
 
 ## Fluxo
 
 ```
 crudmaker generate <manifest> --out <dir> [--dry-run]     src/bin.ts → src/cli.ts
-    │  readManifest(caminho)      lê e faz o parse do JSON
+    │  readManifest(caminho)      lê e faz o parse (YAML ou JSON, pela extensão)
     ▼
 generate(manifest, { now, existingMigrations })     função pura, sem acesso ao disco
     │  Manifest        schema (zod) → validação entre entidades → normalização
@@ -29,7 +29,7 @@ A CLI é uma casca fina em volta de `generate` (sem lógica de geração):
 
 - `src/bin.ts`: entrada do binário (shebang `#!/usr/bin/env node`); passa `process.argv` para `run` e usa o retorno como exit code.
 - `src/cli.ts`: `run(argv, io)` interpreta os argumentos (`node:util` `parseArgs`, sem dependência externa), executa `generate` ou `init` e devolve o exit code. `io` (stdout, stderr, cwd, relógio) é injetável, o que permite testar sem subprocesso. Para `generate`, lê os nomes em `<out>/database/migrations` (lista vazia se a pasta não existe), chama `generate` com a data atual, monta o plano de escrita e, sem `--dry-run`, o aplica; depois imprime o resumo.
-- `src/readManifest.ts`: único ponto de leitura do manifest (hoje só JSON). Erros esperados viram `UserError`; a CLI imprime `Erro: <mensagem>` no stderr e sai com código 1, sem stack trace (defina `CRUDMAKER_DEBUG=1` para vê-lo).
+- `src/readManifest.ts`: único ponto de leitura do manifest: escolhe o parser pela extensão (`.yaml`/`.yml` → YAML 1.2 via lib `yaml`, um documento só e mapa na raiz; `.json` → `JSON.parse`; outra extensão é erro). Erros esperados viram `UserError`; a CLI imprime `Erro: <mensagem>` no stderr e sai com código 1, sem stack trace (defina `CRUDMAKER_DEBUG=1` para vê-lo).
 - `src/initTemplate.ts`: conteúdo do manifest criado por `crudmaker init`.
 
 O `npx`/`npm link` usam o campo `bin` do `package.json` (`dist/bin.js`), gerado por `npm run build` (`tsconfig.build.json`, que compila só `src/`).
@@ -99,6 +99,7 @@ O PHP é montado concatenando strings linha a linha, com `\t` como indentação.
 | `pluralize` | nome das tabelas e dos métodos `hasMany` |
 | `lodash` | `snakeCase`, `uniq` |
 | `date-fns` | timestamp do nome da migration |
+| `yaml` | parse do manifest em YAML 1.2 (modo padrão, sem tags customizadas; erros com linha e coluna) |
 | `zod` | schema e validação do manifest, e o JSON Schema publicado |
 
 ## Testes
@@ -106,6 +107,8 @@ O PHP é montado concatenando strings linha a linha, com `\t` como indentação.
 `tests/cli.test.ts` cobre a CLI: chama `run(argv, io)` em diretórios temporários (criação, regeração, `--dry-run`, `init`, erros, ajuda) e tem um teste que roda o binário em subprocesso.
 
 `tests/validate.test.ts` cobre a validação (fixtures válidos, manifests inválidos com caminho e mensagem, vários erros de uma vez) e confere que `schema/manifest.schema.json` está em dia com o schema zod.
+
+`tests/yaml.test.ts` cobre o YAML: cada fixture tem um `manifest.yaml` que precisa ler o mesmo objeto e gerar a mesma saída do JSON, os erros de sintaxe/vazio/multi-documento/extensão, e o `init` em cada formato (o exemplo YAML tem de ser igual ao JSON).
 
 `tests/generate.test.ts` chama `generate` para os três manifests de `tests/fixtures/` com data fixa e sem migrations existentes. O conteúdo de cada arquivo é comparado com um snapshot em `tests/__snapshots__/<fixture>/<path>`, e a lista de caminhos com `_paths.txt`. Os snapshots registram a saída atual, inclusive bugs conhecidos.
 

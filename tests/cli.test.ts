@@ -144,7 +144,7 @@ describe("crudmaker generate", () => {
 
 describe("crudmaker init", () => {
   it("cria um manifest que o generate aceita", () => {
-    expect(run(["init"], io())).toBe(0);
+    expect(run(["init", "manifest.json"], io())).toBe(0);
     expect(fs.existsSync(path.join(tmp, "manifest.json"))).toBe(true);
 
     expect(run(["generate", "manifest.json", "--out", out], io())).toBe(0);
