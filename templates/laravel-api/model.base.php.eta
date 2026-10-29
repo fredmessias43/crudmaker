@@ -19,6 +19,21 @@ abstract class <%~ it.className %> extends <%~ it.extends %>
 	protected $keyType = "string";
 	public $incrementing = false;
 	
+<% if (it.capabilities.castsMethod) { -%>
+	/**
+	 * Get the attributes that should be cast.
+	 *
+	 * @return array<string, string>
+	 */
+	protected function casts(): array
+	{
+		return [
+<% for (const cast of it.casts) { -%>
+			'<%~ cast.name %>' => '<%~ cast.cast %>',
+<% } -%>
+		];
+	}
+<% } else { -%>
 	/**
 	 * The attributes that should be cast.
 	 *
@@ -29,6 +44,7 @@ abstract class <%~ it.className %> extends <%~ it.extends %>
 		'<%~ cast.name %>' => '<%~ cast.cast %>',
 <% } -%>
 	];
+<% } -%>
 	
 	/**
 	 * The attributes that are mass assignable.

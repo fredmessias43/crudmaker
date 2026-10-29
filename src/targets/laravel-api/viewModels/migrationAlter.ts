@@ -1,5 +1,6 @@
 import { Entity } from "../../../models/Entity";
 import { Field, LockMigrationChange } from "../../../types";
+import { Capabilities } from "../capabilities";
 import { column, foreignKeyTable } from "./migration";
 
 /**
@@ -109,10 +110,11 @@ function renderOperation(operation: SchemaOperation): string {
 }
 
 /** Variáveis do template `migration.alter`: `up` na ordem do diff, `down` as inversas na ordem contrária. */
-export function alterView(table: string, operations: SchemaOperation[]) {
+export function alterView(table: string, operations: SchemaOperation[], capabilities: Capabilities) {
   const notes: string[] = [];
-  if (operations.some((operation) => operation.op === "changeColumn")) {
-    notes.push("->change() nativo no Laravel 11+; no Laravel 10 ou anterior exige o pacote doctrine/dbal (composer require doctrine/dbal).");
+  // Sem `->change()` nativo (Laravel 10), o comentário lembra do doctrine/dbal; nas versões novas não há o que avisar.
+  if (!capabilities.nativeColumnChange && operations.some((operation) => operation.op === "changeColumn")) {
+    notes.push("No Laravel 10, ->change() exige o pacote doctrine/dbal (composer require doctrine/dbal).");
   }
 
   const downNotes: string[] = [];

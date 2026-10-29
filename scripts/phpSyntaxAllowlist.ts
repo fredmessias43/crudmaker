@@ -3,7 +3,7 @@
  *
  * Cada entrada é um problema REAL do gerador que ainda não foi corrigido: a checagem continua
  * detectando o erro (e o mostra como "conhecido"), mas não quebra a checagem. Regras:
- * - `file`: caminho `<fixture>/<caminho relativo do arquivo gerado>`;
+ * - `file`: caminho `<fixture>/<caminho relativo do arquivo gerado>` (na passada do Laravel 10: `laravel-10/<fixture>/...`);
  * - `reason`: o que é e qual ticket corrige;
  * - quando o ticket corrigir, REMOVA a entrada: a checagem falha se uma entrada deixar de falhar.
  * Não acrescente entradas para esconder um erro novo; corrija o gerador.

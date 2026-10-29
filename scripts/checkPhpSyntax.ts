@@ -3,6 +3,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { generate } from "../src/generate";
+import { TargetVersion } from "../src/targetVersion";
 import { phpSyntaxAllowlist } from "./phpSyntaxAllowlist";
 
 /**
@@ -65,13 +66,23 @@ export function checkPhpDir(dir: string): PhpCheckResult {
   return { total, failures };
 }
 
+/**
+ * Versões alvo checadas. O padrão (Laravel 12) fica em `<fixture>/`; as demais em `<pasta>/<fixture>/`, onde o
+ * Laravel 10 (o mais diferente: `$casts` como propriedade, comentário do doctrine/dbal) é checado com o PHP mínimo.
+ * O Laravel 11 gera a mesma saída do 12 e não precisa de passada própria.
+ */
+export const lintTargets: { dir: string; target: TargetVersion }[] = [
+  { dir: "", target: { laravel: 12, php: "8.2" } },
+  { dir: "laravel-10", target: { laravel: 10, php: "8.1" } },
+];
+
 /** Gera a saída de cada fixture em `<outDir>/<fixture>/` (só em memória + diretório temporário). */
-export function writeFixtureOutputs(outDir: string): void {
+export function writeFixtureOutputs(outDir: string, target?: TargetVersion): void {
   for (const name of fs.readdirSync(fixturesDir).sort()) {
     const manifestPath = path.join(fixturesDir, name, "manifest.json");
     if (!fs.existsSync(manifestPath)) continue;
     const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-    const first = generate(manifest, { now, existingMigrations: [] }).files;
+    const first = generate(manifest, { now, existingMigrations: [], target }).files;
     for (const file of first) {
       const target = path.join(outDir, name, file.path);
       fs.mkdirSync(path.dirname(target), { recursive: true });
@@ -85,6 +96,7 @@ export function writeFixtureOutputs(outDir: string): void {
       now,
       existingMigrations: first.filter((file) => file.path.startsWith("database/migrations/")).map((file) => path.basename(file.path)),
       previousLock: JSON.parse(first.find((file) => file.path === "manifest-lock.json")!.content),
+      target,
     }).files;
     for (const file of second.filter((file) => file.path.includes("_alter_"))) {
       fs.writeFileSync(path.join(outDir, name, file.path), file.content);
@@ -116,7 +128,7 @@ function main(): number {
 
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "crudmaker-php-"));
   try {
-    writeFixtureOutputs(tmp);
+    for (const { dir, target } of lintTargets) writeFixtureOutputs(path.join(tmp, dir), target);
 
     // Só para provar que a checagem falha: injeta um PHP inválido (usado no teste e na verificação manual).
     if (process.env.CRUDMAKER_INJECT_INVALID_PHP) {
@@ -125,7 +137,7 @@ function main(): number {
       fs.writeFileSync(bad, "<?php\n\nclass Quebrado {\n\tpublic function x( {\n}\n");
     }
 
-    console.log(`Rodando php -l em ${phpImage} (fixtures: ${fs.readdirSync(tmp).filter((n) => n !== "__invalido__").join(", ")})...`);
+    console.log(`Rodando php -l em ${phpImage} (fixtures: ${fs.readdirSync(tmp).filter((n) => n !== "__invalido__" && !lintTargets.some((item) => item.dir === n)).join(", ")}; versões: ${lintTargets.map((item) => `Laravel ${item.target.laravel}`).join(", ")})...`);
     const { total, failures } = checkPhpDir(tmp);
     const { unexpected, known, staleAllowlist } = classifyFailures(failures);
 

@@ -45,6 +45,7 @@ Os demais exemplos deste documento estão em JSON; a tradução para YAML é dir
 | `pkg.code` | sim | Nome da pasta de saída: os arquivos vão para `generated/<pkg.code>/`. |
 | `pkg.entities` | sim | Mapa `nomeDaEntidade → definição`. |
 | `pkg.normalizeNames` | não | `true` (padrão) ou `false`. Liga/desliga a [normalização de nomes](#normalização-de-nomes). |
+| `pkg.target` | não | [Versão alvo](#versão-alvo-target) do código gerado: `laravel` (10, 11 ou 12) e/ou `php` (8.1 ou superior). |
 | `pkg.defaults.api` | não | Valores padrão do bloco [`api`](#opções-da-api-api) de todas as entidades (só `actions`, `middleware` e `perPage`). |
 | `pkg.entities.<nome>.api` | não | [Opções da API](#opções-da-api-api) da entidade: actions, middleware, paginação, filtros, busca, ordenação e eager loading. |
 
@@ -59,6 +60,19 @@ A chave em `pkg.entities` é o nome da entidade no singular, em camelCase (`clie
 | Classes (Model, Controller...) | `OrderItem`, `OrderItemController` |
 | Tabela | `order_items` (snake_case + plural) |
 | Variáveis | `$orderItem` |
+
+## Versão alvo (`target`)
+
+```yaml
+pkg:
+  code: minha-api
+  target:
+    laravel: 11      # major: 10, 11 ou 12
+    php: "8.2"       # major.minor: 8.1 ou superior
+  entities: { ... }
+```
+
+Os dois campos são opcionais e independentes: o que faltar é detectado no `composer.lock`/`composer.json` do destino ou cai no padrão (Laravel 12, PHP 8.2). As flags `--laravel` e `--php` da CLI têm prioridade sobre o manifest, e o manifest sobre a detecção. Laravel fora de 10–12, PHP abaixo de 8.1 ou abaixo do mínimo do Laravel escolhido (10 → 8.1; 11 e 12 → 8.2) dão erro. Em YAML, `php: 8.2` (número) funciona; escreva entre aspas se a minor tiver dois dígitos. O passo a passo da escolha está em [Versão do Laravel e do PHP](como-usar.md#versão-do-laravel-e-do-php). A versão não altera o schema nem as migrations de criação; o `manifest-lock.json` registra o `target` usado.
 
 ## Campos (`fields`)
 

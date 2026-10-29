@@ -27,12 +27,15 @@ abstract class BaseClassLessonComment extends Model
 	public $incrementing = false;
 	
 	/**
-	 * The attributes that should be cast.
+	 * Get the attributes that should be cast.
 	 *
-	 * @var array
+	 * @return array<string, string>
 	 */
-	protected $casts = [
-	];
+	protected function casts(): array
+	{
+		return [
+		];
+	}
 	
 	/**
 	 * The attributes that are mass assignable.

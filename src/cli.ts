@@ -4,6 +4,9 @@ import { parseArgs } from "util";
 import { generate } from "./generate";
 import { publishStubs, readStubs } from "./stubFiles";
 import { stubsFolder, stubsLockPath } from "./targets/laravel-api/stubs";
+import { detectTarget } from "./detectTarget";
+import { capabilitiesFor, Capabilities } from "./targets/laravel-api/capabilities";
+import { describeTarget, resolveTarget, ResolvedTarget } from "./targetVersion";
 import { exampleManifestText } from "./initTemplate";
 import { acceptedExtensionsText, manifestFormat, readManifest, UserError } from "./readManifest";
 import { applyPlan, applyRemovals, legacyFinalWarnings, planRemovals, planWrites, PlannedRemoval, PlannedWrite, WriteAction } from "./writeFiles";
@@ -40,6 +43,7 @@ Opções:
 `;
 
 const generateHelp = `Uso: crudmaker generate <manifest> [--out <dir>] [--dry-run] [--normalize-names | --no-normalize-names]
+                                  [--laravel <10|11|12>] [--php <x.y>]
 
 Gera Model, Migration, Controller, Request, Resource e Collection de cada entidade,
 mais o arquivo de rotas (routes/crudmaker.php), incluído uma única vez no routes/api.php.
@@ -50,6 +54,10 @@ Opções:
   --normalize-names     liga a normalização de nomes (entidade singular camelCase, campo snake_case)
   --no-normalize-names  desliga a normalização: os nomes passam como estão (só avisa o que está fora da convenção)
                         As duas flags têm prioridade sobre pkg.normalizeNames do manifest (padrão: ligada).
+  --laravel <n>     major do Laravel de destino: 10, 11 ou 12
+  --php <x.y>       versão do PHP de destino: 8.1 ou superior (mínimo do Laravel 10: 8.1; do 11 e do 12: 8.2)
+                    A versão de cada parte vem, nesta ordem, de: flag, pkg.target do manifest, composer.lock/composer.json
+                    do destino (--out), padrão (Laravel 12, PHP 8.2). O resumo mostra a versão usada e a origem.
   -h, --help        mostra esta ajuda
 
 Stubs: se existir stubs/crudmaker/laravel-api/ no projeto de destino, cada arquivo dela substitui o template
@@ -105,20 +113,21 @@ function readVersion(): string {
   return pkg.version;
 }
 
-function missingApiRoutesWarning(outDir: string): string {
-  return [
-    "",
-    `Aviso: ${path.join(outDir, "routes/api.php")} não existe, então as rotas geradas (routes/crudmaker.php) ainda não são carregadas.`,
-    'No projeto Laravel, rode "php artisan install:api" (cria o arquivo e o registra em bootstrap/app.php) e rode o generate de novo.',
-    "",
-  ].join("\n");
+function missingApiRoutesWarning(outDir: string, capabilities: Capabilities): string {
+  const where = path.join(outDir, "routes/api.php");
+  const how = capabilities.apiRoutesViaBootstrap
+    ? 'No projeto Laravel, rode "php artisan install:api" (cria o arquivo e o registra em bootstrap/app.php) e rode o generate de novo.'
+    : "No Laravel 10 o routes/api.php vem no esqueleto e o RouteServiceProvider o carrega; confira se --out aponta para a raiz do projeto " +
+      "ou restaure o arquivo (ele só precisa do <?php e do use Illuminate\\Support\\Facades\\Route) e rode o generate de novo.";
+
+  return ["", `Aviso: ${where} não existe, então as rotas geradas (routes/crudmaker.php) ainda não são carregadas.`, how, ""].join("\n");
 }
 
-function printPlan(plan: PlannedWrite[], removals: PlannedRemoval[], warnings: string[], io: CliIo, baseDir: string, dryRun: boolean): void {
+function printPlan(plan: PlannedWrite[], removals: PlannedRemoval[], warnings: string[], io: CliIo, baseDir: string, dryRun: boolean, target: ResolvedTarget): void {
   const lines: string[] = [];
   const verb = dryRun ? "Seria" : "Resumo";
 
-  lines.push(`${dryRun ? "Simulação (nada foi escrito)" : verb} em ${baseDir}`, "");
+  lines.push(`${dryRun ? "Simulação (nada foi escrito)" : verb} em ${baseDir}`, `Versão alvo: ${describeTarget(target)}`, "");
 
   for (const action of actionOrder) {
     const items = plan.filter((item) => item.action === action);
@@ -167,6 +176,8 @@ function runGenerate(args: string[], io: CliIo): number {
       "dry-run": { type: "boolean", short: "n" },
       "normalize-names": { type: "boolean" },
       "no-normalize-names": { type: "boolean" },
+      laravel: { type: "string" },
+      php: { type: "string" },
       help: { type: "boolean", short: "h" },
     },
   });
@@ -188,6 +199,15 @@ function runGenerate(args: string[], io: CliIo): number {
   const manifestPath = path.resolve(io.cwd, positionals[0]);
   const outDir = path.resolve(io.cwd, values.out ?? ".");
   const manifestObj = readManifest(manifestPath);
+
+  // Versão alvo: flag → pkg.target do manifest → composer.lock/composer.json do destino → padrão.
+  const detection = detectTarget(outDir);
+  const pkg = manifestObj.pkg;
+  const resolved = resolveTarget({
+    flags: { laravel: values.laravel, php: values.php },
+    manifest: typeof pkg === "object" && pkg !== null ? pkg.target : undefined,
+    detected: detection.detected,
+  });
 
   const migrationsDir = path.join(outDir, "database/migrations");
   const existingMigrations = fs.existsSync(migrationsDir) ? fs.readdirSync(migrationsDir) : [];
@@ -217,6 +237,7 @@ function runGenerate(args: string[], io: CliIo): number {
     previousLock,
     stubs: projectStubs.stubs,
     stubHashes: projectStubs.hashes,
+    target: resolved.target,
   });
   const plan = planWrites(files, outDir);
   const removals = planRemovals(obsolete, outDir);
@@ -226,8 +247,8 @@ function runGenerate(args: string[], io: CliIo): number {
     applyRemovals(removals, outDir);
   }
 
-  printPlan(plan, removals, [...warnings, ...lockWarnings, ...projectStubs.warnings, ...legacyFinalWarnings(plan)], io, outDir, Boolean(values["dry-run"]));
-  if (existingApiRoutes === null) io.stdout(missingApiRoutesWarning(outDir));
+  printPlan(plan, removals, [...resolved.warnings, ...detection.warnings, ...warnings, ...lockWarnings, ...projectStubs.warnings, ...legacyFinalWarnings(plan)], io, outDir, Boolean(values["dry-run"]), resolved);
+  if (existingApiRoutes === null) io.stdout(missingApiRoutesWarning(outDir, capabilitiesFor(resolved.target)));
   return 0;
 }
 

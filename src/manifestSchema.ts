@@ -134,6 +134,13 @@ const entitySchema = z.object({
   api: apiSchema,
 }).partial().describe("Definição de uma entidade.");
 
+const targetSchema = z.object({
+  laravel: z.union([z.number().int(), z.string()]).describe("Major do Laravel de destino: 10, 11 ou 12."),
+  php: z.union([z.number(), z.string()]).describe(`Versão do PHP de destino no formato major.minor (8.1 ou superior; mínimo de cada Laravel: 10 → 8.1, 11 e 12 → 8.2). Em YAML, escreva entre aspas se a minor tiver dois dígitos.`),
+}).partial().describe(
+  "Versão alvo do código gerado. Cada parte é independente e, se omitida, é detectada no composer.lock/composer.json do destino (--out) ou cai no padrão (Laravel 12, PHP 8.2). As flags --laravel e --php da CLI têm prioridade.",
+);
+
 export const manifestSchema = z.object({
   $schema: z.string().describe("Caminho ou URL do JSON Schema, para autocomplete no editor. Ignorado pelo crudmaker.").optional(),
   system: z.object({
@@ -147,6 +154,7 @@ export const manifestSchema = z.object({
       "Normaliza nomes fora da convenção: entidades viram singular camelCase (awards → award, drawn_numbers → drawnNumber) e campos viram snake_case (alertDate → alert_date), com um aviso por nome alterado. Padrão: true. false mantém os nomes como estão (só avisa). A flag --normalize-names / --no-normalize-names da CLI tem prioridade.",
     ).optional(),
     defaults: z.object({ api: defaultsApiSchema }).partial().describe("Valores padrão para todas as entidades.").optional(),
+    target: targetSchema.optional(),
     enums: z.unknown().describe("Reservado; aceito, mas ignorado.").optional(),
   }).describe("Pacote a gerar."),
 }).describe("Manifest do crudmaker: descreve as entidades de uma API Laravel.");

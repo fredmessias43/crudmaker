@@ -22,20 +22,23 @@ abstract class BaseAccount extends Model
 	public $incrementing = false;
 	
 	/**
-	 * The attributes that should be cast.
+	 * Get the attributes that should be cast.
 	 *
-	 * @var array
+	 * @return array<string, string>
 	 */
-	protected $casts = [
-		'age' => 'integer',
-		'credit' => 'double',
-		'score' => 'integer',
-		'active' => 'boolean',
-		'newsletter' => 'boolean',
-		'birthday' => 'date',
-		'last_seen' => 'datetime',
-		'settings' => 'array',
-	];
+	protected function casts(): array
+	{
+		return [
+			'age' => 'integer',
+			'credit' => 'double',
+			'score' => 'integer',
+			'active' => 'boolean',
+			'newsletter' => 'boolean',
+			'birthday' => 'date',
+			'last_seen' => 'datetime',
+			'settings' => 'array',
+		];
+	}
 	
 	/**
 	 * The attributes that are mass assignable.

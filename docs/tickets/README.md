@@ -2,7 +2,7 @@
 
 Tickets da [spec da v2](../specs/crudmaker-v2.md), divididos em fases. Cada ticket é uma fatia vertical que pode ser verificada sozinha. Pode começar qualquer ticket cujos bloqueadores já estejam prontos, mesmo que seja de outra fase.
 
-Até o ticket 15 (versão alvo), o código gerado mira o layout do Laravel 11+.
+Desde o ticket 15 (versão alvo), o código gerado segue a versão do Laravel (10, 11 ou 12) e do PHP do projeto de destino.
 
 ## Fase 1 — Deixar usável de novo
 

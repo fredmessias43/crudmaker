@@ -1,6 +1,7 @@
 import { snakeCase } from "lodash";
 import { resolveApi } from "../apiOptions";
 import { ApiInput, FieldInput, ManifestInput, RELATION_KEYS, OWNER_KEYS } from "../manifestSchema";
+import { TargetVersion } from "../targetVersion";
 import { Field, LOCK_VERSION, LockMigration, ManifestEntities, ManifestEntity, RelationshipValue, Relationships } from "../types";
 import { validateManifest, ValidateOptions } from "../validateManifest";
 
@@ -133,12 +134,13 @@ export class Manifest {
   /**
    * Conteúdo do `manifest-lock.json`: o schema normalizado (`entities`) e as migrations já emitidas.
    */
-  public manifestToString(migrations: LockMigration[] = []): string {
+  public manifestToString(migrations: LockMigration[] = [], target?: TargetVersion): string {
     return JSON.stringify(
       {
         lockVersion: LOCK_VERSION,
         code: this.pkgCode,
         version: "0.1.0",
+        ...(target !== undefined && { target: { laravel: target.laravel, php: target.php } }),
         entities: this.entities,
         migrations,
       },

@@ -24,13 +24,16 @@ abstract class BaseAlert extends Model
 	public $incrementing = false;
 	
 	/**
-	 * The attributes that should be cast.
+	 * Get the attributes that should be cast.
 	 *
-	 * @var array
+	 * @return array<string, string>
 	 */
-	protected $casts = [
-		'alertDate' => 'datetime',
-	];
+	protected function casts(): array
+	{
+		return [
+			'alertDate' => 'datetime',
+		];
+	}
 	
 	/**
 	 * The attributes that are mass assignable.

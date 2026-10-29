@@ -82,4 +82,6 @@ export type PreviousLock = {
   lockVersion?: number,
   entities?: ManifestEntities,
   migrations?: unknown,
+  /** Versão alvo da geração anterior (lock sem ela = geração anterior ao ticket 15). */
+  target?: { laravel?: unknown, php?: unknown },
 };

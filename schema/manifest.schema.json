@@ -780,6 +780,32 @@
           },
           "description": "Valores padrão para todas as entidades."
         },
+        "target": {
+          "type": "object",
+          "properties": {
+            "laravel": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "description": "Major do Laravel de destino: 10, 11 ou 12."
+            },
+            "php": {
+              "description": "Versão do PHP de destino no formato major.minor (8.1 ou superior; mínimo de cada Laravel: 10 → 8.1, 11 e 12 → 8.2). Em YAML, escreva entre aspas se a minor tiver dois dígitos.",
+              "type": [
+                "number",
+                "string"
+              ]
+            }
+          },
+          "description": "Versão alvo do código gerado. Cada parte é independente e, se omitida, é detectada no composer.lock/composer.json do destino (--out) ou cai no padrão (Laravel 12, PHP 8.2). As flags --laravel e --php da CLI têm prioridade."
+        },
         "enums": {
           "description": "Reservado; aceito, mas ignorado."
         }

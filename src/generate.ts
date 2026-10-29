@@ -4,6 +4,7 @@ import { generateLaravelApi } from "./targets/laravel-api";
 import { FilePolicy, GeneratedFile, ObsoleteFile } from "./targets/types";
 import { Stubs } from "./targets/laravel-api/render";
 import { prepareStubs } from "./targets/laravel-api/stubs";
+import { assertSupported, DEFAULT_TARGET, TargetVersion } from "./targetVersion";
 import { LockMigration, PreviousLock } from "./types";
 
 export { FilePolicy, GeneratedFile, ObsoleteFile };
@@ -49,6 +50,13 @@ export type GenerateOptions = {
    * Se o embutido atual tem outro hash, `warnings` traz o aviso de stub desatualizado.
    */
   stubHashes?: { [templateName: string]: string };
+  /**
+   * Versão do Laravel/PHP de destino (`{ laravel: 10 | 11 | 12, php: "8.1" ... }`). Define as capacidades que os
+   * templates consultam (casts como método, `->change()` nativo...) e fica registrada no lock. A resolução (flag,
+   * manifest, composer) é da CLI; aqui só entra o resultado. Omitida, vale `DEFAULT_TARGET` (Laravel 12, PHP 8.2).
+   * Versão não suportada, ou PHP abaixo do mínimo do Laravel, lança `TargetVersionError`.
+   */
+  target?: TargetVersion;
 };
 
 export type GenerateResult = {
@@ -83,11 +91,25 @@ function previousMigrations(lock: GenerateOptions["previousLock"]): LockMigratio
   );
 }
 
+/** Aviso quando o lock anterior foi gerado para outra versão (Laravel/PHP): o código já emitido pode estar no estilo antigo. */
+function targetChangeWarnings(lock: GenerateOptions["previousLock"], target: TargetVersion): string[] {
+  const before = lock?.target;
+  if (typeof before?.laravel !== "number" || typeof before?.php !== "string") return [];
+  if (before.laravel === target.laravel && before.php === target.php) return [];
+
+  return [
+    `A versão alvo mudou desde a última geração (Laravel ${before.laravel}, PHP ${before.php} → Laravel ${target.laravel}, PHP ${target.php}). ` +
+      `A camada gerada foi regravada para a nova versão; confira as classes finais, as migrations já emitidas e os stubs do projeto.`,
+  ];
+}
+
 /**
  * Função pura: não lê nem escreve em disco.
  * Recebe o manifest cru (já parseado) e devolve os arquivos a gravar e os avisos.
  */
 export function generate(manifestObj: { [key: string]: any }, options: GenerateOptions): GenerateResult {
+  const target = options.target ?? DEFAULT_TARGET;
+  assertSupported(target);
   const stubs = prepareStubs(options.stubs ?? {}, options.stubHashes ?? {});
   const manifest = new Manifest(manifestObj, { normalizeNames: options.normalizeNames });
   const entities = Object.keys(manifest.entities).map((key) => new Entity(key, manifest.entities[key]));
@@ -102,6 +124,7 @@ export function generate(manifestObj: { [key: string]: any }, options: GenerateO
     previousEntities: previousEntities(options.previousLock),
     previousMigrations: lockedMigrations,
     stubs: stubs.stubs,
+    target,
   });
 
   // Histórico do lock: o que já estava registrado mais o que esta geração acrescenta (sem repetir arquivo).
@@ -111,11 +134,11 @@ export function generate(manifestObj: { [key: string]: any }, options: GenerateO
   const files: GeneratedFile[] = [
     {
       path: "manifest-lock.json",
-      content: manifest.manifestToString(migrations),
+      content: manifest.manifestToString(migrations, target),
       policy: "overwrite",
     },
     ...api.files,
   ];
 
-  return { files, warnings: [...manifest.warnings, ...api.warnings, ...stubs.warnings], obsolete: api.obsolete };
+  return { files, warnings: [...manifest.warnings, ...targetChangeWarnings(options.previousLock, target), ...api.warnings, ...stubs.warnings], obsolete: api.obsolete };
 }

@@ -10,12 +10,12 @@
 - [07 — Migrar os geradores para templates](../fase-2-bugs/07-migrar-para-templates.md)
 - [06 — Gerar as rotas](../fase-1-usavel/06-gerar-rotas.md)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Critérios de aceite
 
-- [ ] Snapshots rodando para Laravel 10, 11 e 12.
-- [ ] Testes da resolução de versão com `composer.json`/`composer.lock` de exemplo.
-- [ ] Inclusão das rotas no lugar certo para cada versão.
-- [ ] Versão não suportada falha com mensagem clara.
-- [ ] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.
+- [x] Snapshots rodando para Laravel 10, 11 e 12.
+- [x] Testes da resolução de versão com `composer.json`/`composer.lock` de exemplo.
+- [x] Inclusão das rotas no lugar certo para cada versão.
+- [x] Versão não suportada falha com mensagem clara.
+- [x] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.

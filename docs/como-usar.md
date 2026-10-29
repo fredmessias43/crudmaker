@@ -5,7 +5,7 @@ Este guia descreve o fluxo atual do crudmaker, pela CLI `crudmaker`. O manifest 
 ## Pré-requisitos
 
 - Node.js e npm.
-- Um projeto Laravel com a API instalada (`php artisan install:api`), se você quiser rodar o resultado.
+- Um projeto Laravel 10, 11 ou 12 (PHP 8.1 ou superior) com a API instalada (no 11 e no 12, `php artisan install:api`), se você quiser rodar o resultado. Veja [Versão do Laravel e do PHP](#versão-do-laravel-e-do-php).
 
 ```bash
 npm install
@@ -33,6 +33,60 @@ cd minha-api && php artisan install:api
 ```
 
 O destino é a raiz desse projeto. Os arquivos gerados caem direto em `app/` e `database/migrations/`.
+
+## Versão do Laravel e do PHP
+
+O código gerado segue a versão do projeto de destino. **Suportados: Laravel 10, 11 e 12; PHP 8.1 ou superior** (mínimo de cada Laravel: 10 → PHP 8.1; 11 e 12 → PHP 8.2). Outra versão dá erro, e nada é escrito.
+
+Cada parte (Laravel e PHP) é resolvida **de forma independente**, na primeira fonte que existir:
+
+| Prioridade | Fonte | Como informar |
+|---|---|---|
+| 1 | flag | `--laravel 11` e/ou `--php 8.2` |
+| 2 | manifest | `pkg.target.laravel` e/ou `pkg.target.php` (veja [manifest.md](manifest.md#versão-alvo-target)) |
+| 3 | `composer.lock` / `composer.json` do destino (`--out`) | automático |
+| 4 | padrão | Laravel 12, PHP 8.2 |
+
+Detecção no destino:
+
+- **Laravel**: a versão instalada de `laravel/framework` no `composer.lock` (`v11.38.1` → 11); sem lock, a restrição `require.laravel/framework` do `composer.json` (`^11.0` → 11). Com mais de uma alternativa (`^10.0 || ^11.0`), vale a menor.
+- **PHP**: `config.platform.php` do `composer.json`, depois `platform-overrides.php` do `composer.lock` (versões fixadas), depois a restrição `require.php` do `composer.json` (`^8.2` → 8.2; com alternativas, a menor) e, por fim, `platform.php` do `composer.lock`.
+- Arquivo ilegível ou restrição que não dá para interpretar (`dev-master`) gera um aviso e é ignorado.
+
+Quando a versão vem de flag ou manifest e **diverge da detectada**, vale a explícita e o resumo traz um aviso. Para o PHP, uma restrição (`^8.2`) só dá o mínimo: um PHP explícito igual ou maior não avisa.
+
+O resumo mostra a versão usada e a origem de cada parte (`flag`, `manifest`, `composer.lock`, `composer.json` ou `padrão`), e o `manifest-lock.json` registra o `target`. Se a versão mudar entre duas gerações, aparece um aviso lembrando que a camada gerada foi regravada (classes finais, migrations já emitidas e stubs são seus e não mudam).
+
+Exemplos (saídas reais, trechos):
+
+```text
+$ crudmaker generate manifest.yaml --out ../minha-api --dry-run      # projeto com composer.lock do Laravel 11
+Simulação (nada foi escrito) em /home/eu/minha-api
+Versão alvo: Laravel 11 (composer.lock), PHP 8.2 (composer.json)
+
+$ crudmaker generate manifest.yaml --out ../minha-api --laravel 10 --php 8.1
+Versão alvo: Laravel 10 (flag), PHP 8.1 (flag)
+...
+Avisos (2):
+  Laravel 10 (flag) diverge do instalado no destino: Laravel 11 (composer.lock). Vale o explícito; confira se é isso mesmo.
+  PHP 8.1 (flag) diverge do mínimo declarado no destino: PHP 8.2 (composer.json). Vale o explícito; confira se é isso mesmo.
+
+$ crudmaker generate manifest.yaml --laravel 9
+Erro: Laravel 9 (flag) não é suportado. O crudmaker gera código para o Laravel 10, 11, 12.
+
+$ crudmaker generate manifest.yaml --laravel 12 --php 8.1
+Erro: PHP 8.1 (flag) é anterior ao mínimo do Laravel 12 (PHP 8.2). Informe um PHP 8.2 ou superior, ou escolha um Laravel mais antigo.
+```
+
+O que muda na saída por versão (as [capacidades](arquitetura.md#versão-alvo-e-capacidades)):
+
+| Capacidade | Laravel 10 | Laravel 11 e 12 |
+|---|---|---|
+| Casts da model base | propriedade `protected $casts = [...]` | método `protected function casts(): array` |
+| `routes/api.php` | já existe no esqueleto; o `RouteServiceProvider` o carrega | criado e registrado em `bootstrap/app.php` por `php artisan install:api` |
+| `->change()` nas migrations `alter` | comentário lembrando o `doctrine/dbal` | nativo; sem comentário |
+
+O resto da saída é igual nas três versões. O padrão é o Laravel 12, então `--laravel` só é necessário para gerar para um projeto que ainda não existe (ou que não tem `composer.json` em `--out`) em outra versão.
 
 ## 3. Conferir com `--dry-run`
 
@@ -105,7 +159,7 @@ Route::apiResource('tags', TagController::class)->only(['index', 'show'])->middl
 
 Um grupo no `routes/api.php` em volta do `require` continua funcionando e soma com o middleware das rotas. Veja [Opções da API](manifest.md#opções-da-api-api).
 
-**Requisito:** o projeto Laravel (11+) precisa do `routes/api.php`, criado por `php artisan install:api`, que também o registra em `bootstrap/app.php`. Se o arquivo não existir, o `generate` não o cria (criar o arquivo sozinho não o faria ser carregado), grava `routes/crudmaker.php` e imprime um aviso. Rode `install:api` e gere de novo. O `--dry-run` mostra o `routes/api.php` como sobrescrito quando o include vai ser acrescentado.
+**Requisito:** o projeto precisa do `routes/api.php`. No Laravel 11 e 12 ele é criado por `php artisan install:api`, que também o registra em `bootstrap/app.php`; no Laravel 10 ele já vem no esqueleto e é carregado pelo `RouteServiceProvider`. Se o arquivo não existir, o `generate` não o cria (no 11+ criar o arquivo sozinho não o faria ser carregado), grava `routes/crudmaker.php` e imprime um aviso conforme a versão: no 11+, para rodar `install:api`; no 10, para conferir o `--out` ou restaurar o arquivo. Depois gere de novo. O `--dry-run` mostra o `routes/api.php` como sobrescrito quando o include vai ser acrescentado.
 
 ## 5. Terminar à mão
 
@@ -232,7 +286,7 @@ Copia os templates embutidos para `stubs/crudmaker/laravel-api/` do projeto (`--
 
 ### Variáveis (`it`) de cada template
 
-Os templates usam [Eta](https://eta.js.org): `<%~ it.x %>` imprime sem escape, e as tags de controle (`<% for (...) { -%>`) ficam sozinhas na linha. Mantenha os tabs e a linha final. Quem calcula as variáveis é o código TypeScript (`src/targets/laravel-api/viewModels/`); o template só imprime. Todos os templates de classe recebem também `entity` (nomes da entidade em cada casing), `namespace`, `imports` (os `use`, sem repetição), `className`, `extends`, e `base`/`final` (as duas classes do par, com `className`, `namespace`, `fqcn` e `path`).
+Os templates usam [Eta](https://eta.js.org): `<%~ it.x %>` imprime sem escape, e as tags de controle (`<% for (...) { -%>`) ficam sozinhas na linha. Mantenha os tabs e a linha final. Quem calcula as variáveis é o código TypeScript (`src/targets/laravel-api/viewModels/`); o template só imprime. Todos os templates recebem `capabilities` (flags de recurso da [versão alvo](#versão-do-laravel-e-do-php), veja a lista abaixo) e `target` (`{ laravel, php }`; só informativo, prefira as capacidades). Todos os templates de classe recebem também `entity` (nomes da entidade em cada casing), `namespace`, `imports` (os `use`, sem repetição), `className`, `extends`, e `base`/`final` (as duas classes do par, com `className`, `namespace`, `fqcn` e `path`).
 
 | Stub | Variáveis específicas |
 |---|---|
@@ -243,6 +297,8 @@ Os templates usam [Eta](https://eta.js.org): `<%~ it.x %>` imprime sem escape, e
 | `controller.base` | `has` (quais actions existem), `hooks` (hooks mantidos), `index` (`with`, filtros, busca, ordenação, `perPage`), `withShow` |
 | `migration` | `table`, `columns`, `foreignKeys`, `uniques`, `imports` |
 | `routes` | `imports`, `routes` (um item por entidade: `resource`, `controller`, `modifiers`) |
+
+Capacidades (`it.capabilities.<flag>`, booleanas): `castsMethod` (model com `casts()` em vez de `$casts`), `apiRoutesViaBootstrap`, `nativeColumnChange`, `backedEnums`, `readonlyClasses` e `typedClassConstants`. Exemplo num stub: `<% if (it.capabilities.castsMethod) { -%> ... <% } else { -%> ... <% } -%>`. Se você publicou o stub `model.base` antes do ticket 15, ele continua gerando `$casts` (válido em todas as versões); o aviso de hash indica que o embutido mudou.
 
 A referência exata é o próprio template embutido (`crudmaker stubs:publish <tipo> --out <pasta>` e leia o arquivo) e o view model correspondente.
 
@@ -274,7 +330,7 @@ O `down()` desfaz na ordem inversa, o melhor possível. `hidden`, `rules` e `api
 Cuidados:
 
 - **Renomear um campo não é detectável**: vira remover + adicionar, e a coluna antiga perde os dados. O resumo traz um aviso `ATENÇÃO` quando uma tabela tem remoção e adição ao mesmo tempo. Edite a migration `alter` gerada (antes do `migrate`) trocando o par `dropColumn`/`addColumn` por `$table->renameColumn('antigo', 'novo');` no `up()` e a inversa no `down()`.
-- **`->change()`**: nativo no Laravel 11+. No Laravel 10 ou anterior precisa de `composer require doctrine/dbal` (a migration gerada traz um comentário lembrando). `->change()` redeclara a coluna inteira; mudar a lista de um `enum` depende do banco (em alguns não atualiza os valores permitidos): o crudmaker avisa, confira a migration.
+- **`->change()`**: nativo no Laravel 11+. No Laravel 10 precisa de `composer require doctrine/dbal` (para a versão alvo 10, a migration gerada traz um comentário lembrando; nas outras, não). `->change()` redeclara a coluna inteira; mudar a lista de um `enum` depende do banco (em alguns não atualiza os valores permitidos): o crudmaker avisa, confira a migration.
 - **Campo novo obrigatório** (`required` padrão) sem `default` falha no `migrate` se a tabela já tem linhas: o crudmaker avisa. Declare `default` ou `required: false`.
 - **`down()` não recupera dados**: desfazer um `dropColumn` recria a coluna vazia (e, se era obrigatória, falha em tabela com linhas).
 - **Entidade removida**: continua só o aviso de órfãos; nenhum `drop table` é gerado.

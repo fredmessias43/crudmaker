@@ -30,6 +30,7 @@ A CLI é uma casca fina em volta de `generate` (sem lógica de geração):
 
 - `src/bin.ts`: entrada do binário (shebang `#!/usr/bin/env node`); passa `process.argv` para `run` e usa o retorno como exit code.
 - `src/cli.ts`: `run(argv, io)` interpreta os argumentos (`node:util` `parseArgs`, sem dependência externa), executa `generate`, `init` ou `stubs:publish` e devolve o exit code. `io` (stdout, stderr, cwd, relógio) é injetável, o que permite testar sem subprocesso. Para `generate`, lê os nomes em `<out>/database/migrations` (lista vazia se a pasta não existe) e o `manifest-lock.json` anterior (`previousLock`; `null` se não existe, com aviso se estiver ilegível), resolve `--normalize-names` / `--no-normalize-names` (sem flag, `undefined`: vale o manifest), chama `generate` com a data atual, monta o plano de escrita e o de remoção e, sem `--dry-run`, aplica os dois; depois imprime o resumo (com `removidos`, o total e a seção `Órfãos`) e, se houver, a seção `Avisos` (nomes alterados e finais antigas que não estendem a base) (no stdout, como o aviso do `routes/api.php`; o stderr fica para erros).
+- `src/targetVersion.ts` e `src/detectTarget.ts`: a versão alvo (veja [Versão alvo e capacidades](#versão-alvo-e-capacidades)). Na CLI: lê as flags `--laravel`/`--php` e o `pkg.target` do manifest cru, chama `detectTarget(outDir)` (lê `composer.lock`/`composer.json`), resolve com `resolveTarget` (erros e avisos de divergência), passa o resultado em `options.target` e imprime `Versão alvo: ...` no topo do resumo.
 - `src/stubFiles.ts`: leitura dos stubs do projeto e `stubs:publish` (veja [Stubs do projeto](#stubs-do-projeto)). O `generate` lê `stubs/crudmaker/laravel-api/*.php.eta` e o `stubs-lock.json` do destino e os passa a `generate`; avisos de stub (ignorado, desatualizado, lock ilegível) saem na seção `Avisos`.
 - `src/readManifest.ts`: único ponto de leitura do manifest: escolhe o parser pela extensão (`.yaml`/`.yml` → YAML 1.2 via lib `yaml`, um documento só e mapa na raiz; `.json` → `JSON.parse`; outra extensão é erro). Erros esperados viram `UserError`; a CLI imprime `Erro: <mensagem>` no stderr e sai com código 1, sem stack trace (defina `CRUDMAKER_DEBUG=1` para vê-lo).
 - `src/initTemplate.ts`: conteúdo do manifest criado por `crudmaker init`.
@@ -44,6 +45,7 @@ O `npx`/`npm link` usam o campo `bin` do `package.json` (`dist/bin.js`), gerado 
 - `existingMigrations`: nomes de arquivo das migrations que já existem no destino. Se algum termina com `_create_<tabela>_table.php`, o nome é reaproveitado em vez de gerar um novo (regerar nunca renomeia). O prefixo das migrations novas nunca é anterior à migration mais recente que já existe (no destino ou no lock): a base é `max(now, mais recente + 1 s)`;
 - `existingApiRoutes`: conteúdo do `routes/api.php` do destino (ou `null`);
 - `normalizeNames` (opcional): liga/desliga a normalização de nomes; quando definida, vale mais que `pkg.normalizeNames` do manifest;
+- `target` (opcional): a versão alvo `{ laravel: 10 | 11 | 12, php: "8.1" ... }` (padrão: Laravel 12, PHP 8.2). Vira as capacidades dos templates e é registrada no lock. A resolução (flag, manifest, composer) é da CLI; `generate` só valida (`assertSupported`: lança `TargetVersionError` para versão não suportada ou PHP abaixo do mínimo do Laravel) e avisa se o `target` do lock anterior é outro;
 - `previousLock` (opcional): o `manifest-lock.json` anterior do destino, já parseado (ou `null`). As entidades que estavam nele e não geram mais os mesmos caminhos viram `obsolete`; é também a fonte de verdade do schema já emitido, de onde saem as migrations `alter` (veja [Lock e migrations](#lock-e-migrations)).
 
 O retorno é `{ files, warnings, obsolete }`. Os avisos (`string[]`, um por nome alterado ou fora da convenção) vêm junto com os arquivos, em vez de serem impressos, para `generate` continuar pura e quem chama (CLI, scripts, testes) decidir o que mostrar.
@@ -74,6 +76,7 @@ O `manifest-lock.json` é o registro do que foi emitido: o schema normalizado e 
   "lockVersion": 2,
   "code": "alter",
   "version": "0.1.0",
+  "target": { "laravel": 12, "php": "8.2" },
   "entities": { "client": { "fields": { "id": { "type": "uuid", "name": "id", "required": true, "unique": false, "enumItems": [] } }, "relationships": {} } },
   "migrations": [
     { "file": "2025_01_02_030405_create_clients_table.php", "table": "clients", "type": "create" },
@@ -87,6 +90,7 @@ O `manifest-lock.json` é o registro do que foi emitido: o schema normalizado e 
 }
 ```
 
+- `target`: a versão alvo usada na geração (ticket 15); um lock sem ela (anterior ao ticket) não dispara o aviso de mudança de versão;
 - `entities`: o manifest normalizado (o mesmo de antes do ticket 14), o schema que a geração anterior emitiu;
 - `migrations`: histórico acumulado, em ordem de emissão. `type` é `create` ou `alter`; `changes` (só nas `alter`) lista as operações (`addColumn`, `dropColumn`, `changeColumn`, `addUnique`, `dropUnique`, `addForeign`, `dropForeign`) e a coluna de cada uma. Entradas sem esse formato são ignoradas ao ler;
 - **Compatibilidade**: um lock sem `lockVersion` (formato 1) tem só `code`, `version` e `entities`. É lido como "schema = `entities` do lock; migrations = as de criação que existirem no destino": `generate` não precisa de `migrations` para decidir nada, usa o nome das migrations de `existingMigrations`. O lock regravado já sai no formato 2, com as de criação registradas.
@@ -193,6 +197,25 @@ Módulos do target:
 | `controller` | Base: controller de API com `index`, `store`, `show`, `update`, `destroy` e os 7 hooks (só as actions e os hooks mantidos em `api.actions`; o `index` aplica `with`, filtros, busca e ordenação de `api` antes do `indexQuery`). Final: vazia |
 | `routes` | `routes/crudmaker.php`, gerado uma vez por projeto (não por entidade) |
 
+#### Versão alvo e capacidades
+
+A versão do Laravel/PHP entra em `generate` como `options.target`; quem a descobre é a CLI.
+
+- `src/targetVersion.ts` (puro): tipos (`TargetVersion`), constantes (`SUPPORTED_LARAVEL`, `MIN_PHP_BY_LARAVEL`, `DEFAULT_TARGET`), `resolveTarget` (flag → `pkg.target` → detecção → padrão, parte a parte, com origem e avisos de divergência) e as validações, que lançam `TargetVersionError` (uma `UserError`, então a CLI mostra só a mensagem).
+- `src/detectTarget.ts`: lê `composer.lock` e `composer.json` do destino. `lowestOfConstraint` tira a menor versão de uma restrição do Composer.
+- `src/targets/laravel-api/capabilities.ts`: **o único lugar que compara números de versão**. `capabilitiesFor({ laravel, php })` devolve flags de recurso. `generateLaravelApi` injeta `capabilities` (e `target`) em todo `it` dos templates, e os view models que precisam (hoje `alterView`) recebem as capacidades por parâmetro. Templates e view models nunca comparam `it.target.laravel`.
+
+| Capacidade | Condição | Efeito na saída |
+|---|---|---|
+| `castsMethod` | Laravel 11+ | `model.base`: `protected function casts(): array` em vez de `protected $casts = [...]` |
+| `apiRoutesViaBootstrap` | Laravel 11+ | mensagem da CLI quando falta o `routes/api.php`: `install:api` (11+) × esqueleto + `RouteServiceProvider` (10) |
+| `nativeColumnChange` | Laravel 11+ | `migration.alter`: sem ela (Laravel 10) a migration traz o comentário sobre o `doctrine/dbal` |
+| `backedEnums` | PHP 8.1+ | sempre verdadeira hoje (8.1 é o mínimo); será usada pelo ticket 16 (enums) |
+| `readonlyClasses` | PHP 8.2+ | ainda sem uso |
+| `typedClassConstants` | PHP 8.3+ | ainda sem uso |
+
+Variantes de template por major (ex.: `model.base.l10.php.eta`) **não foram necessárias**: todas as diferenças atuais cabem num `if` sobre uma capacidade. Se uma diferença futura não couber, a resolução em `renderTemplate` é o lugar de acrescentar a variante, com fallback para o template padrão. Para uma diferença nova entre versões: acrescente a flag em `capabilities.ts`, use-a no template (ou no view model) e cubra no `tests/targetVersion.test.ts`.
+
 #### Como adicionar um tipo de arquivo
 
 1. Crie `templates/laravel-api/<tipo>.php.eta` (para uma classe com camadas, `<tipo>.base.php.eta` e `<tipo>.final.php.eta`).
@@ -206,7 +229,7 @@ O `generate` continua puro: a CLI lê o `routes/api.php` do destino (ou `null` s
 
 #### Stubs do projeto
 
-`renderTemplate(name, data, stubs)` (`render.ts`) é o ponto único de resolução: se `stubs[name]` existe, o Eta renderiza essa string (`renderString`); senão, usa o embutido de `templates/laravel-api`. Não há variantes por versão do Laravel ainda; seriam mais uma camada nessa resolução.
+`renderTemplate(name, data, stubs)` (`render.ts`) é o ponto único de resolução: se `stubs[name]` existe, o Eta renderiza essa string (`renderString`); senão, usa o embutido de `templates/laravel-api`. As diferenças por versão do Laravel/PHP não são variantes de arquivo: o template consulta `it.capabilities` (veja [Versão alvo e capacidades](#versão-alvo-e-capacidades)), e os stubs do projeto também recebem `it.capabilities` e `it.target`.
 
 - `generate` continua puro: recebe `options.stubs` (nome do template → conteúdo) e `options.stubHashes` (o `stubs-lock.json`, nome → hash do embutido na publicação) e devolve os avisos em `warnings`. Quem lê a pasta é a CLI (`src/stubFiles.ts`: `readStubs`, `publishStubs`).
 - `src/targets/laravel-api/stubs.ts` define `replaceableTemplates` (as bases, `migration` e `routes`; **sem** `*.final`, por serem `create-once` e do usuário), os caminhos (`stubs/crudmaker/laravel-api/`, `stubs/crudmaker/stubs-lock.json`), o hash (sha256 do arquivo embutido) e `prepareStubs`, que ignora com aviso os nomes não substituíveis, valida a sintaxe de cada stub (`validateStub`, que traduz o erro do Eta em `Stub "<nome>.php.eta": erro de sintaxe na linha N: ...`, sem stack trace, antes de qualquer arquivo ser produzido) e gera o aviso de stub desatualizado.
@@ -241,13 +264,15 @@ O `generate` continua puro: a CLI lê o `routes/api.php` do destino (ou `null` s
 
 `tests/alterMigrations.test.ts` cobre o ticket 14: regerar sem mudança (nenhuma migration, lock idêntico), criação imutável (`create-once`, projeto sem lock, migration ausente, entidade nova), campo adicionado, removido e alterado (tipo, `required`, `default`, itens do enum, `unique`), FK adicionada e removida, o `down()`, o aviso de renomeação, nomes e timestamps sem colisão, o formato do lock (e o lock antigo e o malformado), entidade removida sem `drop table`, o snapshot da fixture `alter` (`manifest.json` → `manifest.after.json`) e a CLI em três gerações seguidas.
 
+`tests/targetVersion.test.ts` cobre o ticket 15: a menor versão de uma restrição do Composer, a detecção com `composer.json`/`composer.lock` de exemplo (`tests/fixtures/composer/`), a resolução (prioridade flag > manifest > composer > padrão, partes independentes, aviso de divergência, erros de versão não suportada, PHP abaixo do mínimo e valores mal formados), as capacidades por versão, `generate` por versão e a CLI (resumo com origem, aviso, erro, mensagem de `routes/api.php` ausente por versão). **Saída por versão:** os snapshots completos de todas as fixtures rodam no padrão (Laravel 12). Para não triplicar, o Laravel 11 é comparado byte a byte com o 12 (a saída é idêntica, salvo o `target` do lock), e o Laravel 10 é comparado com o 12 aceitando só a diferença do cast da model base, que ganha snapshot próprio em `tests/__snapshots__/laravel-10/<fixture>/` (mais o da migration `alter` com o comentário do `doctrine/dbal`). Uma diferença nova entre versões quebra essas comparações e obriga a decidir e registrar.
+
 `tests/yaml.test.ts` cobre o YAML: cada fixture tem um `manifest.yaml` que precisa ler o mesmo objeto e gerar a mesma saída do JSON, os erros de sintaxe/vazio/multi-documento/extensão, e o `init` em cada formato (o exemplo YAML tem de ser igual ao JSON).
 
 `tests/generate.test.ts` também cobre a ordem e os timestamps das migrations, a regeração sem renomear, as FKs, o `ignore` do `unique` e os casts, com asserções explícitas (a fixture `order-item`, com entidade camelCase e FK customizada, roda com a normalização ligada e tem snapshot próprio), e as rotas (nome do recurso, include, idempotência, detecção por variações de espaço e aspas). Ele chama `generate` para os manifests de `tests/fixtures/` com data fixa e sem migrations existentes. Os snapshots de `bingo`, `curso` e `vende-que-vende-api` são a saída de antes da normalização de nomes e valem com ela **desligada** (`normalizeNames: false`); `bingo-2` (entidades no plural, FKs declaradas à mão) tem snapshot com a normalização ligada, o padrão. O conteúdo de cada arquivo é comparado com um snapshot em `tests/__snapshots__/<fixture>/<path>`, e a lista de caminhos com `_paths.txt`. Os snapshots registram a saída atual (bases em `app/Generated/` e finais iniciais), inclusive bugs conhecidos. Foram eles que provaram que a migração para templates (ticket 07) não mudou a saída.
 
 ### Sintaxe do PHP gerado
 
-`npm run lint:php` (`scripts/checkPhpSyntax.ts`) valida que o PHP gerado é sintaticamente válido. Ele chama `generate` (normalização no padrão, ligada) para as fixtures de `tests/fixtures/` com data fixa (e, nas que têm `manifest.after.json`, faz uma segunda geração sobre a primeira para também validar as migrations `alter`), grava a saída num diretório temporário do sistema (nunca em `generated/` nem no repositório) e monta esse diretório como volume somente leitura num único `docker run --rm` da imagem oficial `php:8.1-cli`, com o UID/GID do usuário, que roda `php -l` em cada `.php`. O script lista os arquivos com erro, sai com código diferente de zero se houver falha inesperada (ou 2 se o Docker não estiver disponível) e apaga o diretório temporário no fim. A versão 8.1 é a mínima prometida pela spec: se parseia nela, parseia nas mais novas.
+`npm run lint:php` (`scripts/checkPhpSyntax.ts`) valida que o PHP gerado é sintaticamente válido. Ele chama `generate` (normalização no padrão, ligada) para as fixtures de `tests/fixtures/` com data fixa, em duas passadas: Laravel 12 (padrão) e Laravel 10 (em `laravel-10/<fixture>/`, com PHP 8.1; o 11 gera a mesma saída do 12) (e, nas que têm `manifest.after.json`, faz uma segunda geração sobre a primeira para também validar as migrations `alter`), grava a saída num diretório temporário do sistema (nunca em `generated/` nem no repositório) e monta esse diretório como volume somente leitura num único `docker run --rm` da imagem oficial `php:8.1-cli`, com o UID/GID do usuário, que roda `php -l` em cada `.php`. O script lista os arquivos com erro, sai com código diferente de zero se houver falha inesperada (ou 2 se o Docker não estiver disponível) e apaga o diretório temporário no fim. A versão 8.1 é a mínima prometida pela spec: se parseia nela, parseia nas mais novas.
 
 A checagem olha a saída de `generate`, e não os snapshots, para não depender deles: um snapshot pode ser atualizado com `-u` sem que ninguém perceba que o PHP ficou inválido, e a checagem continua valendo mesmo que a forma de guardar os snapshots mude.
 

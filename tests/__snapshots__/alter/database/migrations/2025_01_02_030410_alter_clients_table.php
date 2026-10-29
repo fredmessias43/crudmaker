@@ -17,7 +17,6 @@ return new class extends Migration
 	public function up()
 	{
 		Schema::table('clients', function (Blueprint $table) {
-			// ->change() nativo no Laravel 11+; no Laravel 10 ou anterior exige o pacote doctrine/dbal (composer require doctrine/dbal).
 			$table->dropUnique(['email']);
 			$table->dropColumn('nickname');
 			$table->string('phone')->nullable();

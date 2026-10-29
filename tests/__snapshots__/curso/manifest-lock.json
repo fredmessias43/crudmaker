@@ -2,6 +2,10 @@
   "lockVersion": 2,
   "code": "curso",
   "version": "0.1.0",
+  "target": {
+    "laravel": 12,
+    "php": "8.2"
+  },
   "entities": {
     "course": {
       "fields": {

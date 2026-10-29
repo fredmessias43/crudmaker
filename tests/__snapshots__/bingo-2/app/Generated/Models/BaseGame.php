@@ -27,13 +27,16 @@ abstract class BaseGame extends Model
 	public $incrementing = false;
 	
 	/**
-	 * The attributes that should be cast.
+	 * Get the attributes that should be cast.
 	 *
-	 * @var array
+	 * @return array<string, string>
 	 */
-	protected $casts = [
-		'max_players' => 'integer',
-	];
+	protected function casts(): array
+	{
+		return [
+			'max_players' => 'integer',
+		];
+	}
 	
 	/**
 	 * The attributes that are mass assignable.

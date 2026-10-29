@@ -2,7 +2,9 @@ import { addSeconds, format } from "date-fns";
 import { orderByDependency } from "../../dependencyOrder";
 import { Entity } from "../../models/Entity";
 import { LockMigration } from "../../types";
+import { TargetVersion } from "../../targetVersion";
 import { GeneratedFile, ObsoleteFile } from "../types";
+import { capabilitiesFor } from "./capabilities";
 import { EntityFileType } from "./fileType";
 import { renderTemplate, Stubs } from "./render";
 import { collectionBaseFile, collectionFinalFile } from "./viewModels/collection";
@@ -29,6 +31,8 @@ export type LaravelApiInput = {
   previousMigrations?: LockMigration[];
   /** Stubs do projeto já validados (nome do template → conteúdo), com prioridade sobre os embutidos. */
   stubs?: Stubs;
+  /** Versão do Laravel/PHP de destino; vira as capacidades (`it.capabilities`) dos templates. */
+  target: TargetVersion;
 };
 
 /** Tipos de arquivo gerados por entidade, na ordem em que saem. Para um novo tipo, acrescente aqui. */
@@ -147,6 +151,9 @@ export function generateLaravelApi(input: LaravelApiInput): LaravelApiOutput {
     migrationDates: migrationDates(input.entities, base),
     previousTables: new Set(previousByTable.keys()),
   };
+  const capabilities = capabilitiesFor(input.target);
+  // Além das variáveis do view model, todo template recebe as capacidades e a versão alvo.
+  const render = (template: string, view: object) => renderTemplate(template, { ...view, capabilities, target: input.target }, input.stubs);
   const baseName = (path: string) => path.slice(path.lastIndexOf("/") + 1);
 
   for (const entity of input.entities) {
@@ -154,7 +161,7 @@ export function generateLaravelApi(input: LaravelApiInput): LaravelApiOutput {
       const { path, view, generatedBase, policy } = fileType.build(entity, context);
       files.push({
         path,
-        content: renderTemplate(fileType.template, view, input.stubs),
+        content: render(fileType.template, view),
         policy: policy ?? policyByLayer[fileType.layer],
         ...(generatedBase && { generatedBase }),
       });
@@ -189,7 +196,7 @@ export function generateLaravelApi(input: LaravelApiInput): LaravelApiOutput {
     const file = `${format(date, "yyyy_MM_dd_HHmmss")}_alter_${table}_table.php`;
     files.push({
       path: `database/migrations/${file}`,
-      content: renderTemplate("migration.alter", alterView(table, operations), input.stubs),
+      content: render("migration.alter", alterView(table, operations, capabilities)),
       // Imutável depois de emitida, como a de criação; o nome é novo a cada geração, então na prática sempre é criada.
       policy: "create-once",
     });
@@ -204,7 +211,7 @@ export function generateLaravelApi(input: LaravelApiInput): LaravelApiOutput {
     if (!currentTables.has(table) && file !== undefined) migrations.push({ file, table, type: "create" });
   }
 
-  files.push({ path: routesPath, content: renderTemplate("routes", routesView(input.entities), input.stubs), policy: "overwrite" });
+  files.push({ path: routesPath, content: render("routes", routesView(input.entities)), policy: "overwrite" });
 
   // O include é calculado a partir do conteúdo recebido; quem grava continua sendo `planWrites`,
   // que classifica o arquivo como sobrescrito (include novo) ou sem mudança (já incluído).

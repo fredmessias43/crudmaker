@@ -172,7 +172,8 @@ describe("diff de schema → migration alter", () => {
     it("->change() no up e a definição anterior no down", () => {
       expect(up).toContain(upLine);
       expect(down).toContain(downLine);
-      expect(up).toContain("doctrine/dbal");
+      // padrão = Laravel 12: ->change() nativo, sem o lembrete do doctrine/dbal (o Laravel 10 está em targetVersions.test.ts)
+      expect(up).not.toContain("doctrine/dbal");
     });
   });
 
@@ -280,7 +281,7 @@ describe("formato do lock", () => {
     const lock = lockOf(second.files);
 
     expect(lockOf(first.files).lockVersion).toBe(2);
-    expect(Object.keys(lock)).toEqual(["lockVersion", "code", "version", "entities", "migrations"]);
+    expect(Object.keys(lock)).toEqual(["lockVersion", "code", "version", "target", "entities", "migrations"]);
     expect(lock.migrations.map((m: any) => [m.type, m.table])).toEqual([
       ["create", "clients"], ["create", "orders"], ["create", "invoices"], ["alter", "clients"], ["alter", "orders"],
     ]);

@@ -25,18 +25,21 @@ abstract class BaseOrderItem extends Model
 	public $incrementing = false;
 	
 	/**
-	 * The attributes that should be cast.
+	 * Get the attributes that should be cast.
 	 *
-	 * @var array
+	 * @return array<string, string>
 	 */
-	protected $casts = [
-		'quantity' => 'integer',
-		'price' => 'double',
-		'gift' => 'boolean',
-		'options' => 'array',
-		'shipped_on' => 'date',
-		'packed_at' => 'datetime',
-	];
+	protected function casts(): array
+	{
+		return [
+			'quantity' => 'integer',
+			'price' => 'double',
+			'gift' => 'boolean',
+			'options' => 'array',
+			'shipped_on' => 'date',
+			'packed_at' => 'datetime',
+		];
+	}
 	
 	/**
 	 * The attributes that are mass assignable.
