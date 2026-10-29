@@ -81,110 +81,123 @@ O fluxo do ponto de vista do desenvolvedor:
 35. Como desenvolvedor, quero continuar usando a forma curta de campo (`name: string`) e a forma longa (`{ type, required, unique, ... }`), para escrever só o necessário.
 36. Como desenvolvedor, quero continuar usando os aliases existentes (`int`, `displayName`), para não quebrar manifests antigos.
 
+### Normalização de nomes
+
+37. Como desenvolvedor, quero que nomes de entidade fora da convenção sejam normalizados automaticamente para o singular em camelCase (ex.: `awards` → `award`, `drawn_numbers` → `drawnNumber`, `PlayerInvite` → `playerInvite`), para gerar `Award`/`awards` em vez de `Awards`/`awards` sem precisar reescrever o manifest.
+38. Como desenvolvedor, quero que as referências a entidades nos relacionamentos sejam normalizadas do mesmo jeito, para `hasMany: [awards]` continuar apontando para a entidade `award`.
+39. Como desenvolvedor, quero que nomes de campo sejam normalizados para snake_case (ex.: `alertDate` → `alert_date`), para as colunas seguirem a convenção do Laravel.
+40. Como desenvolvedor, quero que campos de FK declarados à mão e também derivados de um `belongsTo` (ex.: `game_id` + `belongsTo: [game]`) sejam unificados sem aviso de conflito, para manifests antigos continuarem funcionando.
+41. Como desenvolvedor, quero ver um aviso para cada nome alterado (`pkg.entities.awards → award`), para saber o que o gerador mudou e poder corrigir o manifest se quiser.
+42. Como desenvolvedor, quero um erro quando duas entidades ou dois campos viram o mesmo nome depois de normalizados (ex.: `card` e `cards`), em vez de um sobrescrever o outro.
+43. Como desenvolvedor, quero desligar a normalização no manifest (`pkg.normalizeNames: false`), para que todo mundo que gera a partir do mesmo manifest obtenha a mesma saída.
+44. Como desenvolvedor, quero poder ligar ou desligar a normalização por flag na CLI (`--normalize-names` / `--no-normalize-names`), com prioridade sobre o manifest, para testar os dois jeitos sem editar o arquivo.
+45. Como desenvolvedor, quero que o manifest-lock registre os nomes já normalizados, para ver exatamente o que foi gerado.
+
 ### Migrations
 
-37. Como desenvolvedor, quero uma migration de criação por entidade, com os tipos de coluna correspondentes aos tipos do manifest.
-38. Como desenvolvedor, quero que as migrations sejam ordenadas pela dependência de foreign keys, para o `migrate` não falhar porque a tabela referenciada ainda não existe.
-39. Como desenvolvedor, quero que o nome da tabela referenciada pela foreign key esteja sempre em snake_case plural (ex.: `orderItem` → `order_items`), para a FK apontar para a tabela certa.
-40. Como desenvolvedor, quero que regerar sem mudanças no schema não crie migrations novas nem renomeie as existentes.
-41. Como desenvolvedor, quero que adicionar, remover ou alterar um campo num manifest já gerado crie uma migration de alteração, para não precisar recriar a tabela nem perder dados.
-42. Como desenvolvedor, quero que o manifest-lock registre o estado do schema da última geração, para o gerador conseguir calcular a diferença.
-43. Como desenvolvedor, quero que campos enum usem a primeira opção como default, como já acontece hoje (ou um `default` explícito, se informado).
+46. Como desenvolvedor, quero uma migration de criação por entidade, com os tipos de coluna correspondentes aos tipos do manifest.
+47. Como desenvolvedor, quero que as migrations sejam ordenadas pela dependência de foreign keys, para o `migrate` não falhar porque a tabela referenciada ainda não existe.
+48. Como desenvolvedor, quero que o nome da tabela referenciada pela foreign key esteja sempre em snake_case plural (ex.: `orderItem` → `order_items`), para a FK apontar para a tabela certa.
+49. Como desenvolvedor, quero que regerar sem mudanças no schema não crie migrations novas nem renomeie as existentes.
+50. Como desenvolvedor, quero que adicionar, remover ou alterar um campo num manifest já gerado crie uma migration de alteração, para não precisar recriar a tabela nem perder dados.
+51. Como desenvolvedor, quero que o manifest-lock registre o estado do schema da última geração, para o gerador conseguir calcular a diferença.
+52. Como desenvolvedor, quero que campos enum usem a primeira opção como default, como já acontece hoje (ou um `default` explícito, se informado).
 
 ### Models e enums
 
-44. Como desenvolvedor, quero uma Model por entidade, com UUID, soft deletes e `$fillable` corretos.
-45. Como desenvolvedor, quero casts para todos os tipos que precisam (boolean, json, date, datetime, double, enum), usando o método `casts()` do Laravel moderno.
-46. Como desenvolvedor, quero que cada campo enum gere um PHP backed enum próprio, para ter tipagem e reutilizar os valores no código.
-47. Como desenvolvedor, quero que a model faça cast do campo enum para o enum gerado.
-48. Como desenvolvedor, quero métodos de relacionamento (belongsTo, hasOne, hasMany) com tipos de retorno, inclusive quando o nome da FK difere do nome da entidade.
+53. Como desenvolvedor, quero uma Model por entidade, com UUID, soft deletes e `$fillable` corretos.
+54. Como desenvolvedor, quero casts para todos os tipos que precisam (boolean, json, date, datetime, double, enum), usando o método `casts()` do Laravel moderno.
+55. Como desenvolvedor, quero que cada campo enum gere um PHP backed enum próprio, para ter tipagem e reutilizar os valores no código.
+56. Como desenvolvedor, quero que a model faça cast do campo enum para o enum gerado.
+57. Como desenvolvedor, quero métodos de relacionamento (belongsTo, hasOne, hasMany) com tipos de retorno, inclusive quando o nome da FK difere do nome da entidade.
 
 ### Requests
 
-49. Como desenvolvedor, quero uma FormRequest por entidade com regras derivadas dos tipos e da obrigatoriedade dos campos.
-50. Como desenvolvedor, quero que a regra `unique` ignore o próprio registro pelo `id` na edição, para a validação falhar de verdade quando existe duplicata em outro registro.
-51. Como desenvolvedor, quero que campos enum sejam validados com `Rule::enum()` usando o enum gerado.
-52. Como desenvolvedor, quero que FKs de belongsTo sejam validadas com `exists` na tabela referenciada.
+58. Como desenvolvedor, quero uma FormRequest por entidade com regras derivadas dos tipos e da obrigatoriedade dos campos.
+59. Como desenvolvedor, quero que a regra `unique` ignore o próprio registro pelo `id` na edição, para a validação falhar de verdade quando existe duplicata em outro registro.
+60. Como desenvolvedor, quero que campos enum sejam validados com `Rule::enum()` usando o enum gerado.
+61. Como desenvolvedor, quero que FKs de belongsTo sejam validadas com `exists` na tabela referenciada.
 
 ### Resources e controllers
 
-53. Como desenvolvedor, quero Resource e Collection por entidade.
-54. Como desenvolvedor, quero que o `index` seja paginado, para a API não carregar a tabela inteira.
-55. Como desenvolvedor, quero que o `update` responda 200, para seguir a semântica HTTP.
-56. Como desenvolvedor, quero que o `destroy` responda 204 sem corpo, para seguir a semântica HTTP.
-57. Como desenvolvedor, quero que os controllers não envolvam tudo em try/catch que relança como 500, para que 404, 422 e 403 cheguem ao cliente com o status certo via handler do Laravel.
-58. Como desenvolvedor, quero manter um formato de resposta consistente entre as actions (envelope com `data`, e `message` nas escritas).
+62. Como desenvolvedor, quero Resource e Collection por entidade.
+63. Como desenvolvedor, quero que o `index` seja paginado, para a API não carregar a tabela inteira.
+64. Como desenvolvedor, quero que o `update` responda 200, para seguir a semântica HTTP.
+65. Como desenvolvedor, quero que o `destroy` responda 204 sem corpo, para seguir a semântica HTTP.
+66. Como desenvolvedor, quero que os controllers não envolvam tudo em try/catch que relança como 500, para que 404, 422 e 403 cheguem ao cliente com o status certo via handler do Laravel.
+67. Como desenvolvedor, quero manter um formato de resposta consistente entre as actions (envelope com `data`, e `message` nas escritas).
 
 ### Rotas e relacionamentos
 
-59. Como desenvolvedor, quero que as rotas `apiResource` de todas as entidades sejam geradas, para a API funcionar logo após `migrate`.
-60. Como desenvolvedor, quero que as rotas geradas fiquem num arquivo próprio incluído pelo `routes/api.php`, para o gerador nunca mexer nas rotas que eu escrevi.
-61. Como desenvolvedor, quero rotas e controllers aninhados para relacionamentos hasMany/hasOne (ex.: `GET /clients/{client}/alerts`), para consultar filhos sem filtro manual.
+68. Como desenvolvedor, quero que as rotas `apiResource` de todas as entidades sejam geradas, para a API funcionar logo após `migrate`.
+69. Como desenvolvedor, quero que as rotas geradas fiquem num arquivo próprio incluído pelo `routes/api.php`, para o gerador nunca mexer nas rotas que eu escrevi.
+70. Como desenvolvedor, quero rotas e controllers aninhados para relacionamentos hasMany/hasOne (ex.: `GET /clients/{client}/alerts`), para consultar filhos sem filtro manual.
 
 ### Factories, seeders e testes gerados
 
-62. Como desenvolvedor, quero uma Factory por entidade, com valores fake coerentes com o tipo de cada campo, para o `HasFactory` funcionar.
-63. Como desenvolvedor, quero que a factory crie automaticamente os registros pais de belongsTo.
-64. Como desenvolvedor, quero um Seeder por entidade (opcional via flag), para popular o banco de desenvolvimento.
-65. Como desenvolvedor, quero testes Pest gerados para cada endpoint CRUD, para saber logo de cara se a API gerada funciona no meu projeto.
+71. Como desenvolvedor, quero uma Factory por entidade, com valores fake coerentes com o tipo de cada campo, para o `HasFactory` funcionar.
+72. Como desenvolvedor, quero que a factory crie automaticamente os registros pais de belongsTo.
+73. Como desenvolvedor, quero um Seeder por entidade (opcional via flag), para popular o banco de desenvolvimento.
+74. Como desenvolvedor, quero testes Pest gerados para cada endpoint CRUD, para saber logo de cara se a API gerada funciona no meu projeto.
 
 ### Customização: três camadas
 
-66. Como desenvolvedor, quero que a customização siga uma ordem clara — primeiro o manifest, depois os hooks em PHP e, por último, os stubs —, para saber onde colocar cada mudança.
+75. Como desenvolvedor, quero que a customização siga uma ordem clara — primeiro o manifest, depois os hooks em PHP e, por último, os stubs —, para saber onde colocar cada mudança.
 
 ### Customização declarativa no manifest
 
-67. Como desenvolvedor, quero escolher quais actions cada entidade expõe (ex.: só `index` e `show`), para não gerar endpoints que não devem existir.
-68. Como desenvolvedor, quero declarar middleware por entidade (ex.: `auth:sanctum`) e um padrão global, para proteger as rotas sem editar PHP.
-69. Como desenvolvedor, quero declarar filtros por igualdade no `index` (`?status=active`), para listar com filtro sem escrever query.
-70. Como desenvolvedor, quero declarar campos de busca textual (`?search=...`), para ter busca simples gerada.
-71. Como desenvolvedor, quero declarar campos ordenáveis e a ordenação padrão (`?sort=-created_at`), para ordenar a listagem pela URL.
-72. Como desenvolvedor, quero declarar o tamanho de página padrão do `index`, para controlar a paginação por entidade.
-73. Como desenvolvedor, quero declarar relacionamentos carregados por padrão (eager loading) e quais deles aparecem na resource, para evitar N+1 e devolver os dados aninhados.
-74. Como desenvolvedor, quero marcar campos como ocultos na resource (ex.: `document`), para não expor dados sensíveis.
-75. Como desenvolvedor, quero acrescentar regras de validação por campo (ex.: `max:120`, `email`), além das derivadas do tipo, para validar sem editar a request.
-76. Como desenvolvedor, quero declarar valor default por campo, para ele valer na migration e na factory.
-77. Como desenvolvedor, quero que o JSON Schema documente todas essas opções, para a IA e o editor saberem o que existe.
+76. Como desenvolvedor, quero escolher quais actions cada entidade expõe (ex.: só `index` e `show`), para não gerar endpoints que não devem existir.
+77. Como desenvolvedor, quero declarar middleware por entidade (ex.: `auth:sanctum`) e um padrão global, para proteger as rotas sem editar PHP.
+78. Como desenvolvedor, quero declarar filtros por igualdade no `index` (`?status=active`), para listar com filtro sem escrever query.
+79. Como desenvolvedor, quero declarar campos de busca textual (`?search=...`), para ter busca simples gerada.
+80. Como desenvolvedor, quero declarar campos ordenáveis e a ordenação padrão (`?sort=-created_at`), para ordenar a listagem pela URL.
+81. Como desenvolvedor, quero declarar o tamanho de página padrão do `index`, para controlar a paginação por entidade.
+82. Como desenvolvedor, quero declarar relacionamentos carregados por padrão (eager loading) e quais deles aparecem na resource, para evitar N+1 e devolver os dados aninhados.
+83. Como desenvolvedor, quero marcar campos como ocultos na resource (ex.: `document`), para não expor dados sensíveis.
+84. Como desenvolvedor, quero acrescentar regras de validação por campo (ex.: `max:120`, `email`), além das derivadas do tipo, para validar sem editar a request.
+85. Como desenvolvedor, quero declarar valor default por campo, para ele valer na migration e na factory.
+86. Como desenvolvedor, quero que o JSON Schema documente todas essas opções, para a IA e o editor saberem o que existe.
 
 ### Customização por hooks
 
-78. Como desenvolvedor, quero que cada controller gerado chame hooks em pontos fixos do fluxo (montagem da query do `index`, antes/depois de criar, atualizar e remover), para mudar só o trecho que importa sem reescrever a action inteira.
-79. Como desenvolvedor, quero que os hooks `before*` recebam e devolvam os dados validados, para transformar dados (ex.: preencher `user_id` com o usuário logado) antes de gravar.
-80. Como desenvolvedor, quero que os hooks `after*` recebam o registro gravado, para disparar efeitos colaterais (e-mail, evento, log) depois de gravar.
-81. Como desenvolvedor, quero que a escrita e os hooks em volta dela rodem na mesma transação, para um erro num hook desfazer a gravação.
-82. Como desenvolvedor, quero poder barrar uma operação num hook lançando exceção ou usando `abort()`, e ter o status certo na resposta.
-83. Como desenvolvedor, quero um hook na request para acrescentar ou trocar regras de validação, e poder sobrescrever o `authorize()`, para ter validação e autorização específicas.
-84. Como desenvolvedor, quero um hook na resource para acrescentar campos calculados à resposta.
-85. Como desenvolvedor, quero escrever scopes, accessors, eventos de model e relacionamentos extras na model final, para estender a model sem perder o que é gerado.
-86. Como desenvolvedor, quero que a classe final venha criada com os hooks disponíveis listados em comentário, para descobrir os hooks sem abrir a classe base.
-87. Como desenvolvedor, quero que, se um hook mudar de assinatura numa versão nova do crudmaker, o erro apareça na hora (o PHP acusa a assinatura incompatível) e o changelog explique a mudança.
+87. Como desenvolvedor, quero que cada controller gerado chame hooks em pontos fixos do fluxo (montagem da query do `index`, antes/depois de criar, atualizar e remover), para mudar só o trecho que importa sem reescrever a action inteira.
+88. Como desenvolvedor, quero que os hooks `before*` recebam e devolvam os dados validados, para transformar dados (ex.: preencher `user_id` com o usuário logado) antes de gravar.
+89. Como desenvolvedor, quero que os hooks `after*` recebam o registro gravado, para disparar efeitos colaterais (e-mail, evento, log) depois de gravar.
+90. Como desenvolvedor, quero que a escrita e os hooks em volta dela rodem na mesma transação, para um erro num hook desfazer a gravação.
+91. Como desenvolvedor, quero poder barrar uma operação num hook lançando exceção ou usando `abort()`, e ter o status certo na resposta.
+92. Como desenvolvedor, quero um hook na request para acrescentar ou trocar regras de validação, e poder sobrescrever o `authorize()`, para ter validação e autorização específicas.
+93. Como desenvolvedor, quero um hook na resource para acrescentar campos calculados à resposta.
+94. Como desenvolvedor, quero escrever scopes, accessors, eventos de model e relacionamentos extras na model final, para estender a model sem perder o que é gerado.
+95. Como desenvolvedor, quero que a classe final venha criada com os hooks disponíveis listados em comentário, para descobrir os hooks sem abrir a classe base.
+96. Como desenvolvedor, quero que, se um hook mudar de assinatura numa versão nova do crudmaker, o erro apareça na hora (o PHP acusa a assinatura incompatível) e o changelog explique a mudança.
 
 ### Regerar com segurança
 
-88. Como desenvolvedor, quero que o gerador separe uma camada gerada (sempre sobrescrita) de uma camada de customização (criada uma única vez), para poder regerar sem perder regra de negócio.
-89. Como desenvolvedor, quero que arquivos da camada de customização nunca sejam sobrescritos, mesmo com `--force`.
-90. Como desenvolvedor, quero que os arquivos da camada gerada tenham um cabeçalho avisando que são gerados e não devem ser editados.
-91. Como desenvolvedor, quero que remover uma entidade do manifest apague só a camada gerada dela e me avise sobre os arquivos da camada de customização que ficaram órfãos, sem apagá-los.
+97. Como desenvolvedor, quero que o gerador separe uma camada gerada (sempre sobrescrita) de uma camada de customização (criada uma única vez), para poder regerar sem perder regra de negócio.
+98. Como desenvolvedor, quero que arquivos da camada de customização nunca sejam sobrescritos, mesmo com `--force`.
+99. Como desenvolvedor, quero que os arquivos da camada gerada tenham um cabeçalho avisando que são gerados e não devem ser editados.
+100. Como desenvolvedor, quero que remover uma entidade do manifest apague só a camada gerada dela e me avise sobre os arquivos da camada de customização que ficaram órfãos, sem apagá-los.
 
 ### Stubs
 
-92. Como mantenedor do crudmaker, quero que cada arquivo gerado venha de um template legível, parecido com o PHP final, para ajustar a saída sem decifrar concatenação de strings.
-93. Como desenvolvedor, quero rodar `crudmaker stubs:publish` para copiar os templates embutidos para o meu projeto, para ter um ponto de partida ao customizar o estilo.
-94. Como desenvolvedor, quero poder publicar só os stubs que vou mudar (ex.: só o do controller), para continuar recebendo melhorias nos outros.
-95. Como desenvolvedor, quero que os stubs do projeto tenham prioridade sobre os embutidos, para mudar o padrão de todos os arquivos de um tipo de uma vez (ex.: o formato da resposta).
-96. Como desenvolvedor, quero ser avisado quando um stub embutido mudou desde que eu publiquei o meu, para decidir se incorporo a mudança.
+101. Como mantenedor do crudmaker, quero que cada arquivo gerado venha de um template legível, parecido com o PHP final, para ajustar a saída sem decifrar concatenação de strings.
+102. Como desenvolvedor, quero rodar `crudmaker stubs:publish` para copiar os templates embutidos para o meu projeto, para ter um ponto de partida ao customizar o estilo.
+103. Como desenvolvedor, quero poder publicar só os stubs que vou mudar (ex.: só o do controller), para continuar recebendo melhorias nos outros.
+104. Como desenvolvedor, quero que os stubs do projeto tenham prioridade sobre os embutidos, para mudar o padrão de todos os arquivos de um tipo de uma vez (ex.: o formato da resposta).
+105. Como desenvolvedor, quero ser avisado quando um stub embutido mudou desde que eu publiquei o meu, para decidir se incorporo a mudança.
 
 ### Qualidade e IA
 
-97. Como mantenedor, quero testes de snapshot da saída a partir de manifests de exemplo, para qualquer mudança no PHP gerado aparecer no diff do teste.
-98. Como mantenedor, quero um comando local que valide a sintaxe de todo PHP gerado, para nunca publicar uma versão que gera código que não compila.
-99. Como desenvolvedor usando IA, quero um documento curto (formato do manifest + exemplo + comando) para colocar no contexto da IA, para ela alterar o manifest e rodar o gerador em vez de escrever o CRUD em PHP.
+106. Como mantenedor, quero testes de snapshot da saída a partir de manifests de exemplo, para qualquer mudança no PHP gerado aparecer no diff do teste.
+107. Como mantenedor, quero um comando local que valide a sintaxe de todo PHP gerado, para nunca publicar uma versão que gera código que não compila.
+108. Como desenvolvedor usando IA, quero um documento curto (formato do manifest + exemplo + comando) para colocar no contexto da IA, para ela alterar o manifest e rodar o gerador em vez de escrever o CRUD em PHP.
 
 ## Implementation Decisions
 
 - **Seam único: `generate(manifest) → arquivos`.** O núcleo vira uma função pura que recebe o manifest já parseado (mais o estado do lock anterior, quando existir) e devolve a lista de arquivos a escrever — cada um com caminho relativo, conteúdo e política de escrita (`overwrite` para a camada gerada, `create-once` para a camada de customização). Nenhum gerador toca o disco. A CLI é uma casca fina: lê o arquivo, faz o parse de YAML/JSON, valida, chama `generate`, aplica as políticas de escrita no diretório de saída e imprime o resumo.
 - **Pipeline:** parse (YAML/JSON) → validação pelo schema → normalização (formas curtas viram formas longas, aliases são resolvidos, campos de FK e de owner são derivados dos relacionamentos) → modelo normalizado de entidades → renderização por template → lista de arquivos.
 - **Schema do manifest** definido uma única vez com zod; o JSON Schema publicado é derivado dele. A normalização que hoje está espalhada no construtor do Manifest passa a ser transformação do schema/normalizador. As regras entre entidades (relacionamento apontando para entidade inexistente) são validadas depois do schema estrutural.
+- **Normalização de nomes** é uma etapa do normalizador, depois da validação estrutural e antes da validação entre entidades. Ela fica ligada por padrão. Nomes de entidade (chaves de `pkg.entities` e referências em relacionamentos) viram singular camelCase, usando o mesmo `pluralize`/`change-case` que já define classe e tabela. Nomes de campo viram snake_case, e o `name` explícito de um campo também é normalizado. Cada alteração vira um aviso que `generate` devolve junto com os arquivos (`{ files, warnings }`), e a CLI imprime os avisos no resumo. A função continua pura. Colisões depois da normalização são erro de validação, com o caminho dos dois nomes. Um campo declarado com o mesmo nome da FK derivada de um `belongsTo` é unificado: vale a declaração explícita, completada com `relationship: true`. A normalização é controlada por `pkg.normalizeNames` (padrão `true`) e pela flag da CLI, que tem prioridade. Com ela desligada, os nomes passam como estão, mas os avisos de convenção continuam aparecendo.
 - **Compatibilidade do manifest:** a estrutura atual (`system`, `pkg.code`, `pkg.entities`, `fields`, `relationships`) continua aceita, então os manifests de `generated/` servem como fixtures. Campo novo opcional: `default` em enums.
 - **Três camadas de customização, em ordem de preferência:** (1) manifest, para o que é declarativo e comum; (2) hooks em PHP nas classes finais, para regra de negócio; (3) stubs, para mudar o padrão de um tipo de arquivo inteiro. Uma customização que der para expressar numa camada anterior não deve exigir a seguinte.
 - **Opções declarativas no manifest.** Cada entidade ganha um bloco opcional `api` e os campos ganham propriedades opcionais. Também existe um bloco `pkg.defaults.api`, com os valores que valem para todas as entidades. Tudo é opcional, e um manifest sem esses blocos gera o mesmo CRUD completo de hoje:
