@@ -457,6 +457,7 @@ function newSummary(dir: string, cwd: string, resolved: ResolvedTarget, o: { sai
     if (o.database !== "sqlite") lines.push("  ./vendor/bin/sail artisan migrate");
     else lines.push("  ./vendor/bin/sail artisan migrate   # o banco é o sqlite do .env (Laravel 11+); no Laravel 10 ajuste DB_CONNECTION=sqlite no .env antes");
     lines.push("  # a API responde em http://localhost/api (rotas: ./vendor/bin/sail artisan route:list)");
+    if (o.generated) lines.push("  ./vendor/bin/sail test             # testes Pest gerados (tests/Feature/Crudmaker); veja \"Testes gerados\" em docs/como-usar.md");
   } else {
     const image = `laravelsail/php${resolved.target.php.replace(".", "")}-composer:latest`;
     lines.push(
@@ -464,6 +465,7 @@ function newSummary(dir: string, cwd: string, resolved: ResolvedTarget, o: { sai
       `  docker run --rm --user $(id -u):$(id -g) -v "$PWD":/var/www/html -w /var/www/html ${image} php artisan migrate`,
       `  docker run --rm --user $(id -u):$(id -g) -v "$PWD":/var/www/html -w /var/www/html -p 8000:8000 ${image} php artisan serve --host=0.0.0.0`,
       "  # a API responde em http://localhost:8000/api",
+      ...(o.generated ? [`  docker run --rm --user $(id -u):$(id -g) -v "$PWD":/var/www/html -w /var/www/html ${image} php vendor/bin/pest   # testes Pest gerados (veja "Testes gerados" em docs/como-usar.md)`] : []),
     );
   }
   return lines.join("\n") + "\n";

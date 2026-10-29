@@ -12,9 +12,13 @@ import { run } from "../src/cli";
  *   CRUDMAKER_E2E=1 npx vitest run tests/new.e2e.test.ts
  *
  * Usa Laravel 12 + sqlite (sem subir MySQL). Deixa o projeto em CRUDMAKER_E2E_KEEP=<dir> se quiser inspecioná-lo.
+ * Os testes Pest gerados (ticket 19) rodam também em outras versões com CRUDMAKER_E2E_LARAVEL=10,11,12 (padrão: 12).
  */
 const enabled = process.env.CRUDMAKER_E2E === "1";
 const manifest = path.join(__dirname, "e2e/blog.json");
+
+/** Versões do Laravel dos testes Pest gerados: major → PHP da imagem (o 10 aceita 8.1; o 11 e o 12 pedem 8.2+). */
+const pestVersions = (process.env.CRUDMAKER_E2E_LARAVEL || "12").split(",").map((major) => ({ laravel: major.trim(), php: major.trim() === "10" ? "8.1" : "8.2" }));
 
 let tmp = "";
 afterAll(() => {
@@ -22,10 +26,10 @@ afterAll(() => {
 });
 
 /** Roda um comando no projeto, num container da mesma imagem do scaffold. */
-function inProject(dir: string, command: string[]): string {
+function inProject(dir: string, command: string[], php = "8.2"): string {
   const result = spawnSync(
     "docker",
-    ["run", "--rm", "--user", `${process.getuid!()}:${process.getgid!()}`, "-v", `${dir}:/var/www/html`, "-w", "/var/www/html", "laravelsail/php82-composer:latest", ...command],
+    ["run", "--rm", "--user", `${process.getuid!()}:${process.getgid!()}`, "-v", `${dir}:/var/www/html`, "-w", "/var/www/html", `laravelsail/php${php.replace(".", "")}-composer:latest`, ...command],
     { encoding: "utf8" },
   );
   if (result.status !== 0) throw new Error(`${command.join(" ")} falhou:\n${result.stdout}\n${result.stderr}`);
@@ -218,5 +222,51 @@ describe.skipIf(!enabled)("crudmaker new (Docker de verdade)", () => {
     ]);
     expect(seeded).toContain("posts=15");
     expect(seeded).toContain("authors=15");
+  });
+
+  // Ticket 19: os testes Pest gerados rodam de verdade (RefreshDatabase + sqlite) e TODOS passam.
+  describe.each(pestVersions)("testes Pest gerados (Laravel $laravel)", ({ laravel, php }) => {
+    it.each([
+      ["blog", "blog.json"],
+      ["shop", "shop.json"],
+    ])("%s: php vendor/bin/pest passa", { timeout: 900_000 }, (name, file) => {
+      tmp = process.env.CRUDMAKER_E2E_KEEP || fs.mkdtempSync(path.join(os.tmpdir(), "crudmaker-e2e-"));
+      const dir = path.join(tmp, `pest-${name}-l${laravel}`);
+      let stderr = "";
+
+      const code = run(["new", dir, path.join(__dirname, "e2e", file), "--laravel", laravel, "--php", php, "--db", "sqlite"], {
+        stdout: () => {},
+        stderr: (t) => (stderr += t),
+        cwd: tmp,
+        now: () => new Date(),
+      });
+      expect(stderr).toBe("");
+      expect(code).toBe(0);
+      expect(fs.existsSync(path.join(dir, "tests/Feature/Crudmaker"))).toBe(true);
+
+      // O phpunit.xml do Laravel 10 e 11 não usa sqlite em memória (o do 12 cria o arquivo `testing` sozinho).
+      if (laravel !== "12") {
+        const phpunit = path.join(dir, "phpunit.xml");
+        const config = fs.readFileSync(phpunit, "utf8").replace(
+          /<env name="DB_DATABASE" value="testing"\/>/,
+          '<env name="DB_CONNECTION" value="sqlite"/>\n        <env name="DB_DATABASE" value=":memory:"/>',
+        );
+        fs.writeFileSync(phpunit, config);
+      }
+
+      // A entidade user do shop: migração do User.php e da UserFactory para as bases geradas (docs/como-usar.md, "A entidade user").
+      if (name === "shop") {
+        fs.writeFileSync(path.join(dir, "app/Models/User.php"), "<?php\n\nnamespace App\\Models;\n\nuse App\\Generated\\Models\\BaseUser;\n\nclass User extends BaseUser\n{\n}\n");
+        fs.writeFileSync(
+          path.join(dir, "database/factories/UserFactory.php"),
+          "<?php\n\nnamespace Database\\Factories;\n\nuse App\\Generated\\Factories\\BaseUserFactory;\n\nclass UserFactory extends BaseUserFactory\n{\n}\n",
+        );
+      }
+
+      const output = inProject(dir, ["php", "vendor/bin/pest", "--colors=never"], php);
+      expect(output).toMatch(/Tests:\s+\d+ passed/);
+      expect(output).not.toMatch(/failed/);
+      expect(output).toContain("Tests\\Feature\\Crudmaker\\");
+    });
   });
 });

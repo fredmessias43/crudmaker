@@ -9,11 +9,11 @@
 - [17 — `crudmaker new` via Docker + Sail](../fase-4-modernizar/17-crudmaker-new-docker.md)
 - [18 — Factories e seeders](../fase-4-modernizar/18-factories-e-seeders.md)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Critérios de aceite
 
-- [ ] Snapshot dos testes gerados.
-- [ ] Em execução manual, num projeto criado por `crudmaker new`, `sail test` passa com os testes gerados.
-- [ ] Actions desabilitadas no manifest não ganham teste.
-- [ ] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.
+- [x] Snapshot dos testes gerados.
+- [x] Em execução manual, num projeto criado por `crudmaker new`, `sail test` passa com os testes gerados. (Conferido com `php artisan test` e `php vendor/bin/pest` no container `laravelsail/php82-composer` (é o que o `sail test` executa por baixo); o Sail com `up` não foi subido. Laravel 10, 11 e 12 com sqlite.)
+- [x] Actions desabilitadas no manifest não ganham teste.
+- [x] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.

@@ -1,0 +1,266 @@
+<?php
+
+// ARQUIVO GERADO PELO CRUDMAKER. NÃO EDITE: ele é sobrescrito a cada `crudmaker generate`.
+// Testes Pest do CRUD de <%~ it.entity.pascal %> (rotas <%~ it.routes.index.split('.')[0] %>.*), com o comportamento padrão gerado.
+// Os seus testes ficam em outros arquivos. Para não gerar este arquivo, declare "tests": false no bloco "api" da entidade (ou em pkg.defaults.api).
+// Usam RefreshDatabase: rode com um banco descartável (sqlite em memória no phpunit.xml), nunca com o banco de desenvolvimento.
+<% if (it.auth) { -%>
+// Middleware da entidade: <%~ it.middleware.join(', ') %>. Os testes autenticam um App\Models\User criado pela factory.
+<% } -%>
+<% if (it.unhandled.length > 0) { -%>
+// ATENÇÃO: estes middlewares não são tratados pelo gerador e podem barrar os testes: <%~ it.unhandled.join(', ') %>.
+<% } -%>
+
+<% for (const use of it.imports) { -%>
+use <%~ use %>;
+<% } -%>
+
+uses(RefreshDatabase::class);
+
+<% if (it.auth) { -%>
+/**
+ * Autentica um usuário da factory padrão do Laravel, como o middleware da entidade pede.
+ */
+function <%~ it.entity.camel %>SignIn(): User
+{
+	$user = User::factory()->create();
+	test()->actingAs($user<%~ it.auth.guard ? ", '" + it.auth.guard + "'" : '' %>);
+
+	return $user;
+}
+
+<% } -%>
+/**
+ * Corpo válido para store/update de <%~ it.entity.pascal %>, montado a partir da factory
+ * (datas nos formatos da request, enums pelo valor, chaves estrangeiras de pais criados pela factory).
+ *
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function <%~ it.entity.camel %>Payload(array $overrides = []): array
+{
+	$model = <%~ it.entity.pascal %>::factory()->make();
+
+	return array_merge([
+<% for (const field of it.payload) { -%>
+		'<%~ field.name %>' => <%~ field.expression %>,
+<% } -%>
+	], $overrides);
+}
+<% if (it.auth) { -%>
+
+test('exige autenticação', function () {
+	<%~ it.unauthenticated %>->assertUnauthorized();
+});
+<% } -%>
+<% if (it.has.index) { -%>
+
+test('index: lista os registros paginados', function () {
+<% if (it.auth) { -%>
+	<%~ it.entity.camel %>SignIn();
+<% } -%>
+	$before = <%~ it.entity.pascal %>::count();
+	<%~ it.entity.pascal %>::factory()->count(3)->create();
+
+	$this->getJson(route('<%~ it.routes.index %>'))
+		->assertOk()
+		->assertJsonStructure(['data', 'links', 'meta'])
+		->assertJsonPath('meta.total', $before + 3)
+		->assertJsonPath('meta.per_page', <%~ it.perPage %>);
+});
+<% } -%>
+<% if (it.has.store) { -%>
+
+test('store: cria o registro com dados válidos', function () {
+<% if (it.auth) { -%>
+	<%~ it.entity.camel %>SignIn();
+<% } -%>
+	$before = <%~ it.entity.pascal %>::count();
+	$payload = <%~ it.entity.camel %>Payload();
+
+	$this->postJson(route('<%~ it.routes.store %>'), $payload)
+		->assertCreated()
+		->assertJsonStructure(['status', 'message', 'data'])
+<% for (const name of it.hidden) { -%>
+		->assertJsonMissingPath('data.<%~ name %>')
+<% } -%>
+		->assertJsonPath('status', 201);
+
+	expect(<%~ it.entity.pascal %>::count())->toBe($before + 1);
+<% if (it.comparables.length > 0) { -%>
+	$this->assertDatabaseHas('<%~ it.entity.table %>', [
+<% for (const name of it.comparables) { -%>
+		'<%~ name %>' => $payload['<%~ name %>'],
+<% } -%>
+	]);
+<% } -%>
+});
+<% if (it.required.length > 0) { -%>
+
+test('store: rejeita um corpo vazio com 422', function () {
+<% if (it.auth) { -%>
+	<%~ it.entity.camel %>SignIn();
+<% } -%>
+
+	$this->postJson(route('<%~ it.routes.store %>'), [])
+		->assertUnprocessable()
+		->assertJsonValidationErrors([<%~ it.required.map((name) => "'" + name + "'").join(', ') %>]);
+});
+<% } -%>
+<% if (it.unique) { -%>
+
+test('store: rejeita <%~ it.unique %> já usado com 422', function () {
+<% if (it.auth) { -%>
+	<%~ it.entity.camel %>SignIn();
+<% } -%>
+	$existing = <%~ it.entity.pascal %>::factory()->create();
+
+	$this->postJson(route('<%~ it.routes.store %>'), <%~ it.entity.camel %>Payload(['<%~ it.unique %>' => $existing-><%~ it.unique %>]))
+		->assertUnprocessable()
+		->assertJsonValidationErrors(['<%~ it.unique %>']);
+});
+<% } -%>
+<% } -%>
+<% if (it.has.show) { -%>
+
+test('show: devolve o registro', function () {
+<% if (it.auth) { -%>
+	<%~ it.entity.camel %>SignIn();
+<% } -%>
+	$record = <%~ it.entity.pascal %>::factory()->create();
+
+	$this->getJson(route('<%~ it.routes.show %>', $record))
+		->assertOk()
+<% if (it.hasId) { -%>
+		->assertJsonPath('data.id', $record->id)
+<% } -%>
+<% for (const name of it.hidden) { -%>
+		->assertJsonMissingPath('data.<%~ name %>')
+<% } -%>
+		->assertJsonStructure(['data']);
+});
+
+test('show: devolve 404 quando o registro não existe', function () {
+<% if (it.auth) { -%>
+	<%~ it.entity.camel %>SignIn();
+<% } -%>
+
+	$this->getJson(route('<%~ it.routes.show %>', [<%~ it.idExample %>]))->assertNotFound();
+});
+<% } -%>
+<% if (it.has.update) { -%>
+
+test('update: atualiza o registro', function () {
+<% if (it.auth) { -%>
+	<%~ it.entity.camel %>SignIn();
+<% } -%>
+	$record = <%~ it.entity.pascal %>::factory()->create();
+	$payload = <%~ it.entity.camel %>Payload();
+
+	$this->putJson(route('<%~ it.routes.update %>', $record), $payload)
+		->assertOk()
+		->assertJsonPath('status', 200);
+<% if (it.comparables.length > 0) { -%>
+
+	$this->assertDatabaseHas('<%~ it.entity.table %>', [
+		'id' => $record->id,
+<% for (const name of it.comparables) { -%>
+		'<%~ name %>' => $payload['<%~ name %>'],
+<% } -%>
+	]);
+<% } -%>
+});
+<% } -%>
+<% if (it.has.destroy) { -%>
+
+test('destroy: remove o registro', function () {
+<% if (it.auth) { -%>
+	<%~ it.entity.camel %>SignIn();
+<% } -%>
+	$record = <%~ it.entity.pascal %>::factory()->create();
+
+	$this->deleteJson(route('<%~ it.routes.destroy %>', $record))->assertNoContent();
+
+<% if (it.softDeletes) { -%>
+	$this->assertSoftDeleted($record);
+<% } else { -%>
+	$this->assertModelMissing($record);
+<% } -%>
+});
+<% } -%>
+<% for (const route of it.nested) { -%>
+<% if (route.read && route.kind === 'many') { -%>
+
+test('GET <%~ route.uri %>: lista só os registros do <%~ route.parent %> da URL', function () {
+<% if (it.auth) { -%>
+	<%~ it.entity.camel %>SignIn();
+<% } -%>
+	$parent = <%~ route.parent %>::factory()->create();
+	<%~ it.entity.pascal %>::factory()->count(2)->create(['<%~ route.foreignKey %>' => $parent->getKey()]);
+	<%~ it.entity.pascal %>::factory()->create();
+
+	$this->getJson(route('<%~ route.readRoute %>', $parent))
+		->assertOk()
+		->assertJsonStructure(['data', 'links', 'meta'])
+		->assertJsonPath('meta.total', 2);
+});
+<% } -%>
+<% if (route.read && route.kind === 'one') { -%>
+
+test('GET <%~ route.uri %>: mostra o registro do <%~ route.parent %> da URL', function () {
+<% if (it.auth) { -%>
+	<%~ it.entity.camel %>SignIn();
+<% } -%>
+	$parent = <%~ route.parent %>::factory()->create();
+	$record = <%~ it.entity.pascal %>::factory()->create(['<%~ route.foreignKey %>' => $parent->getKey()]);
+
+	$this->getJson(route('<%~ route.readRoute %>', $parent))
+		->assertOk()
+<% if (it.hasId) { -%>
+		->assertJsonPath('data.id', $record->id)
+<% } -%>
+		->assertJsonStructure(['data']);
+});
+
+test('GET <%~ route.uri %>: devolve 404 quando o <%~ route.parent %> ainda não tem registro', function () {
+<% if (it.auth) { -%>
+	<%~ it.entity.camel %>SignIn();
+<% } -%>
+	$parent = <%~ route.parent %>::factory()->create();
+
+	$this->getJson(route('<%~ route.readRoute %>', $parent))->assertNotFound();
+});
+<% } -%>
+<% if (route.store) { -%>
+
+test('POST <%~ route.uri %>: cria o registro para o <%~ route.parent %> da URL e ignora a chave do corpo', function () {
+<% if (it.auth) { -%>
+	<%~ it.entity.camel %>SignIn();
+<% } -%>
+	$parent = <%~ route.parent %>::factory()->create();
+	$payload = Arr::except(<%~ it.entity.camel %>Payload(), ['<%~ route.foreignKey %>']);
+
+	$this->postJson(route('<%~ route.storeRoute %>', $parent), $payload)->assertCreated();
+
+	$this->assertDatabaseHas('<%~ it.entity.table %>', [
+		'<%~ route.foreignKey %>' => $parent->getKey(),
+<% for (const name of it.comparables.filter((name) => name !== route.foreignKey)) { -%>
+		'<%~ name %>' => $payload['<%~ name %>'],
+<% } -%>
+	]);
+});
+<% if (route.kind === 'one') { -%>
+
+test('POST <%~ route.uri %>: devolve 409 quando o <%~ route.parent %> já tem registro', function () {
+<% if (it.auth) { -%>
+	<%~ it.entity.camel %>SignIn();
+<% } -%>
+	$parent = <%~ route.parent %>::factory()->create();
+	<%~ it.entity.pascal %>::factory()->create(['<%~ route.foreignKey %>' => $parent->getKey()]);
+
+	$this->postJson(route('<%~ route.storeRoute %>', $parent), Arr::except(<%~ it.entity.camel %>Payload(), ['<%~ route.foreignKey %>']))
+		->assertStatus(409);
+});
+<% } -%>
+<% } -%>
+<% } -%>

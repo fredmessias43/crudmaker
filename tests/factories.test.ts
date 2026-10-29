@@ -288,3 +288,25 @@ describe.each([
     expect(stdout).not.toContain("UserFactory.php:");
   });
 });
+
+describe("modo esqueleto: user sem name/email no manifest (ticket 19)", () => {
+  const existing = fs.readdirSync(path.join(fixturesDir, "skeleton/laravel-11/database/migrations"));
+  const manifest = manifestOf({ user: { fields: { id: "uuid", nickname: "string" } } });
+  const result = generate(manifest, { now, existingMigrations: existing, unmarkedMigrations: existing });
+
+  it("a factory preenche name e email (NOT NULL no esqueleto), para User::factory() criar o usuário", () => {
+    const base = result.files.find((f) => f.path === "app/Generated/Factories/BaseUserFactory.php")!.content;
+    expect(base).toContain("'name' => fake()->name(),");
+    expect(base).toContain("'email' => fake()->unique()->safeEmail(),");
+    expect(base.indexOf("'name' =>")).toBeLessThan(base.indexOf("'email' =>"));
+  });
+
+  it("avisa que a API não consegue criar usuários sem esses campos", () => {
+    expect(result.warnings.some((w) => w.includes("A entidade user não declara name e email"))).toBe(true);
+  });
+
+  it("não avisa quando o manifest declara name e email", () => {
+    const ok = generate(manifestOf({ user: { fields: { id: "uuid", name: "string", email: "string" } } }), { now, existingMigrations: existing, unmarkedMigrations: existing });
+    expect(ok.warnings.some((w) => w.includes("A entidade user não declara"))).toBe(false);
+  });
+});

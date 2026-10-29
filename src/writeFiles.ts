@@ -129,8 +129,8 @@ export type PlannedRemoval = {
   kind: ObsoleteFile["kind"];
 };
 
-/** Só estes arquivos podem ser apagados: a pasta da camada gerada, dentro do destino. */
-const deletableFolder = "app/Generated/";
+/** Só estes arquivos podem ser apagados: as pastas da camada gerada (classes base e testes Pest gerados), dentro do destino. */
+const deletableFolders = ["app/Generated/", "tests/Feature/Crudmaker/"];
 
 /**
  * Plano de remoção: só lê o disco. Considera apenas os caminhos que existem. Apaga (`removed`) somente
@@ -146,9 +146,8 @@ export function planRemovals(obsolete: ObsoleteFile[], baseDir: string): Planned
     const fullPath = path.join(baseDir, relativePath);
     if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) continue;
 
-    const insideGeneratedFolder = path.resolve(fullPath).startsWith(path.join(root, deletableFolder));
-    const isGenerated =
-      kind === "generated" && relativePath.startsWith(deletableFolder) && insideGeneratedFolder && fs.readFileSync(fullPath, "utf8").includes(GENERATED_MARKER);
+    const insideGeneratedFolder = deletableFolders.some((folder) => relativePath.startsWith(folder) && path.resolve(fullPath).startsWith(path.join(root, folder)));
+    const isGenerated = kind === "generated" && insideGeneratedFolder && fs.readFileSync(fullPath, "utf8").includes(GENERATED_MARKER);
 
     removals.push({ path: relativePath, fullPath, action: isGenerated ? "removed" : "orphaned", kind });
   }
@@ -156,16 +155,16 @@ export function planRemovals(obsolete: ObsoleteFile[], baseDir: string): Planned
   return removals;
 }
 
-/** Apaga os `removed` (e as pastas de `app/Generated` que ficarem vazias). Os `orphaned` não são tocados. */
+/** Apaga os `removed` (e as subpastas de `app/Generated` que ficarem vazias). Os `orphaned` não são tocados. */
 export function applyRemovals(removals: PlannedRemoval[], baseDir: string): void {
-  const generatedRoot = path.join(path.resolve(baseDir), deletableFolder);
+  const generatedRoots = deletableFolders.map((folder) => path.join(path.resolve(baseDir), folder));
 
   for (const item of removals) {
     if (item.action !== "removed") continue;
 
     fs.rmSync(item.fullPath);
 
-    for (let dir = path.dirname(path.resolve(item.fullPath)); dir.startsWith(generatedRoot); dir = path.dirname(dir)) {
+    for (let dir = path.dirname(path.resolve(item.fullPath)); generatedRoots.some((root) => dir.startsWith(root)); dir = path.dirname(dir)) {
       if (fs.readdirSync(dir).length > 0) break;
       fs.rmdirSync(dir);
     }

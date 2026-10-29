@@ -58,6 +58,8 @@ export type ApiOptions = {
   with?: string[],
   /** Rotas aninhadas de hasMany/hasOne: `false` desliga, uma lista restringe aos relacionamentos citados (nome do método da model). Padrão: todos. */
   nested?: boolean | string[],
+  /** `false` não gera o arquivo de testes Pest da entidade (`tests/Feature/Crudmaker/<Entidade>Test.php`). Padrão: `true`. */
+  tests?: boolean,
 }
 
 /** Formato atual do `manifest-lock.json` (veja `docs/arquitetura.md`). Locks sem `lockVersion` são o formato 1. */

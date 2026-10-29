@@ -12,6 +12,7 @@ app/Http/Requests/GameRequest.php
 app/Generated/Factories/BaseGameFactory.php
 database/factories/GameFactory.php
 database/migrations/2025_01_02_030405_create_games_table.php
+tests/Feature/Crudmaker/GameTest.php
 app/Generated/Enums/GameStatus.php
 app/Generated/Models/BaseAwards.php
 app/Models/Awards.php
@@ -26,6 +27,7 @@ app/Http/Requests/AwardsRequest.php
 app/Generated/Factories/BaseAwardsFactory.php
 database/factories/AwardsFactory.php
 database/migrations/2025_01_02_030406_create_awards_table.php
+tests/Feature/Crudmaker/AwardsTest.php
 app/Generated/Models/BasePlayer.php
 app/Models/Player.php
 app/Generated/Http/Resources/BasePlayerResource.php
@@ -39,6 +41,7 @@ app/Http/Requests/PlayerRequest.php
 app/Generated/Factories/BasePlayerFactory.php
 database/factories/PlayerFactory.php
 database/migrations/2025_01_02_030407_create_players_table.php
+tests/Feature/Crudmaker/PlayerTest.php
 app/Generated/Models/BasePlayerInvite.php
 app/Models/PlayerInvite.php
 app/Generated/Http/Resources/BasePlayerInviteResource.php
@@ -52,6 +55,7 @@ app/Http/Requests/PlayerInviteRequest.php
 app/Generated/Factories/BasePlayerInviteFactory.php
 database/factories/PlayerInviteFactory.php
 database/migrations/2025_01_02_030408_create_player_invites_table.php
+tests/Feature/Crudmaker/PlayerInviteTest.php
 app/Generated/Enums/PlayerInviteStatus.php
 app/Generated/Models/BaseCards.php
 app/Models/Cards.php
@@ -66,6 +70,7 @@ app/Http/Requests/CardsRequest.php
 app/Generated/Factories/BaseCardsFactory.php
 database/factories/CardsFactory.php
 database/migrations/2025_01_02_030409_create_cards_table.php
+tests/Feature/Crudmaker/CardsTest.php
 app/Generated/Models/BaseDrawnNumbers.php
 app/Models/DrawnNumbers.php
 app/Generated/Http/Resources/BaseDrawnNumbersResource.php
@@ -79,6 +84,7 @@ app/Http/Requests/DrawnNumbersRequest.php
 app/Generated/Factories/BaseDrawnNumbersFactory.php
 database/factories/DrawnNumbersFactory.php
 database/migrations/2025_01_02_030410_create_drawn_numbers_table.php
+tests/Feature/Crudmaker/DrawnNumbersTest.php
 app/Generated/Http/Controllers/Api/Relationships/BaseGameAwardsController.php
 app/Http/Controllers/Api/Relationships/GameAwardsController.php
 app/Generated/Http/Controllers/Api/Relationships/BaseGamePlayerInviteController.php

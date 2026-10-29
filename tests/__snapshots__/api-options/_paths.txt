@@ -12,6 +12,7 @@ app/Http/Requests/ClientRequest.php
 app/Generated/Factories/BaseClientFactory.php
 database/factories/ClientFactory.php
 database/migrations/2025_01_02_030405_create_clients_table.php
+tests/Feature/Crudmaker/ClientTest.php
 app/Generated/Enums/ClientStatus.php
 app/Generated/Models/BaseAddress.php
 app/Models/Address.php
@@ -26,6 +27,7 @@ app/Http/Requests/AddressRequest.php
 app/Generated/Factories/BaseAddressFactory.php
 database/factories/AddressFactory.php
 database/migrations/2025_01_02_030406_create_addresses_table.php
+tests/Feature/Crudmaker/AddressTest.php
 app/Generated/Models/BaseAlert.php
 app/Models/Alert.php
 app/Generated/Http/Resources/BaseAlertResource.php
@@ -39,6 +41,7 @@ app/Http/Requests/AlertRequest.php
 app/Generated/Factories/BaseAlertFactory.php
 database/factories/AlertFactory.php
 database/migrations/2025_01_02_030407_create_alerts_table.php
+tests/Feature/Crudmaker/AlertTest.php
 app/Generated/Models/BaseTag.php
 app/Models/Tag.php
 app/Generated/Http/Resources/BaseTagResource.php
@@ -52,6 +55,7 @@ app/Http/Requests/TagRequest.php
 app/Generated/Factories/BaseTagFactory.php
 database/factories/TagFactory.php
 database/migrations/2025_01_02_030408_create_tags_table.php
+tests/Feature/Crudmaker/TagTest.php
 app/Generated/Http/Controllers/Api/Relationships/BaseClientAddressController.php
 app/Http/Controllers/Api/Relationships/ClientAddressController.php
 app/Generated/Http/Controllers/Api/Relationships/BaseClientAlertController.php

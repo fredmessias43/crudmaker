@@ -12,6 +12,7 @@ app/Http/Requests/AccountRequest.php
 app/Generated/Factories/BaseAccountFactory.php
 database/factories/AccountFactory.php
 database/migrations/2025_01_02_030405_create_accounts_table.php
+tests/Feature/Crudmaker/AccountTest.php
 app/Generated/Enums/AccountStatus.php
 app/Generated/Enums/AccountPlan.php
 routes/crudmaker.php

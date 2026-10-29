@@ -41,6 +41,8 @@ export type EntityApi = {
   with: WithRelation[];
   /** Rotas aninhadas dos hasMany/hasOne: `true` (todos), `false` (nenhum) ou os nomes de método dos relacionamentos que geram rota. */
   nested: boolean | string[];
+  /** Gera os testes Pest da entidade (padrão: sim). */
+  tests: boolean;
 };
 
 /** Resolve o `entity.api` (já mesclado com `pkg.defaults.api` e validado) nas opções que os view models usam. */
@@ -70,6 +72,7 @@ export function entityApi(entity: Entity): EntityApi {
     sort: api.sort ?? [],
     defaultSort,
     nested: api.nested ?? true,
+    tests: api.tests ?? true,
     // Um nome sem relacionamento só aparece num lock antigo ou editado à mão (o manifest é validado): ignora.
     with: (api.with ?? []).flatMap((name) => {
       const relationship = relations.get(name);

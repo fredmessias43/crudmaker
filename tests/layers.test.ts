@@ -259,6 +259,7 @@ describe("arquivos obsoletos (entidade que saiu do manifest)", () => {
       "app/Generated/Http/Controllers/Api/BaseNoteController.php",
       "app/Generated/Http/Requests/BaseNoteRequest.php",
       "app/Generated/Factories/BaseNoteFactory.php",
+      "tests/Feature/Crudmaker/NoteTest.php",
     ]);
     expect(obsolete.filter((o) => o.kind === "custom").map((o) => o.path)).toEqual([
       "app/Models/Note.php",
@@ -511,6 +512,7 @@ describe("CLI: regerar com segurança", () => {
       "app/Generated/Http/Controllers/Api/BaseNoteController.php",
       "app/Generated/Http/Requests/BaseNoteRequest.php",
       "app/Generated/Factories/BaseNoteFactory.php",
+      "tests/Feature/Crudmaker/NoteTest.php",
     ]);
     expect(exists("app/Generated/Models/BaseNote.php")).toBe(true);
     const dry = stdout.replace(/^.*\n/, "");
@@ -519,11 +521,12 @@ describe("CLI: regerar com segurança", () => {
     expect(run(["generate", manifest, "--out", out], io())).toBe(0);
 
     expect(stdout.replace(/^.*\n/, "")).toBe(dry);
-    expect(stdout).toContain("(0 criados, 2 sobrescritos, 6 sem mudança, 7 preservados, 6 removidos)");
-    expect(stdout).toMatch(/Total: \d+ arquivos \(.*, 6 removidos\)/);
+    expect(stdout).toContain("(0 criados, 2 sobrescritos, 7 sem mudança, 7 preservados, 7 removidos)");
+    expect(stdout).toMatch(/Total: \d+ arquivos \(.*, 7 removidos\)/);
     for (const p of ["Models/BaseNote", "Http/Resources/BaseNoteResource", "Http/Resources/BaseNoteCollection", "Http/Controllers/Api/BaseNoteController", "Http/Requests/BaseNoteRequest", "Factories/BaseNoteFactory"]) {
       expect(exists(`app/Generated/${p}.php`), p).toBe(false);
     }
+    expect(exists("tests/Feature/Crudmaker/NoteTest.php")).toBe(false);
     // a camada de customização e a migration ficam, e são listadas
     expect(read("app/Models/Note.php")).toBe("<?php // regra de negócio minha\n");
     for (const p of ["app/Http/Controllers/Api/NoteController.php", "app/Http/Requests/NoteRequest.php", "app/Http/Resources/NoteResource.php", "app/Http/Resources/NoteCollection.php", "database/factories/NoteFactory.php", `database/migrations/${noteMigration}`]) {

@@ -12,6 +12,7 @@ app/Http/Requests/CourseRequest.php
 app/Generated/Factories/BaseCourseFactory.php
 database/factories/CourseFactory.php
 database/migrations/2025_01_02_030405_create_courses_table.php
+tests/Feature/Crudmaker/CourseTest.php
 app/Generated/Models/BaseCourseContent.php
 app/Models/CourseContent.php
 app/Generated/Http/Resources/BaseCourseContentResource.php
@@ -25,6 +26,7 @@ app/Http/Requests/CourseContentRequest.php
 app/Generated/Factories/BaseCourseContentFactory.php
 database/factories/CourseContentFactory.php
 database/migrations/2025_01_02_030406_create_course_contents_table.php
+tests/Feature/Crudmaker/CourseContentTest.php
 app/Generated/Models/BaseUser.php
 app/Models/User.php
 app/Generated/Http/Resources/BaseUserResource.php
@@ -38,6 +40,7 @@ app/Http/Requests/UserRequest.php
 app/Generated/Factories/BaseUserFactory.php
 database/factories/UserFactory.php
 database/migrations/2025_01_02_030407_create_users_table.php
+tests/Feature/Crudmaker/UserTest.php
 app/Generated/Models/BaseUserCourse.php
 app/Models/UserCourse.php
 app/Generated/Http/Resources/BaseUserCourseResource.php
@@ -51,6 +54,7 @@ app/Http/Requests/UserCourseRequest.php
 app/Generated/Factories/BaseUserCourseFactory.php
 database/factories/UserCourseFactory.php
 database/migrations/2025_01_02_030408_create_user_courses_table.php
+tests/Feature/Crudmaker/UserCourseTest.php
 app/Generated/Models/BaseClassroom.php
 app/Models/Classroom.php
 app/Generated/Http/Resources/BaseClassroomResource.php
@@ -64,6 +68,7 @@ app/Http/Requests/ClassroomRequest.php
 app/Generated/Factories/BaseClassroomFactory.php
 database/factories/ClassroomFactory.php
 database/migrations/2025_01_02_030409_create_classrooms_table.php
+tests/Feature/Crudmaker/ClassroomTest.php
 app/Generated/Models/BaseClassLesson.php
 app/Models/ClassLesson.php
 app/Generated/Http/Resources/BaseClassLessonResource.php
@@ -77,6 +82,7 @@ app/Http/Requests/ClassLessonRequest.php
 app/Generated/Factories/BaseClassLessonFactory.php
 database/factories/ClassLessonFactory.php
 database/migrations/2025_01_02_030410_create_class_lessons_table.php
+tests/Feature/Crudmaker/ClassLessonTest.php
 app/Generated/Models/BaseClassLessonComment.php
 app/Models/ClassLessonComment.php
 app/Generated/Http/Resources/BaseClassLessonCommentResource.php
@@ -90,6 +96,7 @@ app/Http/Requests/ClassLessonCommentRequest.php
 app/Generated/Factories/BaseClassLessonCommentFactory.php
 database/factories/ClassLessonCommentFactory.php
 database/migrations/2025_01_02_030411_create_class_lesson_comments_table.php
+tests/Feature/Crudmaker/ClassLessonCommentTest.php
 app/Generated/Models/BaseClassLessonAttendee.php
 app/Models/ClassLessonAttendee.php
 app/Generated/Http/Resources/BaseClassLessonAttendeeResource.php
@@ -103,6 +110,7 @@ app/Http/Requests/ClassLessonAttendeeRequest.php
 app/Generated/Factories/BaseClassLessonAttendeeFactory.php
 database/factories/ClassLessonAttendeeFactory.php
 database/migrations/2025_01_02_030412_create_class_lesson_attendees_table.php
+tests/Feature/Crudmaker/ClassLessonAttendeeTest.php
 app/Generated/Models/BaseStudent.php
 app/Models/Student.php
 app/Generated/Http/Resources/BaseStudentResource.php
@@ -116,6 +124,7 @@ app/Http/Requests/StudentRequest.php
 app/Generated/Factories/BaseStudentFactory.php
 database/factories/StudentFactory.php
 database/migrations/2025_01_02_030413_create_students_table.php
+tests/Feature/Crudmaker/StudentTest.php
 app/Generated/Http/Controllers/Api/Relationships/BaseCourseCourseContentController.php
 app/Http/Controllers/Api/Relationships/CourseCourseContentController.php
 app/Generated/Http/Controllers/Api/Relationships/BaseUserUserCourseController.php

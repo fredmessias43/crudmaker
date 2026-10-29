@@ -264,14 +264,14 @@ function validateDefaultsApi(raw: unknown): ManifestProblem[] {
 
   return ENTITY_ONLY_API_KEYS.filter((key) => key in api).map((key) => ({
     path: `pkg.defaults.api.${key}`,
-    message: `"${key}" depende dos campos de cada entidade e não vale como padrão; declare no bloco api da entidade (em pkg.defaults.api só valem actions, middleware, perPage e nested)`,
+    message: `"${key}" depende dos campos de cada entidade e não vale como padrão; declare no bloco api da entidade (em pkg.defaults.api só valem actions, middleware, perPage, nested e tests)`,
   }));
 }
 
 /**
  * Nomes do bloco `api` das entidades (`filters`, `search`, `sort`, `defaultSort`, `with`) contra os campos
  * e relacionamentos da própria entidade. Roda com os nomes já normalizados; o caminho usa a chave original.
- * `pkg.defaults.api` não tem nomes a conferir (só actions, middleware e perPage, já validados pelo schema).
+ * `pkg.defaults.api` não tem nomes a conferir (só actions, middleware, perPage, nested e tests, já validados pelo schema).
  */
 function validateApiNames(manifest: ManifestInput, originalEntityKeys: { [normalized: string]: string }): ManifestProblem[] {
   const problems: ManifestProblem[] = [];

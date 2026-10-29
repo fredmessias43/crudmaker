@@ -28,6 +28,7 @@ export type EntityFileContext = {
  * - `generated`: classe base em `App\Generated\...`, sempre sobrescrita (política `overwrite`);
  * - `custom`: classe final no namespace normal, criada uma única vez (política `create-once`);
  * - `migration`: arquivo único, sem base nem final (política `overwrite`, como antes).
+ * (Os testes Pest gerados usam `generated`: sempre regravados, mas ficam em `tests/`, fora de `app/Generated`.)
  */
 export type EntityFileLayer = "generated" | "custom" | "migration";
 
@@ -40,6 +41,8 @@ export type EntityFileType = {
   /** Nome do template em `templates/laravel-api/<template>.php.eta` (sem a extensão). */
   template: string;
   layer: EntityFileLayer;
+  /** Tipos opcionais por entidade (os testes Pest, com `api.tests: false`): `false` pula o arquivo. Omitido, sempre sai. */
+  enabled?(entity: Entity): boolean;
   build(
     entity: Entity,
     context: EntityFileContext,

@@ -17,7 +17,7 @@ const controllerNamespace = `${BASE_NAMESPACE}\\Http\\Controllers\\Api`;
  * (`/class-lessons/{class_lesson}`), que é o nome que a request lê com `$this->route('class_lesson')`
  * e que o route model binding casa com `$classLesson` no controller.
  */
-function resourceName(entity: Entity): string {
+export function resourceName(entity: Entity): string {
   return entity.getTableName().replaceAll("_", "-");
 }
 

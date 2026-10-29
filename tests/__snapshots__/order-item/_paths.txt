@@ -12,6 +12,7 @@ app/Http/Requests/OrderItemRequest.php
 app/Generated/Factories/BaseOrderItemFactory.php
 database/factories/OrderItemFactory.php
 database/migrations/2025_01_02_030407_create_order_items_table.php
+tests/Feature/Crudmaker/OrderItemTest.php
 app/Generated/Enums/OrderItemStatus.php
 app/Generated/Models/BaseOrder.php
 app/Models/Order.php
@@ -26,6 +27,7 @@ app/Http/Requests/OrderRequest.php
 app/Generated/Factories/BaseOrderFactory.php
 database/factories/OrderFactory.php
 database/migrations/2025_01_02_030406_create_orders_table.php
+tests/Feature/Crudmaker/OrderTest.php
 app/Generated/Models/BaseUser.php
 app/Models/User.php
 app/Generated/Http/Resources/BaseUserResource.php
@@ -39,6 +41,7 @@ app/Http/Requests/UserRequest.php
 app/Generated/Factories/BaseUserFactory.php
 database/factories/UserFactory.php
 database/migrations/2025_01_02_030405_create_users_table.php
+tests/Feature/Crudmaker/UserTest.php
 app/Generated/Http/Controllers/Api/Relationships/BaseOrderOrderItemController.php
 app/Http/Controllers/Api/Relationships/OrderOrderItemController.php
 app/Generated/Http/Controllers/Api/Relationships/BaseUserOrderByUserController.php

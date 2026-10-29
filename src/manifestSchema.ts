@@ -97,14 +97,21 @@ const nestedDefaultsSchema = z.boolean().describe(
   `false desliga as rotas aninhadas (GET/POST /clients/{client}/alerts) de todas as entidades. Padrão: true.`,
 );
 
+/** Liga/desliga os testes Pest gerados (ticket 19). */
+const testsSchema = z.boolean().describe(
+  `false não gera o arquivo de testes Pest da entidade (tests/Feature/Crudmaker/<Entidade>Test.php); em pkg.defaults.api vale para todas as entidades. ` +
+  `O arquivo é regravado a cada geração, então esta é a forma de desligá-lo (apagar o arquivo não adianta). Padrão: true.`,
+);
+
 /** Valores que valem para todas as entidades; só as opções que não dependem dos campos de cada uma. */
 const defaultsApiSchema = z.object({
   actions: actionsSchema,
   middleware: middlewareSchema,
   perPage: perPageSchema,
   nested: nestedDefaultsSchema,
+  tests: testsSchema,
 }).partial().describe(
-  "Valores padrão do bloco api de todas as entidades. A entidade substitui cada chave que declarar (chave a chave). Só aceita actions, middleware, perPage e nested (booleano): filters, search, sort, defaultSort e with dependem dos campos de cada entidade e ficam no bloco api dela.",
+  "Valores padrão do bloco api de todas as entidades. A entidade substitui cada chave que declarar (chave a chave). Só aceita actions, middleware, perPage, nested (booleano) e tests: filters, search, sort, defaultSort e with dependem dos campos de cada entidade e ficam no bloco api dela.",
 );
 
 /** Chaves do bloco `api` que dependem dos campos/relacionamentos da entidade (não valem em `pkg.defaults.api`). */
@@ -114,6 +121,7 @@ const apiSchema = z.object({
   actions: actionsSchema,
   middleware: middlewareSchema,
   perPage: perPageSchema,
+  tests: testsSchema,
   filters: nameListSchema(
     `Campos com filtro por igualdade na query string (?status=active). Use o nome da coluna. Campo enum só filtra se o valor for um dos enumItems; campo boolean lê ?ativo=true/false/1/0.`,
   ),

@@ -480,6 +480,101 @@ public function run(): void
 
 ou rode `php artisan db:seed --class=CrudmakerSeeder`. Enquanto o `DatabaseSeeder` não citar o `CrudmakerSeeder`, o `generate --seeders` imprime um aviso com essa instrução. A flag não fica registrada no lock: sem ela numa regeração, os seeders existentes ficam onde estão, sem atualizar o `CrudmakerSeeder`.
 
+## Testes gerados (Pest)
+
+O `generate` (e o `new`) escreve, para cada entidade, um arquivo de testes Pest em `tests/Feature/Crudmaker/<Entidade>Test.php` (`ClientTest.php`...). Eles exercitam a API gerada de ponta a ponta (rotas, request, controller, resource, model e factory) e dizem na hora se ela funciona no seu projeto.
+
+```bash
+./vendor/bin/sail test                                  # tudo (artisan test, que roda o Pest)
+./vendor/bin/sail test tests/Feature/Crudmaker          # só os gerados
+./vendor/bin/sail test --filter "ClientTest"            # uma entidade
+./vendor/bin/pest tests/Feature/Crudmaker               # sem Sail, com PHP local (ou o `docker run ... php vendor/bin/pest` do resumo do `new`)
+```
+
+### Pasta e política: por que o arquivo é gerado (`overwrite`)
+
+Os testes ficam fora de `app/`, numa pasta própria, e **são regravados a cada `generate`** (têm o cabeçalho de arquivo gerado). O Pest escreve testes como closures, não como classes: não há uma classe para estender, então o par base × final das demais camadas não se aplica. Os testes **que você escreve ficam em outros arquivos** (`tests/Feature/ClientNotasTest.php`, `tests/Feature/Crudmaker/` só para os gerados). O arquivo gerado cobre o comportamento padrão e acompanha o manifest: um campo novo, uma action a menos ou uma rota aninhada nova mudam o teste na próxima geração.
+
+### O que cobre
+
+Só as actions habilitadas em `api.actions` ganham teste (uma action desabilitada não tem rota, nem teste). Em cada arquivo:
+
+| Teste | Quando | Confere |
+|---|---|---|
+| `index: lista os registros paginados` | `index` | 200, `data`/`links`/`meta`, `meta.total` (registros criados pela factory) e `meta.per_page` (o `api.perPage`) |
+| `store: cria o registro com dados válidos` | `store` | 201, `{status, message, data}`, um registro a mais e os campos simples no banco (`assertDatabaseHas`); campos `hidden` não aparecem em `data` |
+| `store: rejeita um corpo vazio com 422` | `store`, com algum campo obrigatório | 422 e `assertJsonValidationErrors` em todos os campos `required` |
+| `store: rejeita <campo> já usado com 422` | `store`, com campo `unique` | 422 ao repetir o valor de um registro existente |
+| `show: devolve o registro` / `devolve 404 quando o registro não existe` | `show` | 200 com o `id` e 404 para um id inexistente |
+| `update: atualiza o registro` | `update` | 200 e os campos novos no banco |
+| `destroy: remove o registro` | `destroy` | 204 e `assertSoftDeleted` (na entidade `user` do esqueleto, que não tem soft delete: `assertModelMissing`) |
+| `GET/POST <pai>/{pai}/<filho>` | rotas aninhadas em que a entidade é o **filho** | lista só os registros do pai da URL (`hasMany`), mostra o registro e 404 sem ele (`hasOne`), cria com a FK da URL ignorando a do corpo e 409 no segundo `POST` do `hasOne` |
+| `exige autenticação` | a entidade tem `auth`/`auth:<guard>` em `api.middleware` | 401 sem usuário |
+
+### Dados válidos: o `<entidade>Payload()`
+
+O corpo de `store`/`update` sai da factory (`Client::factory()->make()`), campo a campo, no formato que a request aceita: **datas** em `Y-m-d`, **datetime** em `Y-m-d H:i` (o `date_format` da request), **enum** pelo valor (`->value`), **FKs** com o id de um pai criado pela factory (passa no `exists`), **json** como array (um array vazio ganha um item, porque o `required` do Laravel recusa `[]`) e campos `hidden` (como `password`) **entram no corpo**, mas não são conferidos no banco nem aparecem na resposta. O `assertDatabaseHas` só compara string, uuid, text, integer e enum; data, json, boolean e decimal variam por driver e ficam de fora.
+
+### Autenticação e middleware
+
+- `auth:sanctum` → `actingAs($user, 'sanctum')`; `auth` → `actingAs($user)`; `auth:<guard>` → `actingAs($user, '<guard>')`. O usuário é `App\Models\User::factory()->create()`, o `User` do esqueleto do Laravel (ou o da entidade `user`, se você migrou o model para a base gerada). **Não usa `Sanctum::actingAs`**, que exige a trait `HasApiTokens` no `User`: o `install:api` do Laravel 11+ não a adiciona, e o `actingAs` com o guard `sanctum` basta para o middleware `auth:sanctum`.
+- `verified` passa: o usuário da factory tem `email_verified_at`. `throttle:*` também passa.
+- **Outros middlewares** (`can:...`, `role:...`, `signed`...) o gerador não sabe satisfazer: o cabeçalho do arquivo lista os que ele não tratou ("ATENÇÃO"), e os testes podem receber 403/401. Ajuste o usuário (nem que seja desligando os testes da entidade, abaixo) ou cubra a entidade com testes seus.
+- O middleware vale para o teste do filho nas rotas aninhadas também: elas usam o `api.middleware` do filho.
+- Se o projeto não tem `App\Models\User` com factory (o esqueleto sempre tem), os testes autenticados falham.
+
+### Banco de dados
+
+Cada arquivo declara `uses(RefreshDatabase::class)`: o banco é recriado (`migrate:fresh`) e **apagado** a cada teste. Por isso **o banco dos testes precisa ser descartável**; nunca o de desenvolvimento. Se você já habilitou o `RefreshDatabase` no `tests/Pest.php`, nada muda (declarar de novo é inofensivo). Cada versão do esqueleto configura o banco de teste de um jeito, conferido com `crudmaker new`:
+
+| Versão | `phpunit.xml` do esqueleto | O que fazer |
+|---|---|---|
+| Laravel 12 | `DB_DATABASE=testing`, sem trocar o `DB_CONNECTION` | Com Sail e MySQL/PostgreSQL, usa o banco `testing` que o Sail cria na primeira subida do banco. Com sqlite (`--db sqlite`), o Laravel cria o arquivo `testing` na raiz do projeto sozinho |
+| Laravel 11 | idem, mas o sqlite **não** cria o arquivo (`Database file at path [testing] does not exist`) | Use sqlite em memória (abaixo) ou um banco `testing` |
+| Laravel 10 | idem; o `.env` do esqueleto é MySQL | Use sqlite em memória (abaixo) ou um banco `testing` no MySQL do Sail |
+
+Para sqlite em memória (rápido, sem arquivo e sem risco para o banco de desenvolvimento), troque no `phpunit.xml`:
+
+```xml
+<env name="DB_CONNECTION" value="sqlite"/>
+<env name="DB_DATABASE" value=":memory:"/>
+```
+
+(o PHP precisa da extensão `pdo_sqlite`; a imagem `laravelsail/phpXX-composer` e o container do Sail já a têm). O `crudmaker` **não edita o `phpunit.xml`** do seu projeto.
+
+### O que quebra os testes (e o que fazer)
+
+Os testes cobrem o **comportamento padrão gerado**. Customizações suas que mudam esse comportamento fazem testes falharem, e isso é esperado: por exemplo, um `indexQuery` que filtra pelo usuário logado (o `meta.total` deixa de bater), um `beforeStore` que exige um campo a mais, `extraRules()`/`rules` extras do manifest que a factory não satisfaz (`rules: ["min:10"]` num campo cuja factory gera menos), um `authorize()` que nega o usuário comum, ou um escopo global. Para esses casos:
+
+- ajuste a **factory final** (`database/factories/<Entidade>Factory.php`, `create-once`, é sua) para gerar dados que passem nas suas regras: os testes usam a factory, então corrigir lá conserta os testes;
+- ou **desligue os testes gerados** da entidade e escreva os seus (abaixo).
+
+### Desligar: `api.tests: false`
+
+```yaml
+pkg:
+  defaults:
+    api:
+      tests: false          # nenhuma entidade ganha o arquivo de testes
+  entities:
+    client:
+      api:
+        tests: true         # ...menos esta
+    legacy:
+      api:
+        tests: false        # só esta, com o padrão ligado
+```
+
+Como o arquivo é regravado a cada geração, **apagá-lo à mão não adianta** (ele volta): a forma de desligar é `api.tests: false`, na entidade ou em `pkg.defaults.api`. Ao desligar, o `generate` **apaga** o arquivo gerado antes (só se ainda tiver o cabeçalho de gerado; um arquivo seu em `tests/Feature/Crudmaker/` nunca é apagado) e o lista em `removidos`. O mesmo vale para uma entidade que sai do manifest.
+
+### Limitações
+
+- Os testes assumem o formato de resposta gerado (`data`/`links`/`meta`, `{status, message, data}`, 204): se você mudou isso nas classes finais (resource, `extra()`), ajuste ou desligue.
+- Não cobrem filtros, busca e ordenação do `index`, nem os hooks; escreva esses testes à parte.
+- `unique` com `date`, `datetime`, `double` e `boolean` não ganha o teste de duplicidade.
+- Entidade com `user` do esqueleto: **migre o `app/Models/User.php` e a `UserFactory` para as bases geradas** (veja [A entidade `user`](#a-entidade-user)) antes de rodar os testes; senão o `User` do esqueleto não conhece os campos do manifest nem os relacionamentos (`hasOne` aninhado devolve 500). Declare também `name` e `email` no `user` (o `generate` avisa se faltarem).
+- Rotas aninhadas só têm teste de `index`/`show`/`store` (são as que existem); `update` e `destroy` usam as rotas raiz.
+
 ## Stubs: mudar o padrão de um tipo de arquivo
 
 Cada arquivo gerado vem de um template (`templates/laravel-api/*.php.eta`, parecido com o PHP final). Um **stub** é uma cópia de um desses templates dentro do seu projeto, que tem prioridade sobre o embutido. Serve para mudar o padrão de **todos** os arquivos de um tipo de uma vez (ex.: o envelope de resposta de todos os controllers).
@@ -597,7 +692,8 @@ Uma entidade `user` (tabela `users`) num projeto criado pelo esqueleto oficial (
   3. apague `$fillable`, `$hidden` e `$casts`/`casts()` repetidos: redeclarados na final, **substituem** os da base (e o `$fillable` do esqueleto não inclui os campos novos do manifest);
   4. o mesmo vale para `database/factories/UserFactory.php`: é a final `create-once` da factory e o esqueleto já a criou (estendendo `Factory` direto), então é preservada, com um aviso por `generate`. Para usar a base (`app/Generated/Factories/BaseUserFactory.php`, que preenche os campos do manifest, como `phone`, e `email_verified_at`, `password` e `remember_token` como o esqueleto), troque `extends Factory` por `extends \App\Generated\Factories\BaseUserFactory`, remova o `use ...\Factory;`, a propriedade `$password` e a `definition()`, e mantenha o estado `unverified()` e o que for seu. Enquanto não migrar, `User::factory()` usa a factory do esqueleto (que não conhece as colunas novas);
 - declare `password` no manifest com `hidden: true` (`"password": { "type": "string", "hidden": true }`) para a API aceitar a senha sem devolvê-la; o cast `hashed` a cifra ao salvar. Sem esse campo a API não cria usuários com senha. No Laravel 10, o cast `hashed` exige a versão 10.14 ou mais nova;
-- o login padrão do esqueleto (colunas `password`, `remember_token`, `email_verified_at`) continua funcionando.
+- o login padrão do esqueleto (colunas `password`, `remember_token`, `email_verified_at`) continua funcionando;
+- `name` e `email` são obrigatórios (NOT NULL) na tabela do esqueleto: declare-os nos `fields` do `user` (o `generate` avisa se faltarem; a `BaseUserFactory` preenche os dois de qualquer modo, para `User::factory()` funcionar). Os [testes gerados](#testes-gerados-pest) usam o `User` como usuário autenticado.
 
 Esse modo só vale quando a tabela `users` vem de uma migration de fora do crudmaker. Se não há nenhuma migration `create_users_table` no destino (ou se ela é do crudmaker), `user` é uma entidade comum, com id uuid, como qualquer outra.
 
@@ -605,7 +701,7 @@ Esse modo só vale quando a tabela `users` vem de uma migration de fora do crudm
 
 Se uma entidade sai do manifest, o `generate` usa o `manifest-lock.json` da geração anterior para saber o que existia e:
 
-- **apaga** as bases dela em `app/Generated/` (aparecem em `removidos`). Só apaga arquivo que tem o cabeçalho de gerado e está em `app/Generated/`; qualquer outro arquivo nunca é apagado;
+- **apaga** as bases dela em `app/Generated/` e o arquivo de [testes gerados](#testes-gerados-pest) (`tests/Feature/Crudmaker/NoteTest.php`) (aparecem em `removidos`). Só apaga arquivo que tem o cabeçalho de gerado e está em `app/Generated/` ou `tests/Feature/Crudmaker/`; qualquer outro arquivo nunca é apagado;
 - **lista como órfãos**, sem apagar, as classes finais (`app/Models/Note.php`...) e a migration de criação da tabela (o crudmaker nunca apaga migration: crie à mão uma que remova a tabela, se for o caso);
 - deixa de citar o controller dela em `routes/crudmaker.php`. As finais órfãs ficam sem uso (e sem a base não carregam): apague-as à mão quando quiser.
 

@@ -690,6 +690,10 @@
                     "maximum": 9007199254740991,
                     "description": "Itens por página no index (inteiro positivo). Padrão: 15."
                   },
+                  "tests": {
+                    "type": "boolean",
+                    "description": "false não gera o arquivo de testes Pest da entidade (tests/Feature/Crudmaker/<Entidade>Test.php); em pkg.defaults.api vale para todas as entidades. O arquivo é regravado a cada geração, então esta é a forma de desligá-lo (apagar o arquivo não adianta). Padrão: true."
+                  },
                   "filters": {
                     "type": "array",
                     "items": {
@@ -793,9 +797,13 @@
                 "nested": {
                   "type": "boolean",
                   "description": "false desliga as rotas aninhadas (GET/POST /clients/{client}/alerts) de todas as entidades. Padrão: true."
+                },
+                "tests": {
+                  "type": "boolean",
+                  "description": "false não gera o arquivo de testes Pest da entidade (tests/Feature/Crudmaker/<Entidade>Test.php); em pkg.defaults.api vale para todas as entidades. O arquivo é regravado a cada geração, então esta é a forma de desligá-lo (apagar o arquivo não adianta). Padrão: true."
                 }
               },
-              "description": "Valores padrão do bloco api de todas as entidades. A entidade substitui cada chave que declarar (chave a chave). Só aceita actions, middleware, perPage e nested (booleano): filters, search, sort, defaultSort e with dependem dos campos de cada entidade e ficam no bloco api dela."
+              "description": "Valores padrão do bloco api de todas as entidades. A entidade substitui cada chave que declarar (chave a chave). Só aceita actions, middleware, perPage, nested (booleano) e tests: filters, search, sort, defaultSort e with dependem dos campos de cada entidade e ficam no bloco api dela."
             }
           },
           "description": "Valores padrão para todas as entidades."

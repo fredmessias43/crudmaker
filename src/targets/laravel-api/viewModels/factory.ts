@@ -150,9 +150,12 @@ function attributesOf(entity: Entity, authenticatable: boolean): { attributes: F
     attributes.push({ name: field.name, expression: fake.expression });
   }
 
-  // Colunas de autenticação do esqueleto que o manifest pode não declarar: o que a UserFactory do Laravel preenche.
+  // Colunas do esqueleto que o manifest pode não declarar: o que a UserFactory do Laravel preenche.
   if (authenticatable) {
     const has = (name: string) => attributes.some((attribute) => attribute.name === name);
+    // `name` e `email` são NOT NULL na migration do esqueleto: sem eles no manifest a factory não conseguiria criar o usuário.
+    if (!has("email")) attributes.unshift({ name: "email", expression: "fake()->unique()->safeEmail()" });
+    if (!has("name")) attributes.unshift({ name: "name", expression: "fake()->name()" });
     if (!has("email_verified_at")) attributes.push({ name: "email_verified_at", expression: "now()" });
     if (!has("password")) {
       attributes.push({ name: "password", expression: PASSWORD });

@@ -17,6 +17,7 @@ import { modelBaseFile, modelFinalFile } from "./viewModels/model";
 import { nestedControllerBase, nestedControllerFinal, nestedControllerPaths, nestedRoutes } from "./viewModels/nestedController";
 import { crudmakerSeeder, CRUDMAKER_SEEDER, entitySeeder } from "./viewModels/seeder";
 import { requestBaseFile, requestFinalFile } from "./viewModels/request";
+import { testFile } from "./viewModels/test";
 import { resourceBaseFile, resourceFinalFile } from "./viewModels/resource";
 import { ensureRoutesInclude, routesPath, routesView } from "./viewModels/routes";
 import { createMigrationOf, isUserEntity, SKELETON_COLUMNS, USERS_TABLE } from "./viewModels/skeleton";
@@ -66,6 +67,7 @@ const entityFileTypes: EntityFileType[] = [
   factoryBaseFile,
   factoryFinalFile,
   migrationFile,
+  testFile,
 ];
 
 /** Política de cada camada: a gerada e a migration são sempre regravadas; a de customização, só criada. */
@@ -226,6 +228,9 @@ export function generateLaravelApi(input: LaravelApiInput): LaravelApiOutput {
 
   for (const entity of input.entities) {
     for (const fileType of entityFileTypes) {
+      // Tipo opcional desligado nesta entidade (testes com `api.tests: false`): o arquivo não sai.
+      if (fileType.enabled && !fileType.enabled(entity)) continue;
+
       // Tabela que já existe por migration de fora: não há migration de criação (as colunas que faltam vão numa `alter`, abaixo).
       if (fileType.layer === "migration" && foreignTables.has(entity.getTableName())) continue;
 
@@ -270,6 +275,18 @@ export function generateLaravelApi(input: LaravelApiInput): LaravelApiOutput {
         `("id: uuid" do manifest é ignorado): sua model base estende Authenticatable (sem HasUuids e sem SoftDeletes) e as FKs que apontam para users ` +
         `são geradas como unsignedBigInteger (regra "integer" nas requests). O App\\Models\\User do esqueleto precisa estender App\\Generated\\Models\\BaseUser (veja docs/como-usar.md).`,
     );
+  }
+
+  if (skeletonUsers) {
+    const userEntity = input.entities.find(isUserEntity)!;
+    const declared = new Set(Object.values(userEntity.fields).map((field) => field.name));
+    const missing = ["name", "email"].filter((column) => !declared.has(column));
+    if (missing.length > 0) {
+      warnings.push(
+        `A entidade user não declara ${missing.join(" e ")}, mas a tabela users do esqueleto os exige (NOT NULL): ` +
+          `a factory os preenche, mas a API não consegue criar usuários (POST /users falha com 500). Declare ${missing.join(" e ")} nos fields do user.`,
+      );
+    }
   }
 
   const ordered = [...input.entities].sort((a, b) => dates.get(a)!.getTime() - dates.get(b)!.getTime());

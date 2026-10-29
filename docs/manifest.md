@@ -308,12 +308,13 @@ Com isso, `GET /api/clients?status=active&search=ana&sort=-name&page=2` lista os
 | `defaultSort` | campo, com `-` na frente para decrescente | nenhum | Ordenação usada quando `?sort` não vem ou não vale (ex.: `-created_at`). |
 | `with` | lista de relacionamentos | nenhum | Eager loading no `index` (`with([...])`) e no `show` (`load([...])`); a resource inclui cada um aninhado. |
 | `nested` | `true`, `false` ou lista de relacionamentos | `true` | Rotas e controllers aninhados dos `hasMany`/`hasOne` **desta entidade** (`GET`/`POST /clients/{client}/alerts`; veja [Rotas aninhadas](como-usar.md#rotas-aninhadas-hasmany-e-hasone)). `false` desliga; uma lista (nome do método da model, como em `with`: `alerts`, `address`, `postsByAuthor`) gera só para os listados. Só gera onde o filho declara o `belongsTo` de volta; um nome da lista sem ele é erro. Usa as `actions` e o `middleware` do **filho**. |
+| `tests` | booleano | `true` | `false` não gera o arquivo de testes Pest da entidade (`tests/Feature/Crudmaker/<Entidade>Test.php`; veja [Testes gerados](como-usar.md#testes-gerados-pest)). Vale também em `pkg.defaults.api`. O arquivo é regravado a cada geração, então esta é a forma de desligá-lo; ao desligar, o arquivo gerado antes é apagado. |
 
 ### Precedência: padrão do pacote × entidade
 
 O bloco da entidade vale **chave a chave** sobre `pkg.defaults.api`: cada chave que a entidade declara substitui a do padrão, e as que ela não declara herdam o padrão. Listas **substituem por inteiro, não somam**: com `middleware: [auth:sanctum]` no padrão, uma entidade com `middleware: [verified]` fica só com `verified`, e `middleware: []` desliga o middleware do padrão para ela. No exemplo, `client` fica com `perPage: 20` e `middleware: [auth:sanctum, verified]`, e uma entidade sem bloco `api` herda `perPage: 15` e `auth:sanctum`.
 
-`pkg.defaults.api` só aceita `actions`, `middleware`, `perPage` e `nested` (só o booleano: `nested: false` desliga as rotas aninhadas do projeto inteiro, e a entidade religa com `nested: true`). `filters`, `search`, `sort`, `defaultSort` e `with` dependem dos campos de cada entidade, então declará-los no padrão é erro de validação. O `manifest-lock.json` guarda o bloco já resolvido de cada entidade que tem algum valor (padrão ou próprio).
+`pkg.defaults.api` só aceita `actions`, `middleware`, `perPage`, `nested` e `tests` (`nested` só o booleano: `nested: false` desliga as rotas aninhadas do projeto inteiro, e a entidade religa com `nested: true`). `filters`, `search`, `sort`, `defaultSort` e `with` dependem dos campos de cada entidade, então declará-los no padrão é erro de validação. O `manifest-lock.json` guarda o bloco já resolvido de cada entidade que tem algum valor (padrão ou próprio).
 
 ### Consulta do `index`: filtros, busca, ordenação e `with`
 
