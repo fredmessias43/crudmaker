@@ -14,6 +14,7 @@ export class ResourceFile extends PhpFile {
       "Illuminate\\Support\\Facades\\App"
     ];
     this.extendsClauses = ["JsonResource"];
+    this.className = this.entity.getEntityName("pascalCase") + "Resource";
 
     //
     this.toArrayFnLine = this.fillToArrayFn();

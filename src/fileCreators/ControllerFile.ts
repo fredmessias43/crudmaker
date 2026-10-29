@@ -18,7 +18,7 @@ export class ControllerFile extends PhpFile {
       this.baseNamespace + "\\Models\\" + this.entity.getEntityName("pascalCase") + "",
       this.baseNamespace + "\\Http\\Requests\\" + this.entity.getEntityName("pascalCase") + "Request",
       this.baseNamespace + "\\Http\\Resources\\" + this.entity.getEntityName("pascalCase") + "Collection",
-      this.baseNamespace + "\\Http\\Resources\\" + this.entity.getEntityName("pascalCase") + " as " + this.entity.getEntityName("pascalCase") + "Resource",
+      this.baseNamespace + "\\Http\\Resources\\" + this.entity.getEntityName("pascalCase") + "Resource",
       // this.baseNamespace + "\\Exceptions\\Exception",
     ];
     this.extendsClauses = ["Controller"];
@@ -77,7 +77,7 @@ export class ControllerFile extends PhpFile {
     result.push("{");
     result.push(this.tab + "try");
     result.push(this.tab + "{");
-    result.push(this.tab + this.tab + "$" + camelCaseEntity + " = " + pascalCaseEntity + "::create($request->all());");
+    result.push(this.tab + this.tab + "$" + camelCaseEntity + " = " + pascalCaseEntity + "::create($request->validated());");
 
     /* const entityFieldArray = Object.entries(this.entity.fields);
     for (const element of entityFieldArray)
@@ -148,7 +148,7 @@ export class ControllerFile extends PhpFile {
     result.push("{");
     result.push(this.tab + "try");
     result.push(this.tab + "{");
-    result.push(this.tab + this.tab + "$" + camelCaseEntity + "->update($request->all());");
+    result.push(this.tab + this.tab + "$" + camelCaseEntity + "->update($request->validated());");
 
     /* const entityFieldArray = Object.entries(this.entity.fields);
     for (const entity of entityFieldArray)

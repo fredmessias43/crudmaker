@@ -2,6 +2,7 @@ import { snakeCase } from "lodash";
 import { Entity } from "../models/Entity";
 import { PhpFile } from "./PhpFile";
 import { camelCase, pascalCase } from "change-case";
+import { plural } from "pluralize";
 
 export class ModelFile extends PhpFile {
   protected relationShipFunctions: Array<string>;
@@ -15,10 +16,11 @@ export class ModelFile extends PhpFile {
       "Illuminate\\Database\\Eloquent\\Factories\\HasFactory",
       "Illuminate\\Database\\Eloquent\\SoftDeletes",
       "Illuminate\\Database\\Eloquent\\Model",
-      "Illuminate\\Support\\Str"
+      "Illuminate\\Support\\Str",
+      "Illuminate\\Database\\Eloquent\\Concerns\\HasUuids",
     ];
     this.extendsClauses = ["Model"];
-    this.traits = ["HasFactory", "SoftDeletes"];
+    this.traits = ["HasFactory", "SoftDeletes", "HasUuids"];
     //
     this.propertiesLines = this.fillPropertiesLines();
     this.relationShipFunctions = this.fillRelationShipFunctions();
@@ -29,7 +31,7 @@ export class ModelFile extends PhpFile {
     const entityFieldArray = Object.entries(this.entity.fields);
 
     // result.push("protected $connection = \"tenant\";");
-    result.push("protected $keyType = \"string\";");
+    result.push('protected $keyType = "string";');
     result.push("public $incrementing = false;");
     result.push("");
 
@@ -63,40 +65,68 @@ export class ModelFile extends PhpFile {
     }
     result.push("];");
 
-    result.push("");
-
-    result.push("/**");
-    result.push(" * The \"booted\" method of the model.");
-    result.push(" */");
-    result.push("protected static function booted(): void");
-    result.push("{");
-    result.push(this.tab + "static::creating(function ($" + camelCase(this.entity.entityName) + ") {");
-    result.push(this.tab + this.tab + "$" + camelCase(this.entity.entityName) + "->id = Str::uuid();");
-    result.push(this.tab + "});");
-    result.push("}");
-
     return result;
   }
 
   protected fillRelationShipFunctions() {
     let result: Array<string> = [];
 
-    for (const relationship of Object.values(this.entity.relationships).flat()) {
-      this.imports.push("Illuminate\\Database\\Eloquent\\Relations\\" + pascalCase(relationship.relationship));
+    for (const relationship of Object.values(
+      this.entity.relationships,
+    ).flat()) {
+      this.imports.push(
+        "Illuminate\\Database\\Eloquent\\Relations\\" +
+          pascalCase(relationship.relationship),
+      );
 
-      const fieldIsDiferent = relationship.field !== snakeCase(relationship.entity) + "_id";
+      const fieldIsDiferent =
+        relationship.field !== snakeCase(relationship.entity) + "_id";
 
       if (!fieldIsDiferent) {
-        result.push("public function " + camelCase(relationship.entity) + "(): " + pascalCase(relationship.relationship) + "");
+        let camelCaseRelationshipEntity = camelCase(relationship.entity);
+
+        if (relationship.relationship == "hasMany") {
+          camelCaseRelationshipEntity = camelCase(plural(relationship.entity));
+        }
+
+        result.push(
+          "public function " +
+            camelCaseRelationshipEntity +
+            "(): " +
+            pascalCase(relationship.relationship) +
+            "",
+        );
         result.push("{");
-        result.push(this.tab + "return $this->" + camelCase(relationship.relationship) + "(" + pascalCase(relationship.entity) + "::class);");
+        result.push(
+          this.tab +
+            "return $this->" +
+            camelCase(relationship.relationship) +
+            "(" +
+            pascalCase(relationship.entity) +
+            "::class);",
+        );
         result.push("}");
       } else {
         const parcialFieldName = relationship.field.replace("_id", "");
 
-        result.push("public function " + camelCase(parcialFieldName) + "(): " + pascalCase(relationship.relationship) + "");
+        result.push(
+          "public function " +
+            camelCase(parcialFieldName) +
+            "(): " +
+            pascalCase(relationship.relationship) +
+            "",
+        );
         result.push("{");
-        result.push(this.tab + "return $this->" + camelCase(relationship.relationship) + "(" + pascalCase(relationship.entity) + "::class, 'id', '" + relationship.field + "');");
+        result.push(
+          this.tab +
+            "return $this->" +
+            camelCase(relationship.relationship) +
+            "(" +
+            pascalCase(relationship.entity) +
+            "::class, 'id', '" +
+            relationship.field +
+            "');",
+        );
         result.push("}");
       }
 
@@ -107,11 +137,19 @@ export class ModelFile extends PhpFile {
   }
 
   protected getPropertiesLines() {
-    return this.propertiesLines.reduce((previous, current, index, array) => previous + this.tab + current + this.lineBreak, "");
+    return this.propertiesLines.reduce(
+      (previous, current, index, array) =>
+        previous + this.tab + current + this.lineBreak,
+      "",
+    );
   }
 
   protected getRelationShipFunctions() {
-    return this.relationShipFunctions.reduce((previous, current, index, array) => previous + this.tab + current + this.lineBreak, "");
+    return this.relationShipFunctions.reduce(
+      (previous, current, index, array) =>
+        previous + this.tab + current + this.lineBreak,
+      "",
+    );
   }
 
   protected getContentLine() {

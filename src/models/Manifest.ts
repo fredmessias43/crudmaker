@@ -72,6 +72,9 @@ export class Manifest {
           fieldKey = "display_name";
           newField.type = "string";
         }
+        if (newField.type === "int") {
+          newField.type = "integer";
+        }
 
         newEntity.fields[fieldKey] = newField as Field;
       }
