@@ -3,6 +3,14 @@ import { Entity } from "../../models/Entity";
 /** Namespace base de tudo o que o target gera (a pasta de saída deriva dele: `App\Http` → `app/Http`). */
 export const BASE_NAMESPACE = "App";
 
+/** Namespace da camada gerada (classes base): espelha o namespace normal (`App\Models` → `App\Generated\Models`). */
+export const GENERATED_NAMESPACE = `${BASE_NAMESPACE}\\Generated`;
+
+/** `App\Http\Requests` → `App\Generated\Http\Requests`. */
+export function generatedNamespace(namespace: string): string {
+  return GENERATED_NAMESPACE + namespace.slice(BASE_NAMESPACE.length);
+}
+
 /** Nomes da entidade em cada casing usado nos templates. */
 export type EntityNames = {
   pascal: string;

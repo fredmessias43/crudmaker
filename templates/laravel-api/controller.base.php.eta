@@ -1,0 +1,178 @@
+<?php
+
+// ARQUIVO GERADO PELO CRUDMAKER. NÃO EDITE: ele é sobrescrito a cada `crudmaker generate`.
+// Seu código fica em <%~ it.final.fqcn %> (<%~ it.final.path %>), que estende esta classe e nunca é sobrescrita.
+
+namespace <%~ it.namespace %>;
+
+<% for (const use of it.imports) { -%>
+use <%~ use %>;
+<% } -%>
+
+
+abstract class <%~ it.className %> extends <%~ it.extends %>
+{
+
+	/**
+	 * Display a paginated listing of the resource.
+	 *
+	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 *
+	 * @return \Illuminate\Http\JsonResponse
+	 */
+	public function index(Request $request): JsonResponse
+	{
+		$query = $this->indexQuery(<%~ it.entity.pascal %>::query(), $request);
+
+		return (new <%~ it.entity.pascal %>Collection($query->paginate(15)))->response();
+	}
+
+
+	/**
+	 * Store a newly created resource in storage.
+	 *
+	 * A gravação e os hooks `beforeStore`/`afterStore` rodam na mesma transação.
+	 *
+	 * @param  \App\Http\Requests\<%~ it.entity.pascal %>Request $request
+	 *
+	 * @return \Illuminate\Http\JsonResponse
+	 */
+	public function store(<%~ it.entity.pascal %>Request $request): JsonResponse
+	{
+		$<%~ it.entity.camel %> = DB::transaction(function () use ($request) {
+			$data = $this->beforeStore($request->validated(), $request);
+			$model = <%~ it.entity.pascal %>::create($data);
+			$this->afterStore($model, $request);
+
+			return $model;
+		});
+
+		return response()->json([
+			'status' => 201,
+			'message' => trans('<%~ it.entity.pascal %> created successfully.'),
+			'data' => new <%~ it.entity.pascal %>Resource($<%~ it.entity.camel %>),
+		], 201);
+	}
+
+
+	/**
+	 * Display the specified resource.
+	 *
+	 * @param  \App\Models\<%~ it.entity.pascal %> $<%~ it.entity.camel %>
+	 *
+	 * @return \Illuminate\Http\JsonResponse
+	 */
+	public function show(<%~ it.entity.pascal %> $<%~ it.entity.camel %>): JsonResponse
+	{
+		return response()->json([
+			'status' => 200,
+			'data' => new <%~ it.entity.pascal %>Resource($<%~ it.entity.camel %>),
+		], 200);
+	}
+
+
+	/**
+	 * Update the specified resource in storage.
+	 *
+	 * A gravação e os hooks `beforeUpdate`/`afterUpdate` rodam na mesma transação.
+	 *
+	 * @param  \App\Http\Requests\<%~ it.entity.pascal %>Request $request
+	 * @param  \App\Models\<%~ it.entity.pascal %> $<%~ it.entity.camel %>
+	 *
+	 * @return \Illuminate\Http\JsonResponse
+	 */
+	public function update(<%~ it.entity.pascal %>Request $request, <%~ it.entity.pascal %> $<%~ it.entity.camel %>): JsonResponse
+	{
+		DB::transaction(function () use ($request, $<%~ it.entity.camel %>) {
+			$data = $this->beforeUpdate($<%~ it.entity.camel %>, $request->validated(), $request);
+			$<%~ it.entity.camel %>->update($data);
+			$this->afterUpdate($<%~ it.entity.camel %>, $request);
+		});
+
+		return response()->json([
+			'status' => 200,
+			'message' => trans('<%~ it.entity.pascal %> updated successfully.'),
+			'data' => new <%~ it.entity.pascal %>Resource($<%~ it.entity.camel %>),
+		], 200);
+	}
+
+
+	/**
+	 * Remove the specified resource from storage.
+	 *
+	 * A remoção e os hooks `beforeDestroy`/`afterDestroy` rodam na mesma transação.
+	 *
+	 * @param  \App\Models\<%~ it.entity.pascal %> $<%~ it.entity.camel %>
+	 *
+	 * @return \Illuminate\Http\Response
+	 */
+	public function destroy(Request $request, <%~ it.entity.pascal %> $<%~ it.entity.camel %>): Response
+	{
+		DB::transaction(function () use ($request, $<%~ it.entity.camel %>) {
+			$this->beforeDestroy($<%~ it.entity.camel %>, $request);
+			$<%~ it.entity.camel %>->delete();
+			$this->afterDestroy($<%~ it.entity.camel %>, $request);
+		});
+
+		return response()->noContent();
+	}
+
+
+	/*
+	 * Hooks. Todos protected e sem efeito por aqui; sobrescreva só os que precisar na classe final.
+	 * Para barrar a operação, lance uma exceção ou chame abort(): em store/update/destroy isso desfaz a gravação.
+	 */
+
+	/**
+	 * Ajusta a query do `index` antes de paginar (filtro por usuário, escopos, ordenação).
+	 */
+	protected function indexQuery(Builder $query, Request $request): Builder
+	{
+		return $query;
+	}
+
+	/**
+	 * Antes de criar: recebe os dados validados e devolve os dados a gravar.
+	 */
+	protected function beforeStore(array $data, Request $request): array
+	{
+		return $data;
+	}
+
+	/**
+	 * Depois de criar (ainda dentro da transação): efeitos colaterais com o registro gravado.
+	 */
+	protected function afterStore(<%~ it.entity.pascal %> $model, Request $request): void
+	{
+	}
+
+	/**
+	 * Antes de atualizar: recebe o registro e os dados validados e devolve os dados a gravar.
+	 */
+	protected function beforeUpdate(<%~ it.entity.pascal %> $model, array $data, Request $request): array
+	{
+		return $data;
+	}
+
+	/**
+	 * Depois de atualizar (ainda dentro da transação).
+	 */
+	protected function afterUpdate(<%~ it.entity.pascal %> $model, Request $request): void
+	{
+	}
+
+	/**
+	 * Antes de remover: é o lugar de barrar a remoção (exceção ou abort()).
+	 */
+	protected function beforeDestroy(<%~ it.entity.pascal %> $model, Request $request): void
+	{
+	}
+
+	/**
+	 * Depois de remover (ainda dentro da transação).
+	 */
+	protected function afterDestroy(<%~ it.entity.pascal %> $model, Request $request): void
+	{
+	}
+
+}

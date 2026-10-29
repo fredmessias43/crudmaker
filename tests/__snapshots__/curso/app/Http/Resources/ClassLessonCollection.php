@@ -2,42 +2,18 @@
 
 namespace App\Http\Resources;
 
-use Illuminate\Http\Resources\Json\ResourceCollection;
-use Illuminate\Support\Facades\App;
+use App\Generated\Http\Resources\BaseClassLessonCollection;
 
-
-class ClassLessonCollection extends ResourceCollection
+/**
+ * Camada de customização da collection de ClassLesson.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * O código gerado fica em App\Generated\Http\Resources\BaseClassLessonCollection (app/Generated/Http/Resources/BaseClassLessonCollection.php), que não deve ser editada.
+ */
+class ClassLessonCollection extends BaseClassLessonCollection
 {
-
-	/**
-	 * Transform the resource collection into an array.
-	 *
-	 * @param  \Illuminate\Http\Request  $request
-	 * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
+	/*
+	 * A collection não tem hooks: cada item sai pela resource, então campos extras vão em
+	 * ClassLessonResource::extra(). Aqui só ajustes da própria coleção (with(), paginationInformation()...).
 	 */
-	public function toArray($request)
-	{
-		return $this->collection->map(function ($class_lesson) {
-			$createdAt = $class_lesson->created_at->locale(App::getLocale());
-			$updatedAt = $class_lesson->updated_at->locale(App::getLocale());
-	
-			return [
-				'id' => $class_lesson->id,
-				'classroom_id' => $class_lesson->classroom_id,
-				'name' => $class_lesson->name,
-				'description' => $class_lesson->description,
-				'link' => $class_lesson->link,
-				'pdf' => $class_lesson->pdf,
-				'created_at' => array(
-					'timestamp' => $createdAt->timestamp,
-					'description' => $createdAt->diffForHumans(),
-				),
-				'updated_at' => array(
-					'timestamp' => $updatedAt->timestamp,
-					'description' => $updatedAt->diffForHumans(),
-				),
-			];
-		})->toArray();
-	}
-
-};
+}

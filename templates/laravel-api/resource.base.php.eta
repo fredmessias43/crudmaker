@@ -1,5 +1,8 @@
 <?php
 
+// ARQUIVO GERADO PELO CRUDMAKER. NÃO EDITE: ele é sobrescrito a cada `crudmaker generate`.
+// Seu código fica em <%~ it.final.fqcn %> (<%~ it.final.path %>), que estende esta classe e nunca é sobrescrita.
+
 namespace <%~ it.namespace %>;
 
 <% for (const use of it.imports) { -%>
@@ -7,7 +10,7 @@ use <%~ use %>;
 <% } -%>
 
 
-class <%~ it.className %> extends <%~ it.extends %>
+abstract class <%~ it.className %> extends <%~ it.extends %>
 {
 
 	/**
@@ -21,7 +24,7 @@ class <%~ it.className %> extends <%~ it.extends %>
 		$createdAt = $this->created_at->locale(App::getLocale());
 		$updatedAt = $this->updated_at->locale(App::getLocale());
 	
-		return [
+		return array_merge([
 <% for (const field of it.fields) { -%>
 			'<%~ field.key %>' => $this-><%~ field.key %>,
 <% } -%>
@@ -33,7 +36,19 @@ class <%~ it.className %> extends <%~ it.extends %>
 				'timestamp' => $updatedAt->timestamp,
 				'description' => $updatedAt->diffForHumans(),
 			),
-		];
+		], $this->extra($request));
 	}
 
-};
+	/**
+	 * Hook: campos calculados que entram na resposta (junto dos gerados; a mesma chave substitui o campo gerado).
+	 * Sobrescreva na classe final.
+	 *
+	 * @param  \Illuminate\Http\Request  $request
+	 * @return array
+	 */
+	protected function extra(Request $request): array
+	{
+		return [];
+	}
+
+}

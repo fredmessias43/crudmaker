@@ -2,77 +2,20 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
-use App\Models\DrawnNumbers;
+use App\Generated\Http\Requests\BaseDrawnNumbersRequest;
 
-
-class DrawnNumbersRequest extends FormRequest
+/**
+ * Camada de customização da request de DrawnNumbers.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * As regras geradas ficam em App\Generated\Http\Requests\BaseDrawnNumbersRequest (app/Generated/Http/Requests/BaseDrawnNumbersRequest.php), que não deve ser editada.
+ */
+class DrawnNumbersRequest extends BaseDrawnNumbersRequest
 {
-
-	/**
-	 * Determine if the user is authorized to make this request.
+	/*
+	 * Hook e método que você pode sobrescrever aqui:
 	 *
-	 * @return bool
+	 *   protected function extraRules(): array; // regras somadas às geradas (a mesma chave de campo substitui a gerada)
+	 *   public function authorize(): bool; // a base libera tudo (return true)
 	 */
-	public function authorize()
-	{
-		return true;
-	}
-
-	/**
-	 * Prepare the data for validation.
-	 *
-	 * @return void
-	 */
-	protected function prepareForValidation()
-	{
-			$drawnNumbers = $this->route('drawn_numbers');
-	
-			if ($drawnNumbers instanceof DrawnNumbers)
-			{
-					$this->merge(['id' => $drawnNumbers->id]);
-	
-					if ( ! $this->has('id'))
-					{
-							$this->merge(['id' => $drawnNumbers->id]);
-					}
-	
-					if ( ! $this->has('game_id'))
-					{
-							$this->merge(['game_id' => $drawnNumbers->game_id]);
-					}
-	
-					if ( ! $this->has('number'))
-					{
-							$this->merge(['number' => $drawnNumbers->number]);
-					}
-	
-			}
-			else
-			{
-					//
-			}
-	}
-
-	/**
-	 * Get the validation rules that apply to the request.
-	 *
-	 * @return array
-	*/
-	public function rules()
-	{
-			return [
-				'game_id' => array(
-					'bail',
-					'required',
-					'uuid',
-				),
-				'number' => array(
-					'bail',
-					'required',
-					'integer',
-				),
-			];
-	}
-
-};
+}

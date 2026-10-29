@@ -2,77 +2,20 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
-use App\Models\Note;
+use App\Generated\Http\Requests\BaseNoteRequest;
 
-
-class NoteRequest extends FormRequest
+/**
+ * Camada de customização da request de Note.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * As regras geradas ficam em App\Generated\Http\Requests\BaseNoteRequest (app/Generated/Http/Requests/BaseNoteRequest.php), que não deve ser editada.
+ */
+class NoteRequest extends BaseNoteRequest
 {
-
-	/**
-	 * Determine if the user is authorized to make this request.
+	/*
+	 * Hook e método que você pode sobrescrever aqui:
 	 *
-	 * @return bool
+	 *   protected function extraRules(): array; // regras somadas às geradas (a mesma chave de campo substitui a gerada)
+	 *   public function authorize(): bool; // a base libera tudo (return true)
 	 */
-	public function authorize()
-	{
-		return true;
-	}
-
-	/**
-	 * Prepare the data for validation.
-	 *
-	 * @return void
-	 */
-	protected function prepareForValidation()
-	{
-			$note = $this->route('note');
-	
-			if ($note instanceof Note)
-			{
-					$this->merge(['id' => $note->id]);
-	
-					if ( ! $this->has('id'))
-					{
-							$this->merge(['id' => $note->id]);
-					}
-	
-					if ( ! $this->has('content'))
-					{
-							$this->merge(['content' => $note->content]);
-					}
-	
-					if ( ! $this->has('client_id'))
-					{
-							$this->merge(['client_id' => $note->client_id]);
-					}
-	
-			}
-			else
-			{
-					//
-			}
-	}
-
-	/**
-	 * Get the validation rules that apply to the request.
-	 *
-	 * @return array
-	*/
-	public function rules()
-	{
-			return [
-				'content' => array(
-					'bail',
-					'required',
-					'string',
-				),
-				'client_id' => array(
-					'bail',
-					'required',
-					'uuid',
-				),
-			];
-	}
-
-};
+}

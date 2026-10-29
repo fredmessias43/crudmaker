@@ -19,18 +19,18 @@ Gerador de API Laravel a partir de um manifest YAML ou JSON: lê entidades, camp
 - `src/bin.ts`: entrada do binário (shebang); chama `run` de `src/cli.ts`.
 - `src/cli.ts`: `run(argv, io)` devolve o exit code; comandos `generate` e `init`, ajuda e versão. Casca fina em volta de `generate`.
 - `src/readManifest.ts`: único ponto de leitura do manifest (caminho → objeto; YAML ou JSON pela extensão) e `UserError`.
-- `src/writeFiles.ts`: `planWrites` classifica cada arquivo (criado/sobrescrito/sem mudança/preservado) sem escrever; `applyPlan` grava. O `--dry-run` e a escrita real usam o mesmo plano.
+- `src/writeFiles.ts`: `planWrites` classifica cada arquivo (criado/sobrescrito/sem mudança/preservado) sem escrever; `applyPlan` grava (nunca um `create-once` existente). `planRemovals`/`applyRemovals` tratam as entidades que saíram do manifest (apagam só bases de `app/Generated/` com cabeçalho de gerado; o resto vira órfão) e `legacyFinalWarnings` avisa finais antigas que não estendem a base. O `--dry-run` e a escrita real usam o mesmo plano.
 - `src/initTemplate.ts`: manifest de exemplo do `init` (YAML comentado e JSON; devem gerar o mesmo objeto).
-- `src/generate.ts`: `generate(manifest, { now, existingMigrations, ... })`, função pura (sem disco) que devolve `{ files, warnings }`: `files` é a lista `{ path, content, policy }` (`path` relativo à raiz do projeto Laravel) e `warnings` os avisos de nomes alterados. A opção `normalizeNames` vence `pkg.normalizeNames`.
+- `src/generate.ts`: `generate(manifest, { now, existingMigrations, ... })`, função pura (sem disco) que devolve `{ files, warnings, obsolete }`: `files` é a lista `{ path, content, policy }` (`path` relativo à raiz do projeto Laravel), `warnings` os avisos de nomes alterados e `obsolete` os caminhos de entidades que saíram do manifest (calculados com `previousLock`, o lock anterior que a CLI lê). A opção `normalizeNames` vence `pkg.normalizeNames`.
 - `src/manifestSchema.ts`: schema zod do manifest (fonte do JSON Schema em `schema/manifest.schema.json`, publicado no pacote).
 - `src/normalizeNames.ts`: normalização de nomes (entidade singular camelCase, campo snake_case), avisos e colisões; roda entre a validação estrutural e a validação entre entidades.
 - `src/dependencyOrder.ts`: ordenação topológica estável e detecção de ciclos (ordem das migrations por FK e erro de ciclo).
 - `src/validateManifest.ts`: pipeline de validação (schema → normalização de nomes → entre entidades: alvos, campo `id`, nomes reservados do PHP, ciclos de FK) e `ManifestValidationError` com `{ path, message }` por problema.
 - `src/models/Manifest.ts`: valida via `validateManifest` e normaliza (formas curtas, aliases, campos de FK, unificação de FK declarada + derivada).
 - `src/models/Entity.ts`: nome da entidade em vários casings e nome da tabela.
-- `src/targets/types.ts`: `GeneratedFile` (`{ path, content, policy }`) e `FilePolicy`.
+- `src/targets/types.ts`: `GeneratedFile` (`{ path, content, policy, generatedBase? }`), `FilePolicy`, `ObsoleteFile` e `GENERATED_MARKER` (o cabeçalho que marca arquivo gerado).
 - `src/targets/laravel-api/`: o target que transforma o modelo normalizado em arquivos Laravel. `index.ts` (`generateLaravelApi`, lista `entityFileTypes`), `render.ts` (motor Eta), `names.ts`, `fileType.ts` e `viewModels/<tipo>.ts` (variáveis de cada template, caminho do arquivo; também `routes.ts` com `ensureRoutesInclude`).
-- `templates/laravel-api/<tipo>.php.eta`: os templates do PHP gerado (model, migration, request, resource, collection, controller, routes). Vão no pacote publicado (`files` do `package.json`).
+- `templates/laravel-api/`: os templates do PHP gerado: `<tipo>.base.php.eta` (camada gerada) e `<tipo>.final.php.eta` (camada de customização) para model, request, resource, collection e controller, mais `migration.php.eta` e `routes.php.eta`. Vão no pacote publicado (`files` do `package.json`).
 - `generated/<pkg.code>/`: saída. Está no `.gitignore` e costuma conter projetos Laravel reais (com código escrito à mão).
 
 ## Documentação
@@ -42,6 +42,15 @@ Gerador de API Laravel a partir de um manifest YAML ou JSON: lê entidades, camp
 
 Atualize os docs quando mudar o comportamento do gerador ou o formato do manifest.
 
+## Camadas gerada × customização
+
+Model, controller, request, resource e collection saem em duas classes: a **base** (`App\Generated\...`, pasta `app/Generated/`, `abstract Base<Classe>`, política `overwrite`, cabeçalho "ARQUIVO GERADO") e a **final** (namespace normal, estende a base, nasce vazia com os hooks em comentário, política `create-once`). Regras ao mexer nisso:
+
+- Rotas, type hints dos controllers e relacionamentos da model usam **sempre as classes finais** (o route model binding e o container instanciam o tipo declarado). Nunca tipe uma base num parâmetro de action.
+- Um arquivo `create-once` existente nunca é sobrescrito, por nenhuma opção. Não crie `--force`. Se mudar o conteúdo de uma final, só vale para projetos novos.
+- Mudar a assinatura de um hook é mudança que quebra o código dos usuários (o PHP acusa assinatura incompatível): registre no changelog.
+- O crudmaker só apaga bases de `app/Generated/` com o cabeçalho de gerado, e só de entidades do lock anterior. Finais e migrations nunca são apagadas (viram órfãs na saída).
+
 ## Convenções
 
 - O PHP gerado vem de templates Eta em `templates/laravel-api/`, alimentados por view models em `src/targets/laravel-api/viewModels/` (a lógica fica no TS; o template só imprime). Mantenha a saída byte a byte: tabs, linhas só com `\t` e a linha final importam, e as tags de controle ficam sozinhas na linha, em coluna 0, terminando em `-%>`. Detalhes e passo a passo para um novo tipo de arquivo em `docs/arquitetura.md`.
@@ -51,5 +60,5 @@ Atualize os docs quando mudar o comportamento do gerador ou o formato do manifes
 
 ## Cuidados
 
-- **`crudmaker generate --out <dir>` sobrescreve arquivos em `<dir>` sem perguntar**, inclusive edições feitas à mão. Antes de rodar, use `--dry-run` e confira se o destino tem código que não pode ser perdido. Nos testes e experimentos, use sempre diretórios temporários, nunca `generated/`.
+- **`crudmaker generate --out <dir>` sobrescreve a camada gerada (`app/Generated/`, migrations, rotas, lock) em `<dir>` sem perguntar**, inclusive edições feitas à mão nesses arquivos, e apaga as bases de entidades que saíram do manifest. As classes finais (`create-once`) são preservadas. Antes de rodar, use `--dry-run` e confira se o destino tem código que não pode ser perdido. Nos testes e experimentos, use sempre diretórios temporários, nunca `generated/`.
 - Não apague nem limpe `generated/`. Ela não está versionada aqui, então não dá para recuperar.

@@ -2,39 +2,18 @@
 
 namespace App\Http\Resources;
 
-use Illuminate\Http\Resources\Json\ResourceCollection;
-use Illuminate\Support\Facades\App;
+use App\Generated\Http\Resources\BaseClassroomCollection;
 
-
-class ClassroomCollection extends ResourceCollection
+/**
+ * Camada de customização da collection de Classroom.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * O código gerado fica em App\Generated\Http\Resources\BaseClassroomCollection (app/Generated/Http/Resources/BaseClassroomCollection.php), que não deve ser editada.
+ */
+class ClassroomCollection extends BaseClassroomCollection
 {
-
-	/**
-	 * Transform the resource collection into an array.
-	 *
-	 * @param  \Illuminate\Http\Request  $request
-	 * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
+	/*
+	 * A collection não tem hooks: cada item sai pela resource, então campos extras vão em
+	 * ClassroomResource::extra(). Aqui só ajustes da própria coleção (with(), paginationInformation()...).
 	 */
-	public function toArray($request)
-	{
-		return $this->collection->map(function ($classroom) {
-			$createdAt = $classroom->created_at->locale(App::getLocale());
-			$updatedAt = $classroom->updated_at->locale(App::getLocale());
-	
-			return [
-				'id' => $classroom->id,
-				'name' => $classroom->name,
-				'description' => $classroom->description,
-				'created_at' => array(
-					'timestamp' => $createdAt->timestamp,
-					'description' => $createdAt->diffForHumans(),
-				),
-				'updated_at' => array(
-					'timestamp' => $updatedAt->timestamp,
-					'description' => $updatedAt->diffForHumans(),
-				),
-			];
-		})->toArray();
-	}
-
-};
+}

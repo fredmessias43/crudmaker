@@ -2,100 +2,35 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Models\DrawnNumber;
-use App\Http\Requests\DrawnNumberRequest;
-use App\Http\Resources\DrawnNumberCollection;
-use App\Http\Resources\DrawnNumberResource;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Response;
+use App\Generated\Http\Controllers\Api\BaseDrawnNumberController;
 
-
-class DrawnNumberController extends Controller
+/**
+ * Camada de customização do controller de DrawnNumber.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * As actions geradas (index, store, show, update, destroy) ficam em
+ * App\Generated\Http\Controllers\Api\BaseDrawnNumberController (app/Generated/Http/Controllers/Api/BaseDrawnNumberController.php), que não deve ser editada.
+ */
+class DrawnNumberController extends BaseDrawnNumberController
 {
-
-	/**
-	 * Display a paginated listing of the resource.
+	/*
+	 * Hooks disponíveis. Todos são protected e não fazem nada na base: copie para cá só os que precisar.
+	 * As assinaturas precisam ficar idênticas (o PHP acusa a incompatibilidade na hora).
 	 *
-	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 * Imports que os hooks usam:
+	 *   use App\Models\DrawnNumber;
+	 *   use Illuminate\Database\Eloquent\Builder;
+	 *   use Illuminate\Http\Request;
 	 *
-	 * @return \Illuminate\Http\JsonResponse
+	 *   protected function indexQuery(Builder $query, Request $request): Builder; // antes de paginar
+	 *   protected function beforeStore(array $data, Request $request): array; // dados validados -> dados a gravar
+	 *   protected function afterStore(DrawnNumber $model, Request $request): void; // depois de criar
+	 *   protected function beforeUpdate(DrawnNumber $model, array $data, Request $request): array; // dados validados -> dados a gravar
+	 *   protected function afterUpdate(DrawnNumber $model, Request $request): void; // depois de atualizar
+	 *   protected function beforeDestroy(DrawnNumber $model, Request $request): void; // antes de remover
+	 *   protected function afterDestroy(DrawnNumber $model, Request $request): void; // depois de remover
+	 *
+	 * store, update e destroy rodam a gravação e os hooks na mesma transação (DB::transaction):
+	 * para barrar a operação, lance uma exceção ou chame abort(), e nada é gravado.
 	 */
-	public function index(): JsonResponse
-	{
-		$drawnNumber = DrawnNumber::paginate(15);
-
-		return (new DrawnNumberCollection($drawnNumber))->response();
-	}
-
-
-	/**
-	 * Store a newly created resource in storage.
-	 *
-	 * @param  \App\Http\Requests\DrawnNumberRequest $request
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function store(DrawnNumberRequest $request): JsonResponse
-	{
-		$drawnNumber = DrawnNumber::create($request->validated());
-
-		return response()->json([
-			'status' => 201,
-			'message' => trans('DrawnNumber created successfully.'),
-			'data' => new DrawnNumberResource($drawnNumber),
-		], 201);
-	}
-
-
-	/**
-	 * Display the specified resource.
-	 *
-	 * @param  \App\Models\DrawnNumber $drawnNumber
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function show(DrawnNumber $drawnNumber): JsonResponse
-	{
-		return response()->json([
-			'status' => 200,
-			'data' => new DrawnNumberResource($drawnNumber),
-		], 200);
-	}
-
-
-	/**
-	 * Update the specified resource in storage.
-	 *
-	 * @param  \App\Http\Requests\DrawnNumberRequest $request
-	 * @param  \App\Models\DrawnNumber $drawnNumber
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function update(DrawnNumberRequest $request, DrawnNumber $drawnNumber): JsonResponse
-	{
-		$drawnNumber->update($request->validated());
-
-		return response()->json([
-			'status' => 200,
-			'message' => trans('DrawnNumber updated successfully.'),
-			'data' => new DrawnNumberResource($drawnNumber),
-		], 200);
-	}
-
-
-	/**
-	 * Remove the specified resource from storage.
-	 *
-	 * @param  \App\Models\DrawnNumber $drawnNumber
-	 *
-	 * @return \Illuminate\Http\Response
-	 */
-	public function destroy(DrawnNumber $drawnNumber): Response
-	{
-		$drawnNumber->delete();
-
-		return response()->noContent();
-	}
-
-};
+}

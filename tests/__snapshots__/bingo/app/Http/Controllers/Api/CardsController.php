@@ -2,100 +2,35 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Models\Cards;
-use App\Http\Requests\CardsRequest;
-use App\Http\Resources\CardsCollection;
-use App\Http\Resources\CardsResource;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Response;
+use App\Generated\Http\Controllers\Api\BaseCardsController;
 
-
-class CardsController extends Controller
+/**
+ * Camada de customização do controller de Cards.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * As actions geradas (index, store, show, update, destroy) ficam em
+ * App\Generated\Http\Controllers\Api\BaseCardsController (app/Generated/Http/Controllers/Api/BaseCardsController.php), que não deve ser editada.
+ */
+class CardsController extends BaseCardsController
 {
-
-	/**
-	 * Display a paginated listing of the resource.
+	/*
+	 * Hooks disponíveis. Todos são protected e não fazem nada na base: copie para cá só os que precisar.
+	 * As assinaturas precisam ficar idênticas (o PHP acusa a incompatibilidade na hora).
 	 *
-	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 * Imports que os hooks usam:
+	 *   use App\Models\Cards;
+	 *   use Illuminate\Database\Eloquent\Builder;
+	 *   use Illuminate\Http\Request;
 	 *
-	 * @return \Illuminate\Http\JsonResponse
+	 *   protected function indexQuery(Builder $query, Request $request): Builder; // antes de paginar
+	 *   protected function beforeStore(array $data, Request $request): array; // dados validados -> dados a gravar
+	 *   protected function afterStore(Cards $model, Request $request): void; // depois de criar
+	 *   protected function beforeUpdate(Cards $model, array $data, Request $request): array; // dados validados -> dados a gravar
+	 *   protected function afterUpdate(Cards $model, Request $request): void; // depois de atualizar
+	 *   protected function beforeDestroy(Cards $model, Request $request): void; // antes de remover
+	 *   protected function afterDestroy(Cards $model, Request $request): void; // depois de remover
+	 *
+	 * store, update e destroy rodam a gravação e os hooks na mesma transação (DB::transaction):
+	 * para barrar a operação, lance uma exceção ou chame abort(), e nada é gravado.
 	 */
-	public function index(): JsonResponse
-	{
-		$cards = Cards::paginate(15);
-
-		return (new CardsCollection($cards))->response();
-	}
-
-
-	/**
-	 * Store a newly created resource in storage.
-	 *
-	 * @param  \App\Http\Requests\CardsRequest $request
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function store(CardsRequest $request): JsonResponse
-	{
-		$cards = Cards::create($request->validated());
-
-		return response()->json([
-			'status' => 201,
-			'message' => trans('Cards created successfully.'),
-			'data' => new CardsResource($cards),
-		], 201);
-	}
-
-
-	/**
-	 * Display the specified resource.
-	 *
-	 * @param  \App\Models\Cards $cards
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function show(Cards $cards): JsonResponse
-	{
-		return response()->json([
-			'status' => 200,
-			'data' => new CardsResource($cards),
-		], 200);
-	}
-
-
-	/**
-	 * Update the specified resource in storage.
-	 *
-	 * @param  \App\Http\Requests\CardsRequest $request
-	 * @param  \App\Models\Cards $cards
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function update(CardsRequest $request, Cards $cards): JsonResponse
-	{
-		$cards->update($request->validated());
-
-		return response()->json([
-			'status' => 200,
-			'message' => trans('Cards updated successfully.'),
-			'data' => new CardsResource($cards),
-		], 200);
-	}
-
-
-	/**
-	 * Remove the specified resource from storage.
-	 *
-	 * @param  \App\Models\Cards $cards
-	 *
-	 * @return \Illuminate\Http\Response
-	 */
-	public function destroy(Cards $cards): Response
-	{
-		$cards->delete();
-
-		return response()->noContent();
-	}
-
-};
+}

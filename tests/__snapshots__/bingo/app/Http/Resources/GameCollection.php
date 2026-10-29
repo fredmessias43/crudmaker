@@ -2,42 +2,18 @@
 
 namespace App\Http\Resources;
 
-use Illuminate\Http\Resources\Json\ResourceCollection;
-use Illuminate\Support\Facades\App;
+use App\Generated\Http\Resources\BaseGameCollection;
 
-
-class GameCollection extends ResourceCollection
+/**
+ * Camada de customização da collection de Game.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * O código gerado fica em App\Generated\Http\Resources\BaseGameCollection (app/Generated/Http/Resources/BaseGameCollection.php), que não deve ser editada.
+ */
+class GameCollection extends BaseGameCollection
 {
-
-	/**
-	 * Transform the resource collection into an array.
-	 *
-	 * @param  \Illuminate\Http\Request  $request
-	 * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
+	/*
+	 * A collection não tem hooks: cada item sai pela resource, então campos extras vão em
+	 * GameResource::extra(). Aqui só ajustes da própria coleção (with(), paginationInformation()...).
 	 */
-	public function toArray($request)
-	{
-		return $this->collection->map(function ($game) {
-			$createdAt = $game->created_at->locale(App::getLocale());
-			$updatedAt = $game->updated_at->locale(App::getLocale());
-	
-			return [
-				'id' => $game->id,
-				'name' => $game->name,
-				'description' => $game->description,
-				'max_players' => $game->max_players,
-				'document' => $game->document,
-				'status' => $game->status,
-				'created_at' => array(
-					'timestamp' => $createdAt->timestamp,
-					'description' => $createdAt->diffForHumans(),
-				),
-				'updated_at' => array(
-					'timestamp' => $updatedAt->timestamp,
-					'description' => $updatedAt->diffForHumans(),
-				),
-			];
-		})->toArray();
-	}
-
-};
+}

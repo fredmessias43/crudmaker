@@ -1,5 +1,8 @@
 <?php
 
+// ARQUIVO GERADO PELO CRUDMAKER. NÃO EDITE: ele é sobrescrito a cada `crudmaker generate`.
+// Seu código fica em <%~ it.final.fqcn %> (<%~ it.final.path %>), que estende esta classe e nunca é sobrescrita.
+
 namespace <%~ it.namespace %>;
 
 <% for (const use of it.imports) { -%>
@@ -7,7 +10,7 @@ use <%~ use %>;
 <% } -%>
 
 
-class <%~ it.className %> extends <%~ it.extends %>
+abstract class <%~ it.className %> extends <%~ it.extends %>
 {
 
 	/**
@@ -48,11 +51,32 @@ class <%~ it.className %> extends <%~ it.extends %>
 	}
 
 	/**
-	 * Get the validation rules that apply to the request.
+	 * Get the validation rules that apply to the request: as geradas mais as de `extraRules()`.
 	 *
 	 * @return array
 	*/
 	public function rules()
+	{
+			return array_merge($this->generatedRules(), $this->extraRules());
+	}
+
+	/**
+	 * Hook: regras de validação que se somam às geradas (a mesma chave de campo substitui a regra gerada).
+	 * Sobrescreva na classe final. Para mudar a autorização, sobrescreva também `authorize()` lá.
+	 *
+	 * @return array
+	 */
+	protected function extraRules(): array
+	{
+		return [];
+	}
+
+	/**
+	 * Regras geradas a partir do manifest.
+	 *
+	 * @return array
+	 */
+	private function generatedRules(): array
 	{
 			return [
 <% for (const rule of it.rules) { -%>
@@ -65,4 +89,4 @@ class <%~ it.className %> extends <%~ it.extends %>
 			];
 	}
 
-};
+}

@@ -2,87 +2,20 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
-use App\Models\Student;
+use App\Generated\Http\Requests\BaseStudentRequest;
 
-
-class StudentRequest extends FormRequest
+/**
+ * Camada de customização da request de Student.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * As regras geradas ficam em App\Generated\Http\Requests\BaseStudentRequest (app/Generated/Http/Requests/BaseStudentRequest.php), que não deve ser editada.
+ */
+class StudentRequest extends BaseStudentRequest
 {
-
-	/**
-	 * Determine if the user is authorized to make this request.
+	/*
+	 * Hook e método que você pode sobrescrever aqui:
 	 *
-	 * @return bool
+	 *   protected function extraRules(): array; // regras somadas às geradas (a mesma chave de campo substitui a gerada)
+	 *   public function authorize(): bool; // a base libera tudo (return true)
 	 */
-	public function authorize()
-	{
-		return true;
-	}
-
-	/**
-	 * Prepare the data for validation.
-	 *
-	 * @return void
-	 */
-	protected function prepareForValidation()
-	{
-			$student = $this->route('student');
-	
-			if ($student instanceof Student)
-			{
-					$this->merge(['id' => $student->id]);
-	
-					if ( ! $this->has('id'))
-					{
-							$this->merge(['id' => $student->id]);
-					}
-	
-					if ( ! $this->has('status'))
-					{
-							$this->merge(['status' => $student->status]);
-					}
-	
-					if ( ! $this->has('classroom_id'))
-					{
-							$this->merge(['classroom_id' => $student->classroom_id]);
-					}
-	
-					if ( ! $this->has('user_id'))
-					{
-							$this->merge(['user_id' => $student->user_id]);
-					}
-	
-			}
-			else
-			{
-					//
-			}
-	}
-
-	/**
-	 * Get the validation rules that apply to the request.
-	 *
-	 * @return array
-	*/
-	public function rules()
-	{
-			return [
-				'status' => array(
-					'bail',
-					'required',
-					'string',
-				),
-				'classroom_id' => array(
-					'bail',
-					'required',
-					'uuid',
-				),
-				'user_id' => array(
-					'bail',
-					'required',
-					'uuid',
-				),
-			];
-	}
-
-};
+}

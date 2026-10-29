@@ -2,65 +2,26 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Generated\Models\BaseOrderItem;
 
-
-class OrderItem extends Model
+/**
+ * Camada de customização da model OrderItem.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * O código gerado (traits, $casts, $fillable e relacionamentos do manifest) fica em
+ * App\Generated\Models\BaseOrderItem (app/Generated/Models/BaseOrderItem.php), que não deve ser editada.
+ */
+class OrderItem extends BaseOrderItem
 {
-	use HasFactory;
-	use SoftDeletes;
-	use HasUuids;
-
-	protected $keyType = "string";
-	public $incrementing = false;
-	
-	/**
-	 * The attributes that should be cast.
+	/*
+	 * A model não tem hooks: use os recursos do Eloquent aqui, por exemplo
 	 *
-	 * @var array
+	 *   - scopes locais e globais (scopeAtivos, #[ScopedBy]);
+	 *   - accessors e mutators (Attribute::make);
+	 *   - $hidden, $appends e relacionamentos extras;
+	 *   - eventos no booted() (static::creating, static::deleting...);
+	 *   - mais casts ou campos em massa, somados aos gerados: $this->mergeCasts([...]) e
+	 *     $this->mergeFillable([...]) num __construct(array $attributes = []) que chame parent::__construct($attributes).
+	 *     (Redeclarar $casts ou $fillable aqui substituiria os gerados.)
 	 */
-	protected $casts = [
-		'quantity' => 'integer',
-		'price' => 'double',
-		'gift' => 'boolean',
-		'options' => 'array',
-		'shipped_on' => 'date',
-		'packed_at' => 'datetime',
-	];
-	
-	/**
-	 * The attributes that are mass assignable.
-	 *
-	 * @var array
-	 */
-	protected $fillable = [
-		'id',
-		'sku',
-		'quantity',
-		'price',
-		'gift',
-		'options',
-		'shipped_on',
-		'packed_at',
-		'status',
-		'order_id',
-		'author_id',
-	];
-
-	public function order(): BelongsTo
-	{
-		return $this->belongsTo(Order::class);
-	}
-	
-	public function author(): BelongsTo
-	{
-		return $this->belongsTo(User::class, 'author_id');
-	}
-	
-
-};
+}

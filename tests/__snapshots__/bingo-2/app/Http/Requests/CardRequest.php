@@ -2,87 +2,20 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
-use App\Models\Card;
+use App\Generated\Http\Requests\BaseCardRequest;
 
-
-class CardRequest extends FormRequest
+/**
+ * Camada de customização da request de Card.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * As regras geradas ficam em App\Generated\Http\Requests\BaseCardRequest (app/Generated/Http/Requests/BaseCardRequest.php), que não deve ser editada.
+ */
+class CardRequest extends BaseCardRequest
 {
-
-	/**
-	 * Determine if the user is authorized to make this request.
+	/*
+	 * Hook e método que você pode sobrescrever aqui:
 	 *
-	 * @return bool
+	 *   protected function extraRules(): array; // regras somadas às geradas (a mesma chave de campo substitui a gerada)
+	 *   public function authorize(): bool; // a base libera tudo (return true)
 	 */
-	public function authorize()
-	{
-		return true;
-	}
-
-	/**
-	 * Prepare the data for validation.
-	 *
-	 * @return void
-	 */
-	protected function prepareForValidation()
-	{
-			$card = $this->route('card');
-	
-			if ($card instanceof Card)
-			{
-					$this->merge(['id' => $card->id]);
-	
-					if ( ! $this->has('id'))
-					{
-							$this->merge(['id' => $card->id]);
-					}
-	
-					if ( ! $this->has('game_id'))
-					{
-							$this->merge(['game_id' => $card->game_id]);
-					}
-	
-					if ( ! $this->has('player_id'))
-					{
-							$this->merge(['player_id' => $card->player_id]);
-					}
-	
-					if ( ! $this->has('numbers'))
-					{
-							$this->merge(['numbers' => $card->numbers]);
-					}
-	
-			}
-			else
-			{
-					//
-			}
-	}
-
-	/**
-	 * Get the validation rules that apply to the request.
-	 *
-	 * @return array
-	*/
-	public function rules()
-	{
-			return [
-				'game_id' => array(
-					'bail',
-					'required',
-					'uuid',
-				),
-				'player_id' => array(
-					'bail',
-					'required',
-					'uuid',
-				),
-				'numbers' => array(
-					'bail',
-					'required',
-					'array',
-				),
-			];
-	}
-
-};
+}

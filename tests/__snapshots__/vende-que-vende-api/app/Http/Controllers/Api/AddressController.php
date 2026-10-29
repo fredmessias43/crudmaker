@@ -2,100 +2,35 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Models\Address;
-use App\Http\Requests\AddressRequest;
-use App\Http\Resources\AddressCollection;
-use App\Http\Resources\AddressResource;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Response;
+use App\Generated\Http\Controllers\Api\BaseAddressController;
 
-
-class AddressController extends Controller
+/**
+ * Camada de customização do controller de Address.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * As actions geradas (index, store, show, update, destroy) ficam em
+ * App\Generated\Http\Controllers\Api\BaseAddressController (app/Generated/Http/Controllers/Api/BaseAddressController.php), que não deve ser editada.
+ */
+class AddressController extends BaseAddressController
 {
-
-	/**
-	 * Display a paginated listing of the resource.
+	/*
+	 * Hooks disponíveis. Todos são protected e não fazem nada na base: copie para cá só os que precisar.
+	 * As assinaturas precisam ficar idênticas (o PHP acusa a incompatibilidade na hora).
 	 *
-	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 * Imports que os hooks usam:
+	 *   use App\Models\Address;
+	 *   use Illuminate\Database\Eloquent\Builder;
+	 *   use Illuminate\Http\Request;
 	 *
-	 * @return \Illuminate\Http\JsonResponse
+	 *   protected function indexQuery(Builder $query, Request $request): Builder; // antes de paginar
+	 *   protected function beforeStore(array $data, Request $request): array; // dados validados -> dados a gravar
+	 *   protected function afterStore(Address $model, Request $request): void; // depois de criar
+	 *   protected function beforeUpdate(Address $model, array $data, Request $request): array; // dados validados -> dados a gravar
+	 *   protected function afterUpdate(Address $model, Request $request): void; // depois de atualizar
+	 *   protected function beforeDestroy(Address $model, Request $request): void; // antes de remover
+	 *   protected function afterDestroy(Address $model, Request $request): void; // depois de remover
+	 *
+	 * store, update e destroy rodam a gravação e os hooks na mesma transação (DB::transaction):
+	 * para barrar a operação, lance uma exceção ou chame abort(), e nada é gravado.
 	 */
-	public function index(): JsonResponse
-	{
-		$address = Address::paginate(15);
-
-		return (new AddressCollection($address))->response();
-	}
-
-
-	/**
-	 * Store a newly created resource in storage.
-	 *
-	 * @param  \App\Http\Requests\AddressRequest $request
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function store(AddressRequest $request): JsonResponse
-	{
-		$address = Address::create($request->validated());
-
-		return response()->json([
-			'status' => 201,
-			'message' => trans('Address created successfully.'),
-			'data' => new AddressResource($address),
-		], 201);
-	}
-
-
-	/**
-	 * Display the specified resource.
-	 *
-	 * @param  \App\Models\Address $address
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function show(Address $address): JsonResponse
-	{
-		return response()->json([
-			'status' => 200,
-			'data' => new AddressResource($address),
-		], 200);
-	}
-
-
-	/**
-	 * Update the specified resource in storage.
-	 *
-	 * @param  \App\Http\Requests\AddressRequest $request
-	 * @param  \App\Models\Address $address
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function update(AddressRequest $request, Address $address): JsonResponse
-	{
-		$address->update($request->validated());
-
-		return response()->json([
-			'status' => 200,
-			'message' => trans('Address updated successfully.'),
-			'data' => new AddressResource($address),
-		], 200);
-	}
-
-
-	/**
-	 * Remove the specified resource from storage.
-	 *
-	 * @param  \App\Models\Address $address
-	 *
-	 * @return \Illuminate\Http\Response
-	 */
-	public function destroy(Address $address): Response
-	{
-		$address->delete();
-
-		return response()->noContent();
-	}
-
-};
+}

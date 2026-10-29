@@ -9,6 +9,11 @@ const snapshotsDir = path.join(__dirname, "__snapshots__");
 // 2025-01-02 03:04:05 (hora local, como o `format` do date-fns usa no nome da migration)
 const now = new Date(2025, 0, 2, 3, 4, 5);
 
+/** Camada de customização: classes finais (fora de `app/Generated`, `database` e `routes`) são `create-once`. */
+function isCustomLayer(p: string): boolean {
+  return p.startsWith("app/") && !p.startsWith("app/Generated/");
+}
+
 function loadManifest(name: string) {
   return JSON.parse(fs.readFileSync(path.join(fixturesDir, name, "manifest.json"), "utf8"));
 }
@@ -30,9 +35,9 @@ describe.each(["bingo", "curso", "vende-que-vende-api"])("generate (%s)", (name)
     }
   });
 
-  it("usa a política overwrite e caminhos relativos", () => {
+  it("usa a política da camada (final = create-once, o resto = overwrite) e caminhos relativos", () => {
     for (const file of files) {
-      expect(file.policy).toBe("overwrite");
+      expect(file.policy).toBe(isCustomLayer(file.path) ? "create-once" : "overwrite");
       expect(path.isAbsolute(file.path)).toBe(false);
       expect(file.path).not.toContain("\\");
     }
@@ -95,8 +100,8 @@ describe("generate (bingo-2, normalização de nomes ligada)", () => {
     const routes = files.find((file) => file.path === "routes/crudmaker.php")!.content;
     expect(routes).toContain("Route::apiResource('player-invites', PlayerInviteController::class);");
     expect(routes).toContain("Route::apiResource('drawn-numbers', DrawnNumberController::class);");
-    expect(files.find((file) => file.path === "app/Http/Requests/DrawnNumberRequest.php")!.content).toContain("$this->route('drawn_number')");
-    expect(files.find((file) => file.path === "app/Http/Requests/PlayerInviteRequest.php")!.content).toContain("$this->route('player_invite')");
+    expect(files.find((file) => file.path === "app/Generated/Http/Requests/BaseDrawnNumberRequest.php")!.content).toContain("$this->route('drawn_number')");
+    expect(files.find((file) => file.path === "app/Generated/Http/Requests/BasePlayerInviteRequest.php")!.content).toContain("$this->route('player_invite')");
   });
 });
 
@@ -137,15 +142,15 @@ describe("generate (order-item)", () => {
   });
 
   it("a regra unique ignora o registro da rota, não o id do corpo", () => {
-    const request = content("app/Http/Requests/OrderItemRequest.php");
+    const request = content("app/Generated/Http/Requests/BaseOrderItemRequest.php");
 
     expect(request).toContain("Rule::unique('order_items', 'sku')->ignore($this->route('order_item'))");
     expect(request).not.toContain("$this->input(");
-    expect(content("app/Http/Requests/OrderRequest.php")).toContain("Rule::unique('orders', 'number')->ignore($this->route('order'))");
+    expect(content("app/Generated/Http/Requests/BaseOrderRequest.php")).toContain("Rule::unique('orders', 'number')->ignore($this->route('order'))");
   });
 
   it("devolve datas ao formato da regra no prepareForValidation (o cast vira Carbon)", () => {
-    const request = content("app/Http/Requests/OrderItemRequest.php");
+    const request = content("app/Generated/Http/Requests/BaseOrderItemRequest.php");
 
     expect(request).toContain("$this->merge(['shipped_on' => $orderItem->shipped_on?->format('Y-m-d')]);");
     expect(request).toContain("$this->merge(['packed_at' => $orderItem->packed_at?->format('Y-m-d H:i')]);");
@@ -165,7 +170,7 @@ describe("generate (order-item)", () => {
   }
 
   it("cada tipo de campo gera a regra de validação certa", () => {
-    const request = content("app/Http/Requests/OrderItemRequest.php");
+    const request = content("app/Generated/Http/Requests/BaseOrderItemRequest.php");
     const expected: { [field: string]: string[] } = {
       sku: ["'bail'", "'required'", "'string'", "Rule::unique('order_items', 'sku')->ignore($this->route('order_item'))"],
       quantity: ["'bail'", "'required'", "'integer'"],
@@ -186,7 +191,7 @@ describe("generate (order-item)", () => {
   });
 
   it("nenhuma request usa regra inexistente no Laravel (nem `double`)", () => {
-    for (const file of files.filter((f) => f.path.startsWith("app/Http/Requests/"))) {
+    for (const file of files.filter((f) => f.path.startsWith("app/Generated/Http/Requests/"))) {
       expect(file.content).not.toContain("'double'");
       const rules = Object.values(allRules(file.content)).flat();
       expect(rules.length).toBeGreaterThan(0);
@@ -199,7 +204,7 @@ describe("generate (order-item)", () => {
   });
 
   it("belongsTo com FK customizada passa só a FK (foreignKey) e o método leva o nome da FK sem _id", () => {
-    const model = content("app/Models/OrderItem.php");
+    const model = content("app/Generated/Models/BaseOrderItem.php");
 
     expect(model).toContain("public function author(): BelongsTo");
     expect(model).toContain("return $this->belongsTo(User::class, 'author_id');");
@@ -208,7 +213,7 @@ describe("generate (order-item)", () => {
   });
 
   it("hasMany e hasOne com FK customizada apontam para a coluna do filho", () => {
-    const user = content("app/Models/User.php");
+    const user = content("app/Generated/Models/BaseUser.php");
 
     expect(user).toContain("public function orderItemsByAuthor(): HasMany");
     expect(user).toContain("return $this->hasMany(OrderItem::class, 'author_id');");
@@ -220,7 +225,7 @@ describe("generate (order-item)", () => {
   });
 
   it("a model tem um cast por tipo que precisa dele", () => {
-    const model = content("app/Models/OrderItem.php");
+    const model = content("app/Generated/Models/BaseOrderItem.php");
 
     for (const cast of [
       "'quantity' => 'integer',",
@@ -355,7 +360,7 @@ describe("rotas", () => {
 
     expect(byPath(files, "routes/crudmaker.php")!.content)
       .toContain("Route::apiResource('class-lessons', ClassLessonController::class);");
-    expect(byPath(files, "app/Http/Requests/ClassLessonRequest.php")!.content).toContain("$this->route('class_lesson')");
+    expect(byPath(files, "app/Generated/Http/Requests/BaseClassLessonRequest.php")!.content).toContain("$this->route('class_lesson')");
   });
 
   it("não gera routes/api.php quando ele não existe", () => {
@@ -404,7 +409,7 @@ describe("rotas", () => {
 // Semântica HTTP dos controllers (ticket 08), sem depender de snapshot.
 describe("controllers gerados (semântica HTTP)", () => {
   const { files } = generate(loadManifest("vende-que-vende-api"), { now, existingMigrations: [] });
-  const controllers = files.filter((file) => file.path.startsWith("app/Http/Controllers/Api/"));
+  const controllers = files.filter((file) => file.path.startsWith("app/Generated/Http/Controllers/Api/"));
 
   function action(content: string, name: string): string {
     const start = content.indexOf(`public function ${name}(`);
@@ -418,7 +423,7 @@ describe("controllers gerados (semântica HTTP)", () => {
 
   it("responde com o status certo em cada action", () => {
     for (const { content } of controllers) {
-      expect(action(content, "index")).toContain("::paginate(15)");
+      expect(action(content, "index")).toContain("->paginate(15)");
       expect(action(content, "store")).toContain("], 201);");
       expect(action(content, "show")).toContain("], 200);");
       expect(action(content, "update")).toContain("], 200);");

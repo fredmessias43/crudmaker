@@ -2,97 +2,20 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
-use App\Models\Award;
+use App\Generated\Http\Requests\BaseAwardRequest;
 
-
-class AwardRequest extends FormRequest
+/**
+ * Camada de customização da request de Award.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * As regras geradas ficam em App\Generated\Http\Requests\BaseAwardRequest (app/Generated/Http/Requests/BaseAwardRequest.php), que não deve ser editada.
+ */
+class AwardRequest extends BaseAwardRequest
 {
-
-	/**
-	 * Determine if the user is authorized to make this request.
+	/*
+	 * Hook e método que você pode sobrescrever aqui:
 	 *
-	 * @return bool
+	 *   protected function extraRules(): array; // regras somadas às geradas (a mesma chave de campo substitui a gerada)
+	 *   public function authorize(): bool; // a base libera tudo (return true)
 	 */
-	public function authorize()
-	{
-		return true;
-	}
-
-	/**
-	 * Prepare the data for validation.
-	 *
-	 * @return void
-	 */
-	protected function prepareForValidation()
-	{
-			$award = $this->route('award');
-	
-			if ($award instanceof Award)
-			{
-					$this->merge(['id' => $award->id]);
-	
-					if ( ! $this->has('id'))
-					{
-							$this->merge(['id' => $award->id]);
-					}
-	
-					if ( ! $this->has('game_id'))
-					{
-							$this->merge(['game_id' => $award->game_id]);
-					}
-	
-					if ( ! $this->has('name'))
-					{
-							$this->merge(['name' => $award->name]);
-					}
-	
-					if ( ! $this->has('description'))
-					{
-							$this->merge(['description' => $award->description]);
-					}
-	
-					if ( ! $this->has('image_url'))
-					{
-							$this->merge(['image_url' => $award->image_url]);
-					}
-	
-			}
-			else
-			{
-					//
-			}
-	}
-
-	/**
-	 * Get the validation rules that apply to the request.
-	 *
-	 * @return array
-	*/
-	public function rules()
-	{
-			return [
-				'game_id' => array(
-					'bail',
-					'required',
-					'uuid',
-				),
-				'name' => array(
-					'bail',
-					'required',
-					'string',
-				),
-				'description' => array(
-					'bail',
-					'required',
-					'string',
-				),
-				'image_url' => array(
-					'bail',
-					'required',
-					'string',
-				),
-			];
-	}
-
-};
+}

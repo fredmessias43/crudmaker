@@ -313,7 +313,7 @@ describe("fixtures antigas com a normalização ligada", () => {
     expect(warnings).toContain("pkg.entities.awards → award");
     expect(warnings).toContain("pkg.entities.drawn_numbers → drawnNumber");
     expect(files.map((f) => f.path)).toContain("app/Models/DrawnNumber.php");
-    expect(files.find((f) => f.path === "app/Models/Game.php")!.content).toContain("$this->hasMany(Award::class)");
+    expect(files.find((f) => f.path === "app/Generated/Models/BaseGame.php")!.content).toContain("$this->hasMany(Award::class)");
   });
 
   it("curso: course_content vira courseContent, com FK course_content_id e tabela course_contents; classroom continua classroom", () => {
@@ -360,8 +360,8 @@ describe("fixtures antigas com a normalização ligada", () => {
     expect(warnings).toEqual(["pkg.entities.alert.fields.alertDate → alert_date"]);
     expect(contentOf(m, "database/migrations/2025_01_02_030405_create_alerts_table.php")).toContain("$table->datetime('alert_date');");
     expect(contentOf(m, "database/migrations/2025_01_02_030405_create_alerts_table.php", false)).toContain("$table->datetime('alertDate');");
-    expect(contentOf(m, "app/Models/Alert.php")).toContain("'alert_date',");
-    expect(contentOf(m, "app/Http/Resources/AlertResource.php")).toContain("'alert_date' => $this->alert_date,");
+    expect(contentOf(m, "app/Generated/Models/BaseAlert.php")).toContain("'alert_date',");
+    expect(contentOf(m, "app/Generated/Http/Resources/BaseAlertResource.php")).toContain("'alert_date' => $this->alert_date,");
   });
 });
 

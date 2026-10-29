@@ -2,67 +2,20 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
-use App\Models\User;
+use App\Generated\Http\Requests\BaseUserRequest;
 
-
-class UserRequest extends FormRequest
+/**
+ * Camada de customização da request de User.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * As regras geradas ficam em App\Generated\Http\Requests\BaseUserRequest (app/Generated/Http/Requests/BaseUserRequest.php), que não deve ser editada.
+ */
+class UserRequest extends BaseUserRequest
 {
-
-	/**
-	 * Determine if the user is authorized to make this request.
+	/*
+	 * Hook e método que você pode sobrescrever aqui:
 	 *
-	 * @return bool
+	 *   protected function extraRules(): array; // regras somadas às geradas (a mesma chave de campo substitui a gerada)
+	 *   public function authorize(): bool; // a base libera tudo (return true)
 	 */
-	public function authorize()
-	{
-		return true;
-	}
-
-	/**
-	 * Prepare the data for validation.
-	 *
-	 * @return void
-	 */
-	protected function prepareForValidation()
-	{
-			$user = $this->route('user');
-	
-			if ($user instanceof User)
-			{
-					$this->merge(['id' => $user->id]);
-	
-					if ( ! $this->has('id'))
-					{
-							$this->merge(['id' => $user->id]);
-					}
-	
-					if ( ! $this->has('name'))
-					{
-							$this->merge(['name' => $user->name]);
-					}
-	
-			}
-			else
-			{
-					//
-			}
-	}
-
-	/**
-	 * Get the validation rules that apply to the request.
-	 *
-	 * @return array
-	*/
-	public function rules()
-	{
-			return [
-				'name' => array(
-					'bail',
-					'required',
-					'string',
-				),
-			];
-	}
-
-};
+}

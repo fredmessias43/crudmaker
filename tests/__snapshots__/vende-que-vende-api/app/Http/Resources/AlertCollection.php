@@ -2,40 +2,18 @@
 
 namespace App\Http\Resources;
 
-use Illuminate\Http\Resources\Json\ResourceCollection;
-use Illuminate\Support\Facades\App;
+use App\Generated\Http\Resources\BaseAlertCollection;
 
-
-class AlertCollection extends ResourceCollection
+/**
+ * Camada de customização da collection de Alert.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * O código gerado fica em App\Generated\Http\Resources\BaseAlertCollection (app/Generated/Http/Resources/BaseAlertCollection.php), que não deve ser editada.
+ */
+class AlertCollection extends BaseAlertCollection
 {
-
-	/**
-	 * Transform the resource collection into an array.
-	 *
-	 * @param  \Illuminate\Http\Request  $request
-	 * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
+	/*
+	 * A collection não tem hooks: cada item sai pela resource, então campos extras vão em
+	 * AlertResource::extra(). Aqui só ajustes da própria coleção (with(), paginationInformation()...).
 	 */
-	public function toArray($request)
-	{
-		return $this->collection->map(function ($alert) {
-			$createdAt = $alert->created_at->locale(App::getLocale());
-			$updatedAt = $alert->updated_at->locale(App::getLocale());
-	
-			return [
-				'id' => $alert->id,
-				'message' => $alert->message,
-				'alertDate' => $alert->alertDate,
-				'client_id' => $alert->client_id,
-				'created_at' => array(
-					'timestamp' => $createdAt->timestamp,
-					'description' => $createdAt->diffForHumans(),
-				),
-				'updated_at' => array(
-					'timestamp' => $updatedAt->timestamp,
-					'description' => $updatedAt->diffForHumans(),
-				),
-			];
-		})->toArray();
-	}
-
-};
+}

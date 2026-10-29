@@ -2,39 +2,18 @@
 
 namespace App\Http\Resources;
 
-use Illuminate\Http\Resources\Json\ResourceCollection;
-use Illuminate\Support\Facades\App;
+use App\Generated\Http\Resources\BaseDrawnNumberCollection;
 
-
-class DrawnNumberCollection extends ResourceCollection
+/**
+ * Camada de customização da collection de DrawnNumber.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * O código gerado fica em App\Generated\Http\Resources\BaseDrawnNumberCollection (app/Generated/Http/Resources/BaseDrawnNumberCollection.php), que não deve ser editada.
+ */
+class DrawnNumberCollection extends BaseDrawnNumberCollection
 {
-
-	/**
-	 * Transform the resource collection into an array.
-	 *
-	 * @param  \Illuminate\Http\Request  $request
-	 * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
+	/*
+	 * A collection não tem hooks: cada item sai pela resource, então campos extras vão em
+	 * DrawnNumberResource::extra(). Aqui só ajustes da própria coleção (with(), paginationInformation()...).
 	 */
-	public function toArray($request)
-	{
-		return $this->collection->map(function ($drawn_number) {
-			$createdAt = $drawn_number->created_at->locale(App::getLocale());
-			$updatedAt = $drawn_number->updated_at->locale(App::getLocale());
-	
-			return [
-				'id' => $drawn_number->id,
-				'game_id' => $drawn_number->game_id,
-				'number' => $drawn_number->number,
-				'created_at' => array(
-					'timestamp' => $createdAt->timestamp,
-					'description' => $createdAt->diffForHumans(),
-				),
-				'updated_at' => array(
-					'timestamp' => $updatedAt->timestamp,
-					'description' => $updatedAt->diffForHumans(),
-				),
-			];
-		})->toArray();
-	}
-
-};
+}

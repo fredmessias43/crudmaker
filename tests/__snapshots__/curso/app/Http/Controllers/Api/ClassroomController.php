@@ -2,100 +2,35 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Models\Classroom;
-use App\Http\Requests\ClassroomRequest;
-use App\Http\Resources\ClassroomCollection;
-use App\Http\Resources\ClassroomResource;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Response;
+use App\Generated\Http\Controllers\Api\BaseClassroomController;
 
-
-class ClassroomController extends Controller
+/**
+ * Camada de customização do controller de Classroom.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * As actions geradas (index, store, show, update, destroy) ficam em
+ * App\Generated\Http\Controllers\Api\BaseClassroomController (app/Generated/Http/Controllers/Api/BaseClassroomController.php), que não deve ser editada.
+ */
+class ClassroomController extends BaseClassroomController
 {
-
-	/**
-	 * Display a paginated listing of the resource.
+	/*
+	 * Hooks disponíveis. Todos são protected e não fazem nada na base: copie para cá só os que precisar.
+	 * As assinaturas precisam ficar idênticas (o PHP acusa a incompatibilidade na hora).
 	 *
-	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 * Imports que os hooks usam:
+	 *   use App\Models\Classroom;
+	 *   use Illuminate\Database\Eloquent\Builder;
+	 *   use Illuminate\Http\Request;
 	 *
-	 * @return \Illuminate\Http\JsonResponse
+	 *   protected function indexQuery(Builder $query, Request $request): Builder; // antes de paginar
+	 *   protected function beforeStore(array $data, Request $request): array; // dados validados -> dados a gravar
+	 *   protected function afterStore(Classroom $model, Request $request): void; // depois de criar
+	 *   protected function beforeUpdate(Classroom $model, array $data, Request $request): array; // dados validados -> dados a gravar
+	 *   protected function afterUpdate(Classroom $model, Request $request): void; // depois de atualizar
+	 *   protected function beforeDestroy(Classroom $model, Request $request): void; // antes de remover
+	 *   protected function afterDestroy(Classroom $model, Request $request): void; // depois de remover
+	 *
+	 * store, update e destroy rodam a gravação e os hooks na mesma transação (DB::transaction):
+	 * para barrar a operação, lance uma exceção ou chame abort(), e nada é gravado.
 	 */
-	public function index(): JsonResponse
-	{
-		$classroom = Classroom::paginate(15);
-
-		return (new ClassroomCollection($classroom))->response();
-	}
-
-
-	/**
-	 * Store a newly created resource in storage.
-	 *
-	 * @param  \App\Http\Requests\ClassroomRequest $request
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function store(ClassroomRequest $request): JsonResponse
-	{
-		$classroom = Classroom::create($request->validated());
-
-		return response()->json([
-			'status' => 201,
-			'message' => trans('Classroom created successfully.'),
-			'data' => new ClassroomResource($classroom),
-		], 201);
-	}
-
-
-	/**
-	 * Display the specified resource.
-	 *
-	 * @param  \App\Models\Classroom $classroom
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function show(Classroom $classroom): JsonResponse
-	{
-		return response()->json([
-			'status' => 200,
-			'data' => new ClassroomResource($classroom),
-		], 200);
-	}
-
-
-	/**
-	 * Update the specified resource in storage.
-	 *
-	 * @param  \App\Http\Requests\ClassroomRequest $request
-	 * @param  \App\Models\Classroom $classroom
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function update(ClassroomRequest $request, Classroom $classroom): JsonResponse
-	{
-		$classroom->update($request->validated());
-
-		return response()->json([
-			'status' => 200,
-			'message' => trans('Classroom updated successfully.'),
-			'data' => new ClassroomResource($classroom),
-		], 200);
-	}
-
-
-	/**
-	 * Remove the specified resource from storage.
-	 *
-	 * @param  \App\Models\Classroom $classroom
-	 *
-	 * @return \Illuminate\Http\Response
-	 */
-	public function destroy(Classroom $classroom): Response
-	{
-		$classroom->delete();
-
-		return response()->noContent();
-	}
-
-};
+}

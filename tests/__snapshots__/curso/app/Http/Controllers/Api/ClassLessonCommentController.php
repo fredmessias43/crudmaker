@@ -2,100 +2,35 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Models\ClassLessonComment;
-use App\Http\Requests\ClassLessonCommentRequest;
-use App\Http\Resources\ClassLessonCommentCollection;
-use App\Http\Resources\ClassLessonCommentResource;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Response;
+use App\Generated\Http\Controllers\Api\BaseClassLessonCommentController;
 
-
-class ClassLessonCommentController extends Controller
+/**
+ * Camada de customização do controller de ClassLessonComment.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * As actions geradas (index, store, show, update, destroy) ficam em
+ * App\Generated\Http\Controllers\Api\BaseClassLessonCommentController (app/Generated/Http/Controllers/Api/BaseClassLessonCommentController.php), que não deve ser editada.
+ */
+class ClassLessonCommentController extends BaseClassLessonCommentController
 {
-
-	/**
-	 * Display a paginated listing of the resource.
+	/*
+	 * Hooks disponíveis. Todos são protected e não fazem nada na base: copie para cá só os que precisar.
+	 * As assinaturas precisam ficar idênticas (o PHP acusa a incompatibilidade na hora).
 	 *
-	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 * Imports que os hooks usam:
+	 *   use App\Models\ClassLessonComment;
+	 *   use Illuminate\Database\Eloquent\Builder;
+	 *   use Illuminate\Http\Request;
 	 *
-	 * @return \Illuminate\Http\JsonResponse
+	 *   protected function indexQuery(Builder $query, Request $request): Builder; // antes de paginar
+	 *   protected function beforeStore(array $data, Request $request): array; // dados validados -> dados a gravar
+	 *   protected function afterStore(ClassLessonComment $model, Request $request): void; // depois de criar
+	 *   protected function beforeUpdate(ClassLessonComment $model, array $data, Request $request): array; // dados validados -> dados a gravar
+	 *   protected function afterUpdate(ClassLessonComment $model, Request $request): void; // depois de atualizar
+	 *   protected function beforeDestroy(ClassLessonComment $model, Request $request): void; // antes de remover
+	 *   protected function afterDestroy(ClassLessonComment $model, Request $request): void; // depois de remover
+	 *
+	 * store, update e destroy rodam a gravação e os hooks na mesma transação (DB::transaction):
+	 * para barrar a operação, lance uma exceção ou chame abort(), e nada é gravado.
 	 */
-	public function index(): JsonResponse
-	{
-		$classLessonComment = ClassLessonComment::paginate(15);
-
-		return (new ClassLessonCommentCollection($classLessonComment))->response();
-	}
-
-
-	/**
-	 * Store a newly created resource in storage.
-	 *
-	 * @param  \App\Http\Requests\ClassLessonCommentRequest $request
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function store(ClassLessonCommentRequest $request): JsonResponse
-	{
-		$classLessonComment = ClassLessonComment::create($request->validated());
-
-		return response()->json([
-			'status' => 201,
-			'message' => trans('ClassLessonComment created successfully.'),
-			'data' => new ClassLessonCommentResource($classLessonComment),
-		], 201);
-	}
-
-
-	/**
-	 * Display the specified resource.
-	 *
-	 * @param  \App\Models\ClassLessonComment $classLessonComment
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function show(ClassLessonComment $classLessonComment): JsonResponse
-	{
-		return response()->json([
-			'status' => 200,
-			'data' => new ClassLessonCommentResource($classLessonComment),
-		], 200);
-	}
-
-
-	/**
-	 * Update the specified resource in storage.
-	 *
-	 * @param  \App\Http\Requests\ClassLessonCommentRequest $request
-	 * @param  \App\Models\ClassLessonComment $classLessonComment
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function update(ClassLessonCommentRequest $request, ClassLessonComment $classLessonComment): JsonResponse
-	{
-		$classLessonComment->update($request->validated());
-
-		return response()->json([
-			'status' => 200,
-			'message' => trans('ClassLessonComment updated successfully.'),
-			'data' => new ClassLessonCommentResource($classLessonComment),
-		], 200);
-	}
-
-
-	/**
-	 * Remove the specified resource from storage.
-	 *
-	 * @param  \App\Models\ClassLessonComment $classLessonComment
-	 *
-	 * @return \Illuminate\Http\Response
-	 */
-	public function destroy(ClassLessonComment $classLessonComment): Response
-	{
-		$classLessonComment->delete();
-
-		return response()->noContent();
-	}
-
-};
+}

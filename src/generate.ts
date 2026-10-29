@@ -1,9 +1,10 @@
 import { Entity } from "./models/Entity";
 import { Manifest } from "./models/Manifest";
 import { generateLaravelApi } from "./targets/laravel-api";
-import { FilePolicy, GeneratedFile } from "./targets/types";
+import { FilePolicy, GeneratedFile, ObsoleteFile } from "./targets/types";
+import { ManifestEntities } from "./types";
 
-export { FilePolicy, GeneratedFile };
+export { FilePolicy, GeneratedFile, ObsoleteFile };
 
 export type GenerateOptions = {
   /** Data/hora usada no prefixo do nome das migrations novas. */
@@ -23,13 +24,34 @@ export type GenerateOptions = {
    * do manifest; omitida, vale o manifest (padrão: ligada).
    */
   normalizeNames?: boolean;
+  /**
+   * Conteúdo (já parseado) do `manifest-lock.json` anterior do destino, ou `null`/omitido se não existe.
+   * Serve para saber o que a geração anterior produziu: as entidades que estavam nele e saíram do manifest
+   * viram `obsolete` no resultado. Um lock sem `entities` válidas é ignorado.
+   */
+  previousLock?: { entities?: ManifestEntities } | null;
 };
 
 export type GenerateResult = {
   files: GeneratedFile[];
   /** Um aviso por nome alterado (ou fora da convenção, com a normalização desligada). Não bloqueiam a geração. */
   warnings: string[];
+  /**
+   * Arquivos de entidades que saíram do manifest (veja `ObsoleteFile`). São caminhos *possíveis*: o plano
+   * de escrita confere o que existe no disco e só apaga a camada gerada.
+   */
+  obsolete: ObsoleteFile[];
 };
+
+/** Entidades do lock anterior; entradas que não têm o formato esperado são descartadas. */
+function previousEntities(lock: GenerateOptions["previousLock"]): Entity[] {
+  const entities = lock?.entities;
+  if (typeof entities !== "object" || entities === null) return [];
+
+  return Object.entries(entities)
+    .filter(([, entity]) => typeof entity?.fields === "object" && entity.fields !== null)
+    .map(([key, entity]) => new Entity(key, { fields: entity.fields, relationships: entity.relationships ?? {} }));
+}
 
 /**
  * Função pura: não lê nem escreve em disco.
@@ -39,19 +61,22 @@ export function generate(manifestObj: { [key: string]: any }, options: GenerateO
   const manifest = new Manifest(manifestObj, { normalizeNames: options.normalizeNames });
   const entities = Object.keys(manifest.entities).map((key) => new Entity(key, manifest.entities[key]));
 
+  const api = generateLaravelApi({
+    entities,
+    now: options.now,
+    existingMigrations: options.existingMigrations,
+    existingApiRoutes: options.existingApiRoutes,
+    previousEntities: previousEntities(options.previousLock),
+  });
+
   const files: GeneratedFile[] = [
     {
       path: "manifest-lock.json",
       content: manifest.manifestToString(),
       policy: "overwrite",
     },
-    ...generateLaravelApi({
-      entities,
-      now: options.now,
-      existingMigrations: options.existingMigrations,
-      existingApiRoutes: options.existingApiRoutes,
-    }),
+    ...api.files,
   ];
 
-  return { files, warnings: manifest.warnings };
+  return { files, warnings: manifest.warnings, obsolete: api.obsolete };
 }

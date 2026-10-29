@@ -45,7 +45,7 @@ describe("crudmaker generate", () => {
     expect(fs.existsSync(path.join(out, "manifest-lock.json"))).toBe(true);
     expect(listFiles(path.join(out, "app")).length).toBeGreaterThan(0);
     expect(stdout).toMatch(/criados \(\d+\)/);
-    expect(stdout).toMatch(/Total: \d+ arquivos \(\d+ criados, 0 sobrescritos, 0 sem mudança, 0 preservados\)/);
+    expect(stdout).toMatch(/Total: \d+ arquivos \(\d+ criados, 0 sobrescritos, 0 sem mudança, 0 preservados, 0 removidos\)/);
     expect(stderr).toBe("");
   });
 
@@ -59,7 +59,7 @@ describe("crudmaker generate", () => {
     expect(run(["generate", fixture, "--out", out], later)).toBe(0);
 
     expect(fs.readdirSync(path.join(out, "database/migrations")).sort()).toEqual(before);
-    expect(stdout).toMatch(/\(0 criados, 0 sobrescritos, \d+ sem mudança, 0 preservados\)/);
+    expect(stdout).toMatch(/\(0 criados, 0 sobrescritos, \d+ sem mudança, [1-9]\d* preservados, 0 removidos\)/);
   });
 
   it("classifica como sobrescrito o arquivo que foi editado à mão", () => {

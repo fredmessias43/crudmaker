@@ -1,0 +1,22 @@
+<?php
+
+namespace <%~ it.namespace %>;
+
+<% for (const use of it.imports) { -%>
+use <%~ use %>;
+<% } -%>
+
+/**
+ * Camada de customização da resource de <%~ it.entity.pascal %>.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * Os campos gerados ficam em <%~ it.base.fqcn %> (<%~ it.base.path %>), que não deve ser editada.
+ */
+class <%~ it.className %> extends <%~ it.extends %>
+{
+	/*
+	 * Hook que você pode sobrescrever aqui (precisa de `use Illuminate\Http\Request;`):
+	 *
+	 *   protected function extra(Request $request): array;   // campos somados aos gerados (a mesma chave substitui o gerado)
+	 */
+}

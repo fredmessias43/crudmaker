@@ -2,97 +2,20 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
-use App\Models\Client;
+use App\Generated\Http\Requests\BaseClientRequest;
 
-
-class ClientRequest extends FormRequest
+/**
+ * Camada de customização da request de Client.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * As regras geradas ficam em App\Generated\Http\Requests\BaseClientRequest (app/Generated/Http/Requests/BaseClientRequest.php), que não deve ser editada.
+ */
+class ClientRequest extends BaseClientRequest
 {
-
-	/**
-	 * Determine if the user is authorized to make this request.
+	/*
+	 * Hook e método que você pode sobrescrever aqui:
 	 *
-	 * @return bool
+	 *   protected function extraRules(): array; // regras somadas às geradas (a mesma chave de campo substitui a gerada)
+	 *   public function authorize(): bool; // a base libera tudo (return true)
 	 */
-	public function authorize()
-	{
-		return true;
-	}
-
-	/**
-	 * Prepare the data for validation.
-	 *
-	 * @return void
-	 */
-	protected function prepareForValidation()
-	{
-			$client = $this->route('client');
-	
-			if ($client instanceof Client)
-			{
-					$this->merge(['id' => $client->id]);
-	
-					if ( ! $this->has('id'))
-					{
-							$this->merge(['id' => $client->id]);
-					}
-	
-					if ( ! $this->has('name'))
-					{
-							$this->merge(['name' => $client->name]);
-					}
-	
-					if ( ! $this->has('email'))
-					{
-							$this->merge(['email' => $client->email]);
-					}
-	
-					if ( ! $this->has('phone'))
-					{
-							$this->merge(['phone' => $client->phone]);
-					}
-	
-					if ( ! $this->has('document'))
-					{
-							$this->merge(['document' => $client->document]);
-					}
-	
-			}
-			else
-			{
-					//
-			}
-	}
-
-	/**
-	 * Get the validation rules that apply to the request.
-	 *
-	 * @return array
-	*/
-	public function rules()
-	{
-			return [
-				'name' => array(
-					'bail',
-					'required',
-					'string',
-				),
-				'email' => array(
-					'bail',
-					'required',
-					'string',
-				),
-				'phone' => array(
-					'bail',
-					'required',
-					'string',
-				),
-				'document' => array(
-					'bail',
-					'required',
-					'string',
-				),
-			];
-	}
-
-};
+}

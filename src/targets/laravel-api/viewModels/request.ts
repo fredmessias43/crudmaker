@@ -1,7 +1,7 @@
 import { Field } from "../../../types";
 import { EntityFileType } from "../fileType";
 import { BASE_NAMESPACE, entityNames } from "../names";
-import { classHeader, classPath } from "./classHeader";
+import { classHeader, classPair, finalClassFile } from "./classHeader";
 
 const namespace = `${BASE_NAMESPACE}\\Http\\Requests`;
 
@@ -49,11 +49,17 @@ function currentValue(field: Field, variable: string): string {
   return access;
 }
 
-export const requestFile: EntityFileType = {
-  template: "request",
+/**
+ * Base da request. Quem a usa é a request *final* (`ClientRequest`), que o controller tipa no parâmetro:
+ * é assim que o `extraRules()` e o `authorize()` do usuário valem. A `instanceof` do
+ * `prepareForValidation` usa a model final, a mesma que o route model binding entrega.
+ */
+export const requestBaseFile: EntityFileType = {
+  template: "request.base",
+  layer: "generated",
   build(entity) {
     const { pascal, camel, snake, table } = entityNames(entity);
-    const className = `${pascal}Request`;
+    const pair = classPair(namespace, `${pascal}Request`);
     const modelClass = `${BASE_NAMESPACE}\\Models\\${pascal}`;
 
     // A chave do campo no manifest (`key`) alimenta o `prepareForValidation`; o `name` do campo, as regras.
@@ -64,17 +70,16 @@ export const requestFile: EntityFileType = {
     const usesRule = fields.some(([, field]) => field.name !== "id" && (field.type === "enum" || field.unique));
 
     return {
-      path: classPath(namespace, className),
+      path: pair.base.path,
       view: {
-        ...classHeader(entity, {
-          namespace,
+        ...classHeader(entity, pair, {
           imports: [
             "Illuminate\\Foundation\\Http\\FormRequest",
             modelClass,
             ...(usesRule ? ["Illuminate\\Validation\\Rule"] : []),
           ],
-          className,
           extends: "FormRequest",
+          layer: "base",
         }),
         fields: fields.map(([key, field]) => ({ key, value: currentValue({ ...field, name: key }, `$${camel}`) })),
         rules,
@@ -82,3 +87,5 @@ export const requestFile: EntityFileType = {
     };
   },
 };
+
+export const requestFinalFile = finalClassFile("request.final", namespace, ({ pascal }) => `${pascal}Request`);

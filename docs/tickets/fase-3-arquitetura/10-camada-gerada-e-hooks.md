@@ -9,12 +9,12 @@
 - [02 — CLI `crudmaker generate`](../fase-1-usavel/02-cli-generate.md)
 - [08 — Corrigir o comportamento dos controllers](../fase-2-bugs/08-corrigir-controllers.md)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Critérios de aceite
 
-- [ ] Snapshots da classe base (chamadas dos hooks e transação) e da classe final inicial.
-- [ ] Teste da CLI: implementar um hook, regerar, conferir que o hook sobreviveu e que a base foi atualizada.
-- [ ] Teste de remoção de entidade (gerados apagados, customizados listados como órfãos).
-- [ ] Um hook que lança exceção desfaz a gravação.
-- [ ] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.
+- [x] Snapshots da classe base (chamadas dos hooks e transação) e da classe final inicial.
+- [x] Teste da CLI: implementar um hook, regerar, conferir que o hook sobreviveu e que a base foi atualizada.
+- [x] Teste de remoção de entidade (gerados apagados, customizados listados como órfãos).
+- [x] Um hook que lança exceção desfaz a gravação (teste: a escrita e os hooks ficam dentro do `DB::transaction` do controller base, na ordem certa; conferido também executando a saída com stubs do Illuminate num `php:8.3-cli`, fora do repositório).
+- [x] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.

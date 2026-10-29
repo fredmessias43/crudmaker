@@ -2,51 +2,26 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Generated\Models\BaseClassLessonAttendee;
 
-
-class ClassLessonAttendee extends Model
+/**
+ * Camada de customização da model ClassLessonAttendee.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * O código gerado (traits, $casts, $fillable e relacionamentos do manifest) fica em
+ * App\Generated\Models\BaseClassLessonAttendee (app/Generated/Models/BaseClassLessonAttendee.php), que não deve ser editada.
+ */
+class ClassLessonAttendee extends BaseClassLessonAttendee
 {
-	use HasFactory;
-	use SoftDeletes;
-	use HasUuids;
-
-	protected $keyType = "string";
-	public $incrementing = false;
-	
-	/**
-	 * The attributes that should be cast.
+	/*
+	 * A model não tem hooks: use os recursos do Eloquent aqui, por exemplo
 	 *
-	 * @var array
+	 *   - scopes locais e globais (scopeAtivos, #[ScopedBy]);
+	 *   - accessors e mutators (Attribute::make);
+	 *   - $hidden, $appends e relacionamentos extras;
+	 *   - eventos no booted() (static::creating, static::deleting...);
+	 *   - mais casts ou campos em massa, somados aos gerados: $this->mergeCasts([...]) e
+	 *     $this->mergeFillable([...]) num __construct(array $attributes = []) que chame parent::__construct($attributes).
+	 *     (Redeclarar $casts ou $fillable aqui substituiria os gerados.)
 	 */
-	protected $casts = [
-	];
-	
-	/**
-	 * The attributes that are mass assignable.
-	 *
-	 * @var array
-	 */
-	protected $fillable = [
-		'id',
-		'class_lesson_id',
-		'user_id',
-	];
-
-	public function classLesson(): BelongsTo
-	{
-		return $this->belongsTo(ClassLesson::class);
-	}
-	
-	public function user(): BelongsTo
-	{
-		return $this->belongsTo(User::class);
-	}
-	
-
-};
+}

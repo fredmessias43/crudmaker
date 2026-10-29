@@ -4,7 +4,7 @@ import { parseArgs } from "util";
 import { generate } from "./generate";
 import { exampleManifestText } from "./initTemplate";
 import { acceptedExtensionsText, manifestFormat, readManifest, UserError } from "./readManifest";
-import { applyPlan, planWrites, PlannedWrite, WriteAction } from "./writeFiles";
+import { applyPlan, applyRemovals, legacyFinalWarnings, planRemovals, planWrites, PlannedRemoval, PlannedWrite, WriteAction } from "./writeFiles";
 
 export type CliIo = {
   stdout: (text: string) => void;
@@ -43,14 +43,18 @@ mais o arquivo de rotas (routes/crudmaker.php), incluído uma única vez no rout
 
 Opções:
   -o, --out <dir>   raiz do projeto Laravel de destino (padrão: diretório atual)
-  -n, --dry-run     não escreve nada; lista o que seria criado, sobrescrito ou preservado
+  -n, --dry-run     não escreve nada; lista o que seria criado, sobrescrito, preservado ou removido
   --normalize-names     liga a normalização de nomes (entidade singular camelCase, campo snake_case)
   --no-normalize-names  desliga a normalização: os nomes passam como estão (só avisa o que está fora da convenção)
                         As duas flags têm prioridade sobre pkg.normalizeNames do manifest (padrão: ligada).
   -h, --help        mostra esta ajuda
 
-Atenção: arquivos existentes são sobrescritos, inclusive edições feitas à mão.
-Use --dry-run primeiro e mantenha o projeto de destino sob controle de versão.
+Cada classe tem duas camadas: a base, em app/Generated/ (sempre sobrescrita; não edite), e a classe final
+no namespace normal (criada uma única vez e nunca sobrescrita; é onde vai o código seu, com os hooks).
+Entidade que sai do manifest tem a base apagada; a final e a migration ficam e são listadas como órfãs.
+
+Atenção: os demais arquivos existentes (a camada gerada, as migrations, as rotas) são sobrescritos,
+inclusive edições feitas à mão. Use --dry-run primeiro e mantenha o projeto de destino sob controle de versão.
 `;
 
 const initHelp = `Uso: crudmaker init [arquivo]
@@ -87,7 +91,7 @@ function missingApiRoutesWarning(outDir: string): string {
   ].join("\n");
 }
 
-function printPlan(plan: PlannedWrite[], warnings: string[], io: CliIo, baseDir: string, dryRun: boolean): void {
+function printPlan(plan: PlannedWrite[], removals: PlannedRemoval[], warnings: string[], io: CliIo, baseDir: string, dryRun: boolean): void {
   const lines: string[] = [];
   const verb = dryRun ? "Seria" : "Resumo";
 
@@ -102,8 +106,25 @@ function printPlan(plan: PlannedWrite[], warnings: string[], io: CliIo, baseDir:
     lines.push("");
   }
 
+  const removed = removals.filter((item) => item.action === "removed");
+  if (removed.length > 0) {
+    lines.push(`removidos (${removed.length}):`);
+    for (const item of removed) lines.push(`  ${item.path}`);
+    lines.push("");
+  }
+
   const counts = actionOrder.map((action) => `${plan.filter((i) => i.action === action).length} ${actionLabels[action]}`);
+  counts.push(`${removed.length} removidos`);
   lines.push(`Total: ${plan.length} arquivos (${counts.join(", ")})`);
+
+  // Órfãos: arquivos seus de entidades que saíram do manifest. Ficam onde estão.
+  const orphans = removals.filter((item) => item.action === "orphaned");
+  if (orphans.length > 0) {
+    lines.push("", `Órfãos (${orphans.length}): a entidade saiu do manifest, mas estes arquivos são seus e não foram apagados:`);
+    for (const item of orphans) {
+      lines.push(`  ${item.path}${item.kind === "migration" ? "  (migration: crie à mão uma migration que remova a tabela, se for o caso)" : ""}`);
+    }
+  }
 
   // Avisos de nomes: no stdout, junto do resumo (e do --dry-run), como o aviso do routes/api.php.
   if (warnings.length > 0) {
@@ -151,12 +172,34 @@ function runGenerate(args: string[], io: CliIo): number {
   const apiRoutesPath = path.join(outDir, "routes/api.php");
   const existingApiRoutes = fs.existsSync(apiRoutesPath) ? fs.readFileSync(apiRoutesPath, "utf8") : null;
 
-  const { files, warnings } = generate(manifestObj, { now: io.now(), existingMigrations, existingApiRoutes, normalizeNames });
+  // O lock da geração anterior diz quais entidades existiam; se não dá para lê-lo, só não detecta remoções.
+  const lockWarnings: string[] = [];
+  let previousLock = null;
+  const lockPath = path.join(outDir, "manifest-lock.json");
+  if (fs.existsSync(lockPath)) {
+    try {
+      previousLock = JSON.parse(fs.readFileSync(lockPath, "utf8"));
+    } catch {
+      lockWarnings.push("manifest-lock.json anterior ilegível (JSON inválido): não deu para detectar entidades removidas do manifest.");
+    }
+  }
+
+  const { files, warnings, obsolete } = generate(manifestObj, {
+    now: io.now(),
+    existingMigrations,
+    existingApiRoutes,
+    normalizeNames,
+    previousLock,
+  });
   const plan = planWrites(files, outDir);
+  const removals = planRemovals(obsolete, outDir);
 
-  if (!values["dry-run"]) applyPlan(plan);
+  if (!values["dry-run"]) {
+    applyPlan(plan);
+    applyRemovals(removals, outDir);
+  }
 
-  printPlan(plan, warnings, io, outDir, Boolean(values["dry-run"]));
+  printPlan(plan, removals, [...warnings, ...lockWarnings, ...legacyFinalWarnings(plan)], io, outDir, Boolean(values["dry-run"]));
   if (existingApiRoutes === null) io.stdout(missingApiRoutesWarning(outDir));
   return 0;
 }

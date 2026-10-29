@@ -2,87 +2,20 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
-use App\Models\Alert;
+use App\Generated\Http\Requests\BaseAlertRequest;
 
-
-class AlertRequest extends FormRequest
+/**
+ * Camada de customização da request de Alert.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * As regras geradas ficam em App\Generated\Http\Requests\BaseAlertRequest (app/Generated/Http/Requests/BaseAlertRequest.php), que não deve ser editada.
+ */
+class AlertRequest extends BaseAlertRequest
 {
-
-	/**
-	 * Determine if the user is authorized to make this request.
+	/*
+	 * Hook e método que você pode sobrescrever aqui:
 	 *
-	 * @return bool
+	 *   protected function extraRules(): array; // regras somadas às geradas (a mesma chave de campo substitui a gerada)
+	 *   public function authorize(): bool; // a base libera tudo (return true)
 	 */
-	public function authorize()
-	{
-		return true;
-	}
-
-	/**
-	 * Prepare the data for validation.
-	 *
-	 * @return void
-	 */
-	protected function prepareForValidation()
-	{
-			$alert = $this->route('alert');
-	
-			if ($alert instanceof Alert)
-			{
-					$this->merge(['id' => $alert->id]);
-	
-					if ( ! $this->has('id'))
-					{
-							$this->merge(['id' => $alert->id]);
-					}
-	
-					if ( ! $this->has('message'))
-					{
-							$this->merge(['message' => $alert->message]);
-					}
-	
-					if ( ! $this->has('alertDate'))
-					{
-							$this->merge(['alertDate' => $alert->alertDate?->format('Y-m-d H:i')]);
-					}
-	
-					if ( ! $this->has('client_id'))
-					{
-							$this->merge(['client_id' => $alert->client_id]);
-					}
-	
-			}
-			else
-			{
-					//
-			}
-	}
-
-	/**
-	 * Get the validation rules that apply to the request.
-	 *
-	 * @return array
-	*/
-	public function rules()
-	{
-			return [
-				'message' => array(
-					'bail',
-					'required',
-					'string',
-				),
-				'alertDate' => array(
-					'bail',
-					'required',
-					'date_format:Y-m-d H:i',
-				),
-				'client_id' => array(
-					'bail',
-					'required',
-					'uuid',
-				),
-			];
-	}
-
-};
+}

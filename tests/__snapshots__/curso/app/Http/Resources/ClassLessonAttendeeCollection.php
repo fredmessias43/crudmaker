@@ -2,39 +2,18 @@
 
 namespace App\Http\Resources;
 
-use Illuminate\Http\Resources\Json\ResourceCollection;
-use Illuminate\Support\Facades\App;
+use App\Generated\Http\Resources\BaseClassLessonAttendeeCollection;
 
-
-class ClassLessonAttendeeCollection extends ResourceCollection
+/**
+ * Camada de customização da collection de ClassLessonAttendee.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * O código gerado fica em App\Generated\Http\Resources\BaseClassLessonAttendeeCollection (app/Generated/Http/Resources/BaseClassLessonAttendeeCollection.php), que não deve ser editada.
+ */
+class ClassLessonAttendeeCollection extends BaseClassLessonAttendeeCollection
 {
-
-	/**
-	 * Transform the resource collection into an array.
-	 *
-	 * @param  \Illuminate\Http\Request  $request
-	 * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
+	/*
+	 * A collection não tem hooks: cada item sai pela resource, então campos extras vão em
+	 * ClassLessonAttendeeResource::extra(). Aqui só ajustes da própria coleção (with(), paginationInformation()...).
 	 */
-	public function toArray($request)
-	{
-		return $this->collection->map(function ($class_lesson_attendee) {
-			$createdAt = $class_lesson_attendee->created_at->locale(App::getLocale());
-			$updatedAt = $class_lesson_attendee->updated_at->locale(App::getLocale());
-	
-			return [
-				'id' => $class_lesson_attendee->id,
-				'class_lesson_id' => $class_lesson_attendee->class_lesson_id,
-				'user_id' => $class_lesson_attendee->user_id,
-				'created_at' => array(
-					'timestamp' => $createdAt->timestamp,
-					'description' => $createdAt->diffForHumans(),
-				),
-				'updated_at' => array(
-					'timestamp' => $updatedAt->timestamp,
-					'description' => $updatedAt->diffForHumans(),
-				),
-			];
-		})->toArray();
-	}
-
-};
+}

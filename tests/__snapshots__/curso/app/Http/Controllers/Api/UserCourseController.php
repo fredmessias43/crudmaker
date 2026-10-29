@@ -2,100 +2,35 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Models\UserCourse;
-use App\Http\Requests\UserCourseRequest;
-use App\Http\Resources\UserCourseCollection;
-use App\Http\Resources\UserCourseResource;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Response;
+use App\Generated\Http\Controllers\Api\BaseUserCourseController;
 
-
-class UserCourseController extends Controller
+/**
+ * Camada de customização do controller de UserCourse.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * As actions geradas (index, store, show, update, destroy) ficam em
+ * App\Generated\Http\Controllers\Api\BaseUserCourseController (app/Generated/Http/Controllers/Api/BaseUserCourseController.php), que não deve ser editada.
+ */
+class UserCourseController extends BaseUserCourseController
 {
-
-	/**
-	 * Display a paginated listing of the resource.
+	/*
+	 * Hooks disponíveis. Todos são protected e não fazem nada na base: copie para cá só os que precisar.
+	 * As assinaturas precisam ficar idênticas (o PHP acusa a incompatibilidade na hora).
 	 *
-	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 * Imports que os hooks usam:
+	 *   use App\Models\UserCourse;
+	 *   use Illuminate\Database\Eloquent\Builder;
+	 *   use Illuminate\Http\Request;
 	 *
-	 * @return \Illuminate\Http\JsonResponse
+	 *   protected function indexQuery(Builder $query, Request $request): Builder; // antes de paginar
+	 *   protected function beforeStore(array $data, Request $request): array; // dados validados -> dados a gravar
+	 *   protected function afterStore(UserCourse $model, Request $request): void; // depois de criar
+	 *   protected function beforeUpdate(UserCourse $model, array $data, Request $request): array; // dados validados -> dados a gravar
+	 *   protected function afterUpdate(UserCourse $model, Request $request): void; // depois de atualizar
+	 *   protected function beforeDestroy(UserCourse $model, Request $request): void; // antes de remover
+	 *   protected function afterDestroy(UserCourse $model, Request $request): void; // depois de remover
+	 *
+	 * store, update e destroy rodam a gravação e os hooks na mesma transação (DB::transaction):
+	 * para barrar a operação, lance uma exceção ou chame abort(), e nada é gravado.
 	 */
-	public function index(): JsonResponse
-	{
-		$userCourse = UserCourse::paginate(15);
-
-		return (new UserCourseCollection($userCourse))->response();
-	}
-
-
-	/**
-	 * Store a newly created resource in storage.
-	 *
-	 * @param  \App\Http\Requests\UserCourseRequest $request
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function store(UserCourseRequest $request): JsonResponse
-	{
-		$userCourse = UserCourse::create($request->validated());
-
-		return response()->json([
-			'status' => 201,
-			'message' => trans('UserCourse created successfully.'),
-			'data' => new UserCourseResource($userCourse),
-		], 201);
-	}
-
-
-	/**
-	 * Display the specified resource.
-	 *
-	 * @param  \App\Models\UserCourse $userCourse
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function show(UserCourse $userCourse): JsonResponse
-	{
-		return response()->json([
-			'status' => 200,
-			'data' => new UserCourseResource($userCourse),
-		], 200);
-	}
-
-
-	/**
-	 * Update the specified resource in storage.
-	 *
-	 * @param  \App\Http\Requests\UserCourseRequest $request
-	 * @param  \App\Models\UserCourse $userCourse
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function update(UserCourseRequest $request, UserCourse $userCourse): JsonResponse
-	{
-		$userCourse->update($request->validated());
-
-		return response()->json([
-			'status' => 200,
-			'message' => trans('UserCourse updated successfully.'),
-			'data' => new UserCourseResource($userCourse),
-		], 200);
-	}
-
-
-	/**
-	 * Remove the specified resource from storage.
-	 *
-	 * @param  \App\Models\UserCourse $userCourse
-	 *
-	 * @return \Illuminate\Http\Response
-	 */
-	public function destroy(UserCourse $userCourse): Response
-	{
-		$userCourse->delete();
-
-		return response()->noContent();
-	}
-
-};
+}

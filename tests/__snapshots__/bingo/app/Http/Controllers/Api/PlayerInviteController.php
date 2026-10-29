@@ -2,100 +2,35 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Models\PlayerInvite;
-use App\Http\Requests\PlayerInviteRequest;
-use App\Http\Resources\PlayerInviteCollection;
-use App\Http\Resources\PlayerInviteResource;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Response;
+use App\Generated\Http\Controllers\Api\BasePlayerInviteController;
 
-
-class PlayerInviteController extends Controller
+/**
+ * Camada de customização do controller de PlayerInvite.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * As actions geradas (index, store, show, update, destroy) ficam em
+ * App\Generated\Http\Controllers\Api\BasePlayerInviteController (app/Generated/Http/Controllers/Api/BasePlayerInviteController.php), que não deve ser editada.
+ */
+class PlayerInviteController extends BasePlayerInviteController
 {
-
-	/**
-	 * Display a paginated listing of the resource.
+	/*
+	 * Hooks disponíveis. Todos são protected e não fazem nada na base: copie para cá só os que precisar.
+	 * As assinaturas precisam ficar idênticas (o PHP acusa a incompatibilidade na hora).
 	 *
-	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 * Imports que os hooks usam:
+	 *   use App\Models\PlayerInvite;
+	 *   use Illuminate\Database\Eloquent\Builder;
+	 *   use Illuminate\Http\Request;
 	 *
-	 * @return \Illuminate\Http\JsonResponse
+	 *   protected function indexQuery(Builder $query, Request $request): Builder; // antes de paginar
+	 *   protected function beforeStore(array $data, Request $request): array; // dados validados -> dados a gravar
+	 *   protected function afterStore(PlayerInvite $model, Request $request): void; // depois de criar
+	 *   protected function beforeUpdate(PlayerInvite $model, array $data, Request $request): array; // dados validados -> dados a gravar
+	 *   protected function afterUpdate(PlayerInvite $model, Request $request): void; // depois de atualizar
+	 *   protected function beforeDestroy(PlayerInvite $model, Request $request): void; // antes de remover
+	 *   protected function afterDestroy(PlayerInvite $model, Request $request): void; // depois de remover
+	 *
+	 * store, update e destroy rodam a gravação e os hooks na mesma transação (DB::transaction):
+	 * para barrar a operação, lance uma exceção ou chame abort(), e nada é gravado.
 	 */
-	public function index(): JsonResponse
-	{
-		$playerInvite = PlayerInvite::paginate(15);
-
-		return (new PlayerInviteCollection($playerInvite))->response();
-	}
-
-
-	/**
-	 * Store a newly created resource in storage.
-	 *
-	 * @param  \App\Http\Requests\PlayerInviteRequest $request
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function store(PlayerInviteRequest $request): JsonResponse
-	{
-		$playerInvite = PlayerInvite::create($request->validated());
-
-		return response()->json([
-			'status' => 201,
-			'message' => trans('PlayerInvite created successfully.'),
-			'data' => new PlayerInviteResource($playerInvite),
-		], 201);
-	}
-
-
-	/**
-	 * Display the specified resource.
-	 *
-	 * @param  \App\Models\PlayerInvite $playerInvite
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function show(PlayerInvite $playerInvite): JsonResponse
-	{
-		return response()->json([
-			'status' => 200,
-			'data' => new PlayerInviteResource($playerInvite),
-		], 200);
-	}
-
-
-	/**
-	 * Update the specified resource in storage.
-	 *
-	 * @param  \App\Http\Requests\PlayerInviteRequest $request
-	 * @param  \App\Models\PlayerInvite $playerInvite
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function update(PlayerInviteRequest $request, PlayerInvite $playerInvite): JsonResponse
-	{
-		$playerInvite->update($request->validated());
-
-		return response()->json([
-			'status' => 200,
-			'message' => trans('PlayerInvite updated successfully.'),
-			'data' => new PlayerInviteResource($playerInvite),
-		], 200);
-	}
-
-
-	/**
-	 * Remove the specified resource from storage.
-	 *
-	 * @param  \App\Models\PlayerInvite $playerInvite
-	 *
-	 * @return \Illuminate\Http\Response
-	 */
-	public function destroy(PlayerInvite $playerInvite): Response
-	{
-		$playerInvite->delete();
-
-		return response()->noContent();
-	}
-
-};
+}

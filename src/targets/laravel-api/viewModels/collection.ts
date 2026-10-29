@@ -1,25 +1,33 @@
 import { EntityFileType } from "../fileType";
 import { BASE_NAMESPACE, entityNames } from "../names";
-import { classHeader, classPath } from "./classHeader";
+import { classHeader, classPair, finalClassFile } from "./classHeader";
 
 const namespace = `${BASE_NAMESPACE}\\Http\\Resources`;
 
-export const collectionFile: EntityFileType = {
-  template: "collection",
+/**
+ * Base da collection: não tem hook. Cada item sai pela resource final (`$collects`), então o `extra()`
+ * da resource vale na listagem também; ajustes só da collection (`with()`, `paginationInformation()`)
+ * vão direto na classe final.
+ */
+export const collectionBaseFile: EntityFileType = {
+  template: "collection.base",
+  layer: "generated",
   build(entity) {
-    const className = `${entityNames(entity).pascal}Collection`;
+    const { pascal } = entityNames(entity);
+    const pair = classPair(namespace, `${pascal}Collection`);
 
     return {
-      path: classPath(namespace, className),
+      path: pair.base.path,
       view: {
-        ...classHeader(entity, {
-          namespace,
-          imports: ["Illuminate\\Http\\Resources\\Json\\ResourceCollection", "Illuminate\\Support\\Facades\\App"],
-          className,
+        ...classHeader(entity, pair, {
+          imports: ["Illuminate\\Http\\Resources\\Json\\ResourceCollection", `${namespace}\\${pascal}Resource`],
           extends: "ResourceCollection",
+          layer: "base",
         }),
-        fields: Object.keys(entity.fields).map((key) => ({ key })),
+        resourceClass: `${pascal}Resource`,
       },
     };
   },
 };
+
+export const collectionFinalFile = finalClassFile("collection.final", namespace, ({ pascal }) => `${pascal}Collection`);

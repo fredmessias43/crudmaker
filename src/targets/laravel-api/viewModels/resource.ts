@@ -1,25 +1,27 @@
 import { EntityFileType } from "../fileType";
 import { BASE_NAMESPACE, entityNames } from "../names";
-import { classHeader, classPath } from "./classHeader";
+import { classHeader, classPair, finalClassFile } from "./classHeader";
 
 const namespace = `${BASE_NAMESPACE}\\Http\\Resources`;
 
-export const resourceFile: EntityFileType = {
-  template: "resource",
+export const resourceBaseFile: EntityFileType = {
+  template: "resource.base",
+  layer: "generated",
   build(entity) {
-    const className = `${entityNames(entity).pascal}Resource`;
+    const pair = classPair(namespace, `${entityNames(entity).pascal}Resource`);
 
     return {
-      path: classPath(namespace, className),
+      path: pair.base.path,
       view: {
-        ...classHeader(entity, {
-          namespace,
-          imports: ["Illuminate\\Http\\Resources\\Json\\JsonResource", "Illuminate\\Support\\Facades\\App"],
-          className,
+        ...classHeader(entity, pair, {
+          imports: ["Illuminate\\Http\\Request", "Illuminate\\Http\\Resources\\Json\\JsonResource", "Illuminate\\Support\\Facades\\App"],
           extends: "JsonResource",
+          layer: "base",
         }),
         fields: Object.keys(entity.fields).map((key) => ({ key })),
       },
     };
   },
 };
+
+export const resourceFinalFile = finalClassFile("resource.final", namespace, ({ pascal }) => `${pascal}Resource`);

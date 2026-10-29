@@ -2,40 +2,18 @@
 
 namespace App\Http\Resources;
 
-use Illuminate\Http\Resources\Json\ResourceCollection;
-use Illuminate\Support\Facades\App;
+use App\Generated\Http\Resources\BaseCardsCollection;
 
-
-class CardsCollection extends ResourceCollection
+/**
+ * Camada de customização da collection de Cards.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * O código gerado fica em App\Generated\Http\Resources\BaseCardsCollection (app/Generated/Http/Resources/BaseCardsCollection.php), que não deve ser editada.
+ */
+class CardsCollection extends BaseCardsCollection
 {
-
-	/**
-	 * Transform the resource collection into an array.
-	 *
-	 * @param  \Illuminate\Http\Request  $request
-	 * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
+	/*
+	 * A collection não tem hooks: cada item sai pela resource, então campos extras vão em
+	 * CardsResource::extra(). Aqui só ajustes da própria coleção (with(), paginationInformation()...).
 	 */
-	public function toArray($request)
-	{
-		return $this->collection->map(function ($cards) {
-			$createdAt = $cards->created_at->locale(App::getLocale());
-			$updatedAt = $cards->updated_at->locale(App::getLocale());
-	
-			return [
-				'id' => $cards->id,
-				'game_id' => $cards->game_id,
-				'player_id' => $cards->player_id,
-				'numbers' => $cards->numbers,
-				'created_at' => array(
-					'timestamp' => $createdAt->timestamp,
-					'description' => $createdAt->diffForHumans(),
-				),
-				'updated_at' => array(
-					'timestamp' => $updatedAt->timestamp,
-					'description' => $updatedAt->diffForHumans(),
-				),
-			];
-		})->toArray();
-	}
-
-};
+}

@@ -2,100 +2,35 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Models\Alert;
-use App\Http\Requests\AlertRequest;
-use App\Http\Resources\AlertCollection;
-use App\Http\Resources\AlertResource;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Response;
+use App\Generated\Http\Controllers\Api\BaseAlertController;
 
-
-class AlertController extends Controller
+/**
+ * Camada de customização do controller de Alert.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * As actions geradas (index, store, show, update, destroy) ficam em
+ * App\Generated\Http\Controllers\Api\BaseAlertController (app/Generated/Http/Controllers/Api/BaseAlertController.php), que não deve ser editada.
+ */
+class AlertController extends BaseAlertController
 {
-
-	/**
-	 * Display a paginated listing of the resource.
+	/*
+	 * Hooks disponíveis. Todos são protected e não fazem nada na base: copie para cá só os que precisar.
+	 * As assinaturas precisam ficar idênticas (o PHP acusa a incompatibilidade na hora).
 	 *
-	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 * Imports que os hooks usam:
+	 *   use App\Models\Alert;
+	 *   use Illuminate\Database\Eloquent\Builder;
+	 *   use Illuminate\Http\Request;
 	 *
-	 * @return \Illuminate\Http\JsonResponse
+	 *   protected function indexQuery(Builder $query, Request $request): Builder; // antes de paginar
+	 *   protected function beforeStore(array $data, Request $request): array; // dados validados -> dados a gravar
+	 *   protected function afterStore(Alert $model, Request $request): void; // depois de criar
+	 *   protected function beforeUpdate(Alert $model, array $data, Request $request): array; // dados validados -> dados a gravar
+	 *   protected function afterUpdate(Alert $model, Request $request): void; // depois de atualizar
+	 *   protected function beforeDestroy(Alert $model, Request $request): void; // antes de remover
+	 *   protected function afterDestroy(Alert $model, Request $request): void; // depois de remover
+	 *
+	 * store, update e destroy rodam a gravação e os hooks na mesma transação (DB::transaction):
+	 * para barrar a operação, lance uma exceção ou chame abort(), e nada é gravado.
 	 */
-	public function index(): JsonResponse
-	{
-		$alert = Alert::paginate(15);
-
-		return (new AlertCollection($alert))->response();
-	}
-
-
-	/**
-	 * Store a newly created resource in storage.
-	 *
-	 * @param  \App\Http\Requests\AlertRequest $request
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function store(AlertRequest $request): JsonResponse
-	{
-		$alert = Alert::create($request->validated());
-
-		return response()->json([
-			'status' => 201,
-			'message' => trans('Alert created successfully.'),
-			'data' => new AlertResource($alert),
-		], 201);
-	}
-
-
-	/**
-	 * Display the specified resource.
-	 *
-	 * @param  \App\Models\Alert $alert
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function show(Alert $alert): JsonResponse
-	{
-		return response()->json([
-			'status' => 200,
-			'data' => new AlertResource($alert),
-		], 200);
-	}
-
-
-	/**
-	 * Update the specified resource in storage.
-	 *
-	 * @param  \App\Http\Requests\AlertRequest $request
-	 * @param  \App\Models\Alert $alert
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function update(AlertRequest $request, Alert $alert): JsonResponse
-	{
-		$alert->update($request->validated());
-
-		return response()->json([
-			'status' => 200,
-			'message' => trans('Alert updated successfully.'),
-			'data' => new AlertResource($alert),
-		], 200);
-	}
-
-
-	/**
-	 * Remove the specified resource from storage.
-	 *
-	 * @param  \App\Models\Alert $alert
-	 *
-	 * @return \Illuminate\Http\Response
-	 */
-	public function destroy(Alert $alert): Response
-	{
-		$alert->delete();
-
-		return response()->noContent();
-	}
-
-};
+}

@@ -2,100 +2,35 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Models\Awards;
-use App\Http\Requests\AwardsRequest;
-use App\Http\Resources\AwardsCollection;
-use App\Http\Resources\AwardsResource;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Response;
+use App\Generated\Http\Controllers\Api\BaseAwardsController;
 
-
-class AwardsController extends Controller
+/**
+ * Camada de customização do controller de Awards.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * As actions geradas (index, store, show, update, destroy) ficam em
+ * App\Generated\Http\Controllers\Api\BaseAwardsController (app/Generated/Http/Controllers/Api/BaseAwardsController.php), que não deve ser editada.
+ */
+class AwardsController extends BaseAwardsController
 {
-
-	/**
-	 * Display a paginated listing of the resource.
+	/*
+	 * Hooks disponíveis. Todos são protected e não fazem nada na base: copie para cá só os que precisar.
+	 * As assinaturas precisam ficar idênticas (o PHP acusa a incompatibilidade na hora).
 	 *
-	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 * Imports que os hooks usam:
+	 *   use App\Models\Awards;
+	 *   use Illuminate\Database\Eloquent\Builder;
+	 *   use Illuminate\Http\Request;
 	 *
-	 * @return \Illuminate\Http\JsonResponse
+	 *   protected function indexQuery(Builder $query, Request $request): Builder; // antes de paginar
+	 *   protected function beforeStore(array $data, Request $request): array; // dados validados -> dados a gravar
+	 *   protected function afterStore(Awards $model, Request $request): void; // depois de criar
+	 *   protected function beforeUpdate(Awards $model, array $data, Request $request): array; // dados validados -> dados a gravar
+	 *   protected function afterUpdate(Awards $model, Request $request): void; // depois de atualizar
+	 *   protected function beforeDestroy(Awards $model, Request $request): void; // antes de remover
+	 *   protected function afterDestroy(Awards $model, Request $request): void; // depois de remover
+	 *
+	 * store, update e destroy rodam a gravação e os hooks na mesma transação (DB::transaction):
+	 * para barrar a operação, lance uma exceção ou chame abort(), e nada é gravado.
 	 */
-	public function index(): JsonResponse
-	{
-		$awards = Awards::paginate(15);
-
-		return (new AwardsCollection($awards))->response();
-	}
-
-
-	/**
-	 * Store a newly created resource in storage.
-	 *
-	 * @param  \App\Http\Requests\AwardsRequest $request
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function store(AwardsRequest $request): JsonResponse
-	{
-		$awards = Awards::create($request->validated());
-
-		return response()->json([
-			'status' => 201,
-			'message' => trans('Awards created successfully.'),
-			'data' => new AwardsResource($awards),
-		], 201);
-	}
-
-
-	/**
-	 * Display the specified resource.
-	 *
-	 * @param  \App\Models\Awards $awards
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function show(Awards $awards): JsonResponse
-	{
-		return response()->json([
-			'status' => 200,
-			'data' => new AwardsResource($awards),
-		], 200);
-	}
-
-
-	/**
-	 * Update the specified resource in storage.
-	 *
-	 * @param  \App\Http\Requests\AwardsRequest $request
-	 * @param  \App\Models\Awards $awards
-	 *
-	 * @return \Illuminate\Http\JsonResponse
-	 */
-	public function update(AwardsRequest $request, Awards $awards): JsonResponse
-	{
-		$awards->update($request->validated());
-
-		return response()->json([
-			'status' => 200,
-			'message' => trans('Awards updated successfully.'),
-			'data' => new AwardsResource($awards),
-		], 200);
-	}
-
-
-	/**
-	 * Remove the specified resource from storage.
-	 *
-	 * @param  \App\Models\Awards $awards
-	 *
-	 * @return \Illuminate\Http\Response
-	 */
-	public function destroy(Awards $awards): Response
-	{
-		$awards->delete();
-
-		return response()->noContent();
-	}
-
-};
+}

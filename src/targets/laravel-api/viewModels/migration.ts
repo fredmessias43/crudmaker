@@ -33,14 +33,19 @@ function column(field: Field): string {
  * Regerar nunca renomeia: migrations existentes mantêm o nome; só as novas usam `date`.
  */
 function fileName(table: string, date: Date, existingMigrations: string[]): string {
-  const suffix = `_create_${table}_table.php`;
-  const existing = existingMigrations.find((file) => file.endsWith(suffix));
+  return existingMigration(table, existingMigrations) ?? format(date, "yyyy_MM_dd_HHmmss") + `_create_${table}_table.php`;
+}
 
-  return existing ?? format(date, "yyyy_MM_dd_HHmmss") + suffix;
+/** Nome da migration de criação da tabela que já existe no destino, se houver. */
+export function existingMigration(table: string, existingMigrations: string[]): string | undefined {
+  const suffix = `_create_${table}_table.php`;
+
+  return existingMigrations.find((file) => file.endsWith(suffix));
 }
 
 export const migrationFile: EntityFileType = {
   template: "migration",
+  layer: "migration",
   build(entity, { migrationDates, existingMigrations }) {
     const { table } = entityNames(entity);
     const fields = Object.values(entity.fields);

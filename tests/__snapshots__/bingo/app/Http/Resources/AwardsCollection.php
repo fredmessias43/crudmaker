@@ -2,41 +2,18 @@
 
 namespace App\Http\Resources;
 
-use Illuminate\Http\Resources\Json\ResourceCollection;
-use Illuminate\Support\Facades\App;
+use App\Generated\Http\Resources\BaseAwardsCollection;
 
-
-class AwardsCollection extends ResourceCollection
+/**
+ * Camada de customização da collection de Awards.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * O código gerado fica em App\Generated\Http\Resources\BaseAwardsCollection (app/Generated/Http/Resources/BaseAwardsCollection.php), que não deve ser editada.
+ */
+class AwardsCollection extends BaseAwardsCollection
 {
-
-	/**
-	 * Transform the resource collection into an array.
-	 *
-	 * @param  \Illuminate\Http\Request  $request
-	 * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
+	/*
+	 * A collection não tem hooks: cada item sai pela resource, então campos extras vão em
+	 * AwardsResource::extra(). Aqui só ajustes da própria coleção (with(), paginationInformation()...).
 	 */
-	public function toArray($request)
-	{
-		return $this->collection->map(function ($awards) {
-			$createdAt = $awards->created_at->locale(App::getLocale());
-			$updatedAt = $awards->updated_at->locale(App::getLocale());
-	
-			return [
-				'id' => $awards->id,
-				'game_id' => $awards->game_id,
-				'name' => $awards->name,
-				'description' => $awards->description,
-				'image_url' => $awards->image_url,
-				'created_at' => array(
-					'timestamp' => $createdAt->timestamp,
-					'description' => $createdAt->diffForHumans(),
-				),
-				'updated_at' => array(
-					'timestamp' => $updatedAt->timestamp,
-					'description' => $updatedAt->diffForHumans(),
-				),
-			];
-		})->toArray();
-	}
-
-};
+}

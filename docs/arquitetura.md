@@ -11,16 +11,17 @@ crudmaker generate <manifest> --out <dir> [--dry-run] [--[no-]normalize-names]  
 generate(manifest, { now, existingMigrations, ... })     função pura, sem acesso ao disco
     │  Manifest        schema (zod) → normalização de nomes → validação entre entidades → normalização
     │  Entity          (uma por entidade) nome + casings + nome da tabela
-    │  target laravel-api   view model (TS) → template (Eta) → arquivo: Model, Resource, Collection, Controller, Request, Migration, rotas
+    │  target laravel-api   view model (TS) → template (Eta) → arquivo: base e final de Model, Resource, Collection, Controller e Request; Migration; rotas
     ▼
-{ files, warnings }      files: { path, content, policy }, path relativo à raiz do projeto Laravel
+{ files, warnings, obsolete }   files: { path, content, policy }, path relativo à raiz do projeto Laravel; obsolete: arquivos de entidades removidas
     │  planWrites(files, out)     classifica: criado / sobrescrito / sem mudança / preservado
-    │  applyPlan(plan)            só sem --dry-run
+    │  planRemovals(obsolete, out)   classifica o que existe: removido (camada gerada) / órfão
+    │  applyPlan(plan), applyRemovals(removals)   só sem --dry-run
     ▼
-<out>/manifest-lock.json, <out>/app/...  e  <out>/database/migrations/...
+<out>/manifest-lock.json, <out>/app/Generated/... (bases), <out>/app/... (finais)  e  <out>/database/migrations/...
     │
     ▼
-resumo e avisos de nomes no stdout
+resumo, órfãos e avisos (nomes, finais antigas) no stdout
 ```
 
 ### CLI
@@ -28,7 +29,7 @@ resumo e avisos de nomes no stdout
 A CLI é uma casca fina em volta de `generate` (sem lógica de geração):
 
 - `src/bin.ts`: entrada do binário (shebang `#!/usr/bin/env node`); passa `process.argv` para `run` e usa o retorno como exit code.
-- `src/cli.ts`: `run(argv, io)` interpreta os argumentos (`node:util` `parseArgs`, sem dependência externa), executa `generate` ou `init` e devolve o exit code. `io` (stdout, stderr, cwd, relógio) é injetável, o que permite testar sem subprocesso. Para `generate`, lê os nomes em `<out>/database/migrations` (lista vazia se a pasta não existe), resolve `--normalize-names` / `--no-normalize-names` (sem flag, `undefined`: vale o manifest), chama `generate` com a data atual, monta o plano de escrita e, sem `--dry-run`, o aplica; depois imprime o resumo e, se houver, a seção `Avisos` (no stdout, como o aviso do `routes/api.php`; o stderr fica para erros).
+- `src/cli.ts`: `run(argv, io)` interpreta os argumentos (`node:util` `parseArgs`, sem dependência externa), executa `generate` ou `init` e devolve o exit code. `io` (stdout, stderr, cwd, relógio) é injetável, o que permite testar sem subprocesso. Para `generate`, lê os nomes em `<out>/database/migrations` (lista vazia se a pasta não existe) e o `manifest-lock.json` anterior (`previousLock`; `null` se não existe, com aviso se estiver ilegível), resolve `--normalize-names` / `--no-normalize-names` (sem flag, `undefined`: vale o manifest), chama `generate` com a data atual, monta o plano de escrita e o de remoção e, sem `--dry-run`, aplica os dois; depois imprime o resumo (com `removidos`, o total e a seção `Órfãos`) e, se houver, a seção `Avisos` (nomes alterados e finais antigas que não estendem a base) (no stdout, como o aviso do `routes/api.php`; o stderr fica para erros).
 - `src/readManifest.ts`: único ponto de leitura do manifest: escolhe o parser pela extensão (`.yaml`/`.yml` → YAML 1.2 via lib `yaml`, um documento só e mapa na raiz; `.json` → `JSON.parse`; outra extensão é erro). Erros esperados viram `UserError`; a CLI imprime `Erro: <mensagem>` no stderr e sai com código 1, sem stack trace (defina `CRUDMAKER_DEBUG=1` para vê-lo).
 - `src/initTemplate.ts`: conteúdo do manifest criado por `crudmaker init`.
 
@@ -41,18 +42,27 @@ O `npx`/`npm link` usam o campo `bin` do `package.json` (`dist/bin.js`), gerado 
 - `now`: base do prefixo das migrations novas (`yyyy_MM_dd_HHmmss`). A migration na posição *n* da ordem de dependência de FK usa `now` + *n* segundos;
 - `existingMigrations`: nomes de arquivo das migrations que já existem no destino. Se algum termina com `_create_<tabela>_table.php`, o nome é reaproveitado em vez de gerar um novo (regerar nunca renomeia);
 - `existingApiRoutes`: conteúdo do `routes/api.php` do destino (ou `null`);
-- `normalizeNames` (opcional): liga/desliga a normalização de nomes; quando definida, vale mais que `pkg.normalizeNames` do manifest.
+- `normalizeNames` (opcional): liga/desliga a normalização de nomes; quando definida, vale mais que `pkg.normalizeNames` do manifest;
+- `previousLock` (opcional): o `manifest-lock.json` anterior do destino, já parseado (ou `null`). As entidades que estavam nele e não geram mais os mesmos caminhos viram `obsolete`.
 
-O retorno é `{ files, warnings }`. Os avisos (`string[]`, um por nome alterado ou fora da convenção) vêm junto com os arquivos, em vez de serem impressos, para `generate` continuar pura e quem chama (CLI, scripts, testes) decidir o que mostrar.
+O retorno é `{ files, warnings, obsolete }`. Os avisos (`string[]`, um por nome alterado ou fora da convenção) vêm junto com os arquivos, em vez de serem impressos, para `generate` continuar pura e quem chama (CLI, scripts, testes) decidir o que mostrar.
 
-Cada arquivo de `files` tem `path`, `content` e `policy` (`overwrite` ou `create-once`). Hoje tudo sai como `overwrite`; `create-once` ainda não é usado pelos geradores. O primeiro item da lista é sempre o `manifest-lock.json`.
+Cada arquivo de `files` tem `path`, `content` e `policy` (`overwrite` ou `create-once`) e, nas classes finais, `generatedBase` (a base que ela deve estender). A política vem da camada: bases gerada, migrations, rotas e lock são `overwrite`; as classes finais são `create-once`. O primeiro item da lista é sempre o `manifest-lock.json`.
+
+`obsolete` é uma lista `{ path, kind }` de caminhos *possíveis* de entidades que saíram do manifest: `generated` (bases, que o crudmaker pode apagar), `custom` (finais, que só são listadas) e `migration` (só se já existe uma migration da tabela no destino; nunca é apagada). É calculada refazendo, para as entidades do lock anterior, os caminhos dos mesmos tipos de arquivo e tirando os que a geração atual também produz; nenhum conteúdo é renderizado. Como `generate` não olha o disco, quem decide o que existe é o plano de remoção.
 
 `src/writeFiles.ts` tem a camada de escrita, em dois passos:
 
 - `planWrites(files, baseDir)` só lê o disco e classifica cada arquivo: `created` (não existia), `overwritten` (existia, política `overwrite`, conteúdo diferente), `unchanged` (existia, `overwrite`, conteúdo idêntico) ou `preserved` (existia e a política é `create-once`);
-- `applyPlan(plan)` grava os `created` e `overwritten`, criando as pastas. Não imprime nada.
+- `applyPlan(plan)` grava os `created` e `overwritten`, criando as pastas. Não imprime nada. **Garantia do `create-once`**: `preserved` não é gravado, e não existe nenhuma opção (nem `--force`) que mude isso; é a única porta de escrita de arquivos gerados.
 
 O `--dry-run` e a escrita real usam o mesmo plano, então nunca divergem. `writeFiles(files, baseDir)` é o atalho que faz os dois passos.
+
+Mais três funções, também em `src/writeFiles.ts`:
+
+- `legacyFinalWarnings(plan)` lê os arquivos `preserved` que têm `generatedBase` e avisa os que não contêm `extends ...Base<Classe>`: são classes completas de uma versão antiga do crudmaker, que a base nova não alcança. A checagem é textual;
+- `planRemovals(obsolete, baseDir)` olha só os caminhos de `obsolete` que existem no disco. Um arquivo de `kind: "generated"` vira `removed` somente se o caminho está em `app/Generated/` dentro do destino (sem escapar por `..`) e o arquivo tem o cabeçalho `ARQUIVO GERADO PELO CRUDMAKER`; tudo o mais (finais, migrations, uma base sem cabeçalho) vira `orphaned`;
+- `applyRemovals(removals, baseDir)` apaga os `removed` e as pastas vazias que sobrarem dentro de `app/Generated/`.
 
 ## Módulos
 
@@ -95,32 +105,54 @@ Convenções de whitespace dos templates (para a saída ser previsível):
 - tags de saída (`<%~ it.x %>`, sem escape) ficam no meio da linha e não alteram nada em volta;
 - o arquivo termina com uma única quebra de linha após o `};` ou a última linha.
 
+#### Camadas: base gerada × classe final
+
+Model, controller, request, resource e collection geram dois arquivos cada, via dois tipos em `entityFileTypes` (um `EntityFileLayer` em `fileType.ts`):
+
+- `generated` (`<tipo>.base.php.eta`): classe `abstract Base<Classe>` em `App\Generated\<namespace normal>`, pasta `app/Generated/...`, política `overwrite`, com o cabeçalho `ARQUIVO GERADO PELO CRUDMAKER. NÃO EDITE`;
+- `custom` (`<tipo>.final.php.eta`): a classe no namespace normal, que estende a base, nasce vazia com um comentário dos hooks e tem política `create-once`. Todas as finais são criadas pelo mesmo `finalClassFile(...)` de `classHeader.ts`; só o template muda;
+- `migration`: arquivo único, sem base nem final.
+
+`classPair(namespace, classe)` (em `classHeader.ts`) devolve `{ base, final }` com namespace, nome, `fqcn` e caminho de cada uma; o view model da base e o da final usam o mesmo par, então os nomes não divergem.
+
+Tipos que as bases usam (decisão): **sempre as classes finais**. A base do controller tipa `ClientRequest` e `Client` nos parâmetros porque o container (request) e o route model binding (model) instanciam o tipo *declarado*: com `BaseClientRequest` o `extraRules()` do usuário nunca rodaria, e com uma base abstrata o binding nem conseguiria criar o objeto (nem teria a tabela certa). Pelo mesmo motivo a base da request faz `instanceof` na model final, a collection usa `$collects = ClientResource::class` (a resource final por item) e os relacionamentos da model base apontam para as models finais das outras entidades (import de `App\Models\...`). A model base nunca cita a final da própria entidade: o Eloquent deduz tabela e chaves estrangeiras da classe em uso (`static`), que é a final. As rotas continuam apontando para os controllers finais.
+
+Hooks, nas bases:
+
+| Classe | Hooks (`protected`, sem efeito na base) |
+|---|---|
+| Controller | `indexQuery(Builder, Request): Builder`, `beforeStore(array, Request): array`, `afterStore(Model, Request): void`, `beforeUpdate(Model, array, Request): array`, `afterUpdate(Model, Request): void`, `beforeDestroy(Model, Request): void`, `afterDestroy(Model, Request): void` (`Model` = a model final da entidade). `store`, `update` e `destroy` rodam a escrita e os hooks em `DB::transaction`; a resposta é montada depois dela |
+| Request | `extraRules(): array` (o `rules()` faz `array_merge(regras geradas, extraRules())`); `authorize()` é público na base e pode ser sobrescrito |
+| Resource | `extra(Request): array` (o `toArray()` faz `array_merge(campos gerados, extra())`) |
+| Collection, Model | nenhum (decisão: a collection delega à resource; a model usa os recursos do Eloquent) |
+
 Módulos do target:
 
 | Arquivo | Papel |
 |---|---|
 | `index.ts` | `generateLaravelApi(input)`: calcula a data de cada migration (ordem topológica pelos `belongsTo`, empate = ordem do manifest, `now` + 1 segundo por posição), percorre as entidades, aplica cada tipo de arquivo (`entityFileTypes`) e acrescenta as rotas e o `routes/api.php` |
-| `fileType.ts` | tipos `EntityFileType` (template + `build(entity, ctx)` que devolve `{ path, view }`) e `EntityFileContext` (inclui `migrationDates`) |
+| `fileType.ts` | tipos `EntityFileType` (template + camada + `build(entity, ctx)` que devolve `{ path, view, generatedBase? }`) e `EntityFileContext` (inclui `migrationDates`) |
 | `render.ts` | motor Eta e `renderTemplate(nome, dados)`; ponto único de resolução de template |
-| `names.ts` | `BASE_NAMESPACE` (`App`), nomes da entidade em cada casing e `namespaceToFolder` (`App\Http\Requests` → `app/Http/Requests`) |
-| `viewModels/classHeader.ts` | parte comum dos templates de classe (namespace, `use`s deduplicados na ordem de declaração, classe e `extends`) e `classPath` |
-| `viewModels/{model,resource,collection,controller,request,migration}.ts` | um view model por tipo de arquivo por entidade |
+| `names.ts` | `BASE_NAMESPACE` (`App`), `generatedNamespace` (`App\Models` → `App\Generated\Models`), nomes da entidade em cada casing e `namespaceToFolder` (`App\Http\Requests` → `app/Http/Requests`) |
+| `viewModels/classHeader.ts` | parte comum dos templates de classe (namespace, `use`s deduplicados na ordem de declaração, classe e `extends`), `classPair` (base × final), `finalClassFile` (tipo das finais) e `classPath` |
+| `viewModels/{model,resource,collection,controller,request}.ts` | os view models da base e da final de cada classe |
+| `viewModels/migration.ts` | view model da migration por entidade |
 | `viewModels/routes.ts` | view model de `routes/crudmaker.php` (uma `apiResource` por entidade, recurso = tabela em kebab-case) e `ensureRoutesInclude`, que acrescenta o `require` ao `routes/api.php` se faltar |
 
 | Tipo | Gera |
 |---|---|
-| `model` | Model com UUID, SoftDeletes, `$casts`, `$fillable` e métodos de relacionamento |
+| `model` | Base: Model com UUID, SoftDeletes, `$casts`, `$fillable` e métodos de relacionamento. Final: vazia |
 | `migration` | Migration anônima de criação da tabela, com FKs, timestamps, soft deletes e índices únicos. Reaproveita o nome de uma migration já existente |
-| `request` | FormRequest com `prepareForValidation` (completa campos ausentes a partir da model da rota) e `rules` |
-| `resource` / `collection` | JsonResource e ResourceCollection com os campos e as datas formatadas |
-| `controller` | Controller de API com `index`, `store`, `show`, `update` e `destroy` |
+| `request` | Base: FormRequest com `prepareForValidation` (completa campos ausentes a partir da model da rota), `rules` e o hook `extraRules`. Final: vazia |
+| `resource` / `collection` | Base: JsonResource (campos, datas formatadas e o hook `extra`) e ResourceCollection (usa a resource final). Finais: vazias |
+| `controller` | Base: controller de API com `index`, `store`, `show`, `update`, `destroy` e os 7 hooks. Final: vazia |
 | `routes` | `routes/crudmaker.php`, gerado uma vez por projeto (não por entidade) |
 
 #### Como adicionar um tipo de arquivo
 
-1. Crie `templates/laravel-api/<tipo>.php.eta`.
-2. Crie `src/targets/laravel-api/viewModels/<tipo>.ts` exportando um `EntityFileType` (`template: "<tipo>"` e `build` devolvendo `{ path, view }`; use `classHeader` e `classPath` para classes).
-3. Registre-o em `entityFileTypes` (`src/targets/laravel-api/index.ts`); a ordem da lista é a ordem dos arquivos na saída.
+1. Crie `templates/laravel-api/<tipo>.php.eta` (para uma classe com camadas, `<tipo>.base.php.eta` e `<tipo>.final.php.eta`).
+2. Crie `src/targets/laravel-api/viewModels/<tipo>.ts` exportando um `EntityFileType` (`template`, `layer` e `build` devolvendo `{ path, view }`; para classes use `classPair` e `classHeader`, e `finalClassFile` para a final).
+3. Registre-o em `entityFileTypes` (`src/targets/laravel-api/index.ts`); a ordem da lista é a ordem dos arquivos na saída. A camada define a política (`custom` = `create-once`) e também o que é apagado ou listado como órfão quando a entidade sai do manifest.
 4. Gere os snapshots (revisando o diff) e rode `npm run lint:php`.
 
 Um arquivo por projeto (como as rotas) não passa por `entityFileTypes`: renderize-o direto em `generateLaravelApi`.
@@ -145,19 +177,23 @@ Ainda não existem stubs do projeto (prioridade arquivo a arquivo sobre os templ
 
 `tests/cli.test.ts` cobre a CLI: chama `run(argv, io)` em diretórios temporários (criação, regeração, `--dry-run`, `init`, erros, ajuda) e tem um teste que roda o binário em subprocesso.
 
+`tests/layers.test.ts` cobre o ticket 10: a política e o cabeçalho de cada camada, as finais vazias que estendem as bases, a ordem dos 7 hooks e a `DB::transaction` no controller base, o `extraRules()`/`extra()`, as rotas e relacionamentos com as classes finais, os caminhos obsoletos de `generate`, a segurança de `planRemovals`/`applyRemovals`, e a CLI em diretório temporário (hook implementado sobrevive à regeração e a base é atualizada, nenhuma combinação de opções sobrescreve uma final, remoção de entidade com `--dry-run`, aviso de final antiga).
+
 `tests/validate.test.ts` cobre a validação (fixtures válidos, manifests inválidos com caminho e mensagem, vários erros de uma vez) e confere que `schema/manifest.schema.json` está em dia com o schema zod.
 
 `tests/normalizeNames.test.ts` cobre a normalização de nomes (regras, avisos, colisões, FK declarada + derivada, precedência opção × manifest, as fixtures antigas ligadas × desligadas e o JSON Schema).
 
 `tests/yaml.test.ts` cobre o YAML: cada fixture tem um `manifest.yaml` que precisa ler o mesmo objeto e gerar a mesma saída do JSON, os erros de sintaxe/vazio/multi-documento/extensão, e o `init` em cada formato (o exemplo YAML tem de ser igual ao JSON).
 
-`tests/generate.test.ts` também cobre a ordem e os timestamps das migrations, a regeração sem renomear, as FKs, o `ignore` do `unique` e os casts, com asserções explícitas (a fixture `order-item`, com entidade camelCase e FK customizada, roda com a normalização ligada e tem snapshot próprio), e as rotas (nome do recurso, include, idempotência, detecção por variações de espaço e aspas). Ele chama `generate` para os manifests de `tests/fixtures/` com data fixa e sem migrations existentes. Os snapshots de `bingo`, `curso` e `vende-que-vende-api` são a saída de antes da normalização de nomes e valem com ela **desligada** (`normalizeNames: false`); `bingo-2` (entidades no plural, FKs declaradas à mão) tem snapshot com a normalização ligada, o padrão. O conteúdo de cada arquivo é comparado com um snapshot em `tests/__snapshots__/<fixture>/<path>`, e a lista de caminhos com `_paths.txt`. Os snapshots registram a saída atual, inclusive bugs conhecidos. Foram eles que provaram que a migração para templates (ticket 07) não mudou a saída.
+`tests/generate.test.ts` também cobre a ordem e os timestamps das migrations, a regeração sem renomear, as FKs, o `ignore` do `unique` e os casts, com asserções explícitas (a fixture `order-item`, com entidade camelCase e FK customizada, roda com a normalização ligada e tem snapshot próprio), e as rotas (nome do recurso, include, idempotência, detecção por variações de espaço e aspas). Ele chama `generate` para os manifests de `tests/fixtures/` com data fixa e sem migrations existentes. Os snapshots de `bingo`, `curso` e `vende-que-vende-api` são a saída de antes da normalização de nomes e valem com ela **desligada** (`normalizeNames: false`); `bingo-2` (entidades no plural, FKs declaradas à mão) tem snapshot com a normalização ligada, o padrão. O conteúdo de cada arquivo é comparado com um snapshot em `tests/__snapshots__/<fixture>/<path>`, e a lista de caminhos com `_paths.txt`. Os snapshots registram a saída atual (bases em `app/Generated/` e finais iniciais), inclusive bugs conhecidos. Foram eles que provaram que a migração para templates (ticket 07) não mudou a saída.
 
 ### Sintaxe do PHP gerado
 
 `npm run lint:php` (`scripts/checkPhpSyntax.ts`) valida que o PHP gerado é sintaticamente válido. Ele chama `generate` (normalização no padrão, ligada) para as fixtures de `tests/fixtures/` com data fixa, grava a saída num diretório temporário do sistema (nunca em `generated/` nem no repositório) e monta esse diretório como volume somente leitura num único `docker run --rm` da imagem oficial `php:8.1-cli`, com o UID/GID do usuário, que roda `php -l` em cada `.php`. O script lista os arquivos com erro, sai com código diferente de zero se houver falha inesperada (ou 2 se o Docker não estiver disponível) e apaga o diretório temporário no fim. A versão 8.1 é a mínima prometida pela spec: se parseia nela, parseia nas mais novas.
 
 A checagem olha a saída de `generate`, e não os snapshots, para não depender deles: um snapshot pode ser atualizado com `-u` sem que ninguém perceba que o PHP ficou inválido, e a checagem continua valendo mesmo que a forma de guardar os snapshots mude.
+
+O `php -l` só olha a sintaxe. A herança e as assinaturas dos hooks (uma final que sobrescreve com assinatura incompatível é erro fatal do PHP) foram conferidas à parte, uma vez, carregando a saída num `php:8.3-cli` com stubs mínimos do Illuminate e exercitando as actions; esse script não faz parte do repositório.
 
 `scripts/phpSyntaxAllowlist.ts` lista as falhas conhecidas (arquivo, motivo e ticket que corrige); hoje está vazia. Elas aparecem como "conhecido" e não quebram a checagem; uma entrada que deixa de falhar também quebra a checagem, para a lista não apodrecer. `tests/phpSyntax.test.ts` testa a classificação sem Docker e, com `PHP_DOCKER_TESTS=1`, prova com Docker que um PHP inválido reprova (a variável `CRUDMAKER_INJECT_INVALID_PHP=1` faz o script injetar um arquivo inválido).
 

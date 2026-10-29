@@ -2,87 +2,20 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
-use App\Models\Player;
+use App\Generated\Http\Requests\BasePlayerRequest;
 
-
-class PlayerRequest extends FormRequest
+/**
+ * Camada de customização da request de Player.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * As regras geradas ficam em App\Generated\Http\Requests\BasePlayerRequest (app/Generated/Http/Requests/BasePlayerRequest.php), que não deve ser editada.
+ */
+class PlayerRequest extends BasePlayerRequest
 {
-
-	/**
-	 * Determine if the user is authorized to make this request.
+	/*
+	 * Hook e método que você pode sobrescrever aqui:
 	 *
-	 * @return bool
+	 *   protected function extraRules(): array; // regras somadas às geradas (a mesma chave de campo substitui a gerada)
+	 *   public function authorize(): bool; // a base libera tudo (return true)
 	 */
-	public function authorize()
-	{
-		return true;
-	}
-
-	/**
-	 * Prepare the data for validation.
-	 *
-	 * @return void
-	 */
-	protected function prepareForValidation()
-	{
-			$player = $this->route('player');
-	
-			if ($player instanceof Player)
-			{
-					$this->merge(['id' => $player->id]);
-	
-					if ( ! $this->has('id'))
-					{
-							$this->merge(['id' => $player->id]);
-					}
-	
-					if ( ! $this->has('name'))
-					{
-							$this->merge(['name' => $player->name]);
-					}
-	
-					if ( ! $this->has('email'))
-					{
-							$this->merge(['email' => $player->email]);
-					}
-	
-					if ( ! $this->has('game_id'))
-					{
-							$this->merge(['game_id' => $player->game_id]);
-					}
-	
-			}
-			else
-			{
-					//
-			}
-	}
-
-	/**
-	 * Get the validation rules that apply to the request.
-	 *
-	 * @return array
-	*/
-	public function rules()
-	{
-			return [
-				'name' => array(
-					'bail',
-					'required',
-					'string',
-				),
-				'email' => array(
-					'bail',
-					'required',
-					'string',
-				),
-				'game_id' => array(
-					'bail',
-					'required',
-					'uuid',
-				),
-			];
-	}
-
-};
+}

@@ -2,38 +2,19 @@
 
 namespace App\Http\Resources;
 
-use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\App;
+use App\Generated\Http\Resources\BasePlayerResource;
 
-
-class PlayerResource extends JsonResource
+/**
+ * Camada de customização da resource de Player.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * Os campos gerados ficam em App\Generated\Http\Resources\BasePlayerResource (app/Generated/Http/Resources/BasePlayerResource.php), que não deve ser editada.
+ */
+class PlayerResource extends BasePlayerResource
 {
-
-	/**
-	 * Transform the resource into an array.
+	/*
+	 * Hook que você pode sobrescrever aqui (precisa de `use Illuminate\Http\Request;`):
 	 *
-	 * @param  \Illuminate\Http\Request  $request
-	 * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
+	 *   protected function extra(Request $request): array;   // campos somados aos gerados (a mesma chave substitui o gerado)
 	 */
-	public function toArray($request)
-	{
-		$createdAt = $this->created_at->locale(App::getLocale());
-		$updatedAt = $this->updated_at->locale(App::getLocale());
-	
-		return [
-			'id' => $this->id,
-			'name' => $this->name,
-			'email' => $this->email,
-			'game_id' => $this->game_id,
-			'created_at' => array(
-				'timestamp' => $createdAt->timestamp,
-				'description' => $createdAt->diffForHumans(),
-			),
-			'updated_at' => array(
-				'timestamp' => $updatedAt->timestamp,
-				'description' => $updatedAt->diffForHumans(),
-			),
-		];
-	}
-
-};
+}

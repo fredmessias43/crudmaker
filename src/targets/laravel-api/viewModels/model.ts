@@ -3,7 +3,7 @@ import { snakeCase } from "lodash";
 import { plural } from "pluralize";
 import { EntityFileType } from "../fileType";
 import { BASE_NAMESPACE, entityNames } from "../names";
-import { classHeader, classPath } from "./classHeader";
+import { classHeader, classPair, finalClassFile } from "./classHeader";
 
 const namespace = `${BASE_NAMESPACE}\\Models`;
 
@@ -17,8 +17,15 @@ const castTypes: { [type: string]: string } = {
   integer: "integer",
 };
 
-export const modelFile: EntityFileType = {
-  template: "model",
+/**
+ * Base da model. Os relacionamentos apontam para as models *finais* das outras entidades (importadas de
+ * `App\Models`), então scopes, accessors e `booted()` do usuário valem também quando se navega pelas
+ * relações. A base nunca cita a final da própria entidade: o Eloquent deduz tabela e chaves estrangeiras
+ * a partir da classe em uso (`static`), que é a final (`Client` → `clients`, `client_id`).
+ */
+export const modelBaseFile: EntityFileType = {
+  template: "model.base",
+  layer: "generated",
   build(entity) {
     const names = entityNames(entity);
     const fields = Object.entries(entity.fields);
@@ -41,6 +48,7 @@ export const modelFile: EntityFileType = {
       .map((relationship) => {
         imports.push(`Illuminate\\Database\\Eloquent\\Relations\\${pascalCase(relationship.relationship)}`);
 
+        imports.push(`${namespace}\\${pascalCase(relationship.entity)}`);
         const related = `${pascalCase(relationship.entity)}::class`;
         // FK com o nome padrão (`<entidade>_id`): o método leva o nome da entidade (plural no hasMany)
         // e o Eloquent deduz as chaves. Com outro nome, as chaves são explícitas.
@@ -72,12 +80,12 @@ export const modelFile: EntityFileType = {
         };
       });
 
-    const className = names.pascal;
+    const pair = classPair(namespace, names.pascal);
 
     return {
-      path: classPath(namespace, className),
+      path: pair.base.path,
       view: {
-        ...classHeader(entity, { namespace, imports, className, extends: "Model" }),
+        ...classHeader(entity, pair, { imports, extends: "Model", layer: "base" }),
         traits: ["HasFactory", "SoftDeletes", "HasUuids"],
         casts,
         fillable: fields.map(([key]) => key),
@@ -86,3 +94,5 @@ export const modelFile: EntityFileType = {
     };
   },
 };
+
+export const modelFinalFile = finalClassFile("model.final", namespace, ({ pascal }) => pascal);

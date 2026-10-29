@@ -1,15 +1,15 @@
 import { addSeconds } from "date-fns";
 import { orderByDependency } from "../../dependencyOrder";
 import { Entity } from "../../models/Entity";
-import { GeneratedFile } from "../types";
+import { GeneratedFile, ObsoleteFile } from "../types";
 import { EntityFileType } from "./fileType";
 import { renderTemplate } from "./render";
-import { collectionFile } from "./viewModels/collection";
-import { controllerFile } from "./viewModels/controller";
-import { foreignKeyTable, migrationFile } from "./viewModels/migration";
-import { modelFile } from "./viewModels/model";
-import { requestFile } from "./viewModels/request";
-import { resourceFile } from "./viewModels/resource";
+import { collectionBaseFile, collectionFinalFile } from "./viewModels/collection";
+import { controllerBaseFile, controllerFinalFile } from "./viewModels/controller";
+import { existingMigration, foreignKeyTable, migrationFile } from "./viewModels/migration";
+import { modelBaseFile, modelFinalFile } from "./viewModels/model";
+import { requestBaseFile, requestFinalFile } from "./viewModels/request";
+import { resourceBaseFile, resourceFinalFile } from "./viewModels/resource";
 import { ensureRoutesInclude, routesPath, routesView } from "./viewModels/routes";
 
 /** Entrada do target: o modelo normalizado de entidades mais o "ambiente" da geração. */
@@ -21,10 +21,27 @@ export type LaravelApiInput = {
   existingMigrations: string[];
   /** Conteúdo atual do `routes/api.php` do destino, ou `null`/omitido se ele não existe. */
   existingApiRoutes?: string | null;
+  /** Entidades do `manifest-lock.json` anterior do destino, para detectar as que saíram do manifest. */
+  previousEntities?: Entity[];
 };
 
 /** Tipos de arquivo gerados por entidade, na ordem em que saem. Para um novo tipo, acrescente aqui. */
-const entityFileTypes: EntityFileType[] = [modelFile, resourceFile, collectionFile, controllerFile, requestFile, migrationFile];
+const entityFileTypes: EntityFileType[] = [
+  modelBaseFile,
+  modelFinalFile,
+  resourceBaseFile,
+  resourceFinalFile,
+  collectionBaseFile,
+  collectionFinalFile,
+  controllerBaseFile,
+  controllerFinalFile,
+  requestBaseFile,
+  requestFinalFile,
+  migrationFile,
+];
+
+/** Política de cada camada: a gerada e a migration são sempre regravadas; a de customização, só criada. */
+const policyByLayer = { generated: "overwrite", migration: "overwrite", custom: "create-once" } as const;
 
 /**
  * Data de cada migration nova: `now` + 1 segundo por posição na ordem de dependência das FKs
@@ -52,17 +69,49 @@ function migrationDates(entities: Entity[], now: Date): Map<Entity, Date> {
 }
 
 /**
+ * Arquivos das entidades do lock anterior que não fazem mais parte da saída atual (`currentPaths`):
+ * entidade removida do manifest (ou renomeada, o que muda os caminhos). Só calcula caminhos *possíveis*,
+ * a partir do mesmo código que gera os arquivos; quem grava confere o que existe no disco.
+ * Migrations só entram se já existe no destino uma com o nome da tabela.
+ */
+function obsoleteFiles(previous: Entity[], currentPaths: Set<string>, input: LaravelApiInput): ObsoleteFile[] {
+  const context = { ...input, migrationDates: migrationDates(previous, input.now) };
+  const obsolete: ObsoleteFile[] = [];
+
+  for (const entity of previous) {
+    for (const fileType of entityFileTypes) {
+      const { path } = fileType.build(entity, context);
+      if (currentPaths.has(path)) continue;
+
+      // Sem migration existente, o caminho calculado seria só um nome novo: não há o que avisar.
+      if (fileType.layer === "migration" && !existingMigration(entity.getTableName(), input.existingMigrations)) continue;
+
+      obsolete.push({ path, kind: fileType.layer });
+    }
+  }
+
+  return obsolete;
+}
+
+export type LaravelApiOutput = { files: GeneratedFile[]; obsolete: ObsoleteFile[] };
+
+/**
  * Target `laravel-api`: recebe o modelo normalizado e devolve os arquivos (sem tocar o disco).
  * Cada arquivo = view model (TS) + template (`templates/laravel-api`).
  */
-export function generateLaravelApi(input: LaravelApiInput): GeneratedFile[] {
+export function generateLaravelApi(input: LaravelApiInput): LaravelApiOutput {
   const files: GeneratedFile[] = [];
   const context = { ...input, migrationDates: migrationDates(input.entities, input.now) };
 
   for (const entity of input.entities) {
     for (const fileType of entityFileTypes) {
-      const { path, view } = fileType.build(entity, context);
-      files.push({ path, content: renderTemplate(fileType.template, view), policy: "overwrite" });
+      const { path, view, generatedBase } = fileType.build(entity, context);
+      files.push({
+        path,
+        content: renderTemplate(fileType.template, view),
+        policy: policyByLayer[fileType.layer],
+        ...(generatedBase && { generatedBase }),
+      });
     }
   }
 
@@ -74,5 +123,8 @@ export function generateLaravelApi(input: LaravelApiInput): GeneratedFile[] {
     files.push({ path: "routes/api.php", content: ensureRoutesInclude(input.existingApiRoutes), policy: "overwrite" });
   }
 
-  return files;
+  const currentPaths = new Set(files.map((file) => file.path));
+  const obsolete = obsoleteFiles(input.previousEntities ?? [], currentPaths, input);
+
+  return { files, obsolete };
 }

@@ -11,12 +11,29 @@ export type EntityFileContext = {
 };
 
 /**
- * Um tipo de arquivo gerado uma vez por entidade (model, controller...).
+ * Camada a que o arquivo pertence:
+ * - `generated`: classe base em `App\Generated\...`, sempre sobrescrita (política `overwrite`);
+ * - `custom`: classe final no namespace normal, criada uma única vez (política `create-once`);
+ * - `migration`: arquivo único, sem base nem final (política `overwrite`, como antes).
+ */
+export type EntityFileLayer = "generated" | "custom" | "migration";
+
+/**
+ * Um tipo de arquivo gerado uma vez por entidade (base do model, final do controller...).
  * `build` é o view model: transforma a entidade normalizada nas variáveis do template
  * (`it.*`) e diz onde o arquivo vai. O template só imprime, sem decidir nada.
  */
 export type EntityFileType = {
-  /** Nome do template em `templates/laravel-api/<template>.php.eta`. */
+  /** Nome do template em `templates/laravel-api/<template>.php.eta` (sem a extensão). */
   template: string;
-  build(entity: Entity, context: EntityFileContext): { path: string; view: object };
+  layer: EntityFileLayer;
+  build(
+    entity: Entity,
+    context: EntityFileContext,
+  ): {
+    path: string;
+    view: object;
+    /** Só na camada `custom`: a base gerada que a classe estende (veja `GeneratedFile.generatedBase`). */
+    generatedBase?: { fqcn: string; path: string };
+  };
 };

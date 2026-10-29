@@ -1,5 +1,8 @@
 <?php
 
+// ARQUIVO GERADO PELO CRUDMAKER. NÃO EDITE: ele é sobrescrito a cada `crudmaker generate`.
+// Seu código fica em <%~ it.final.fqcn %> (<%~ it.final.path %>), que estende esta classe e nunca é sobrescrita.
+
 namespace <%~ it.namespace %>;
 
 <% for (const use of it.imports) { -%>
@@ -7,7 +10,7 @@ use <%~ use %>;
 <% } -%>
 
 
-class <%~ it.className %> extends <%~ it.extends %>
+abstract class <%~ it.className %> extends <%~ it.extends %>
 {
 <% for (const trait of it.traits) { -%>
 	use <%~ trait %>;
@@ -46,4 +49,4 @@ class <%~ it.className %> extends <%~ it.extends %>
 	
 <% } -%>
 
-};
+}

@@ -2,77 +2,20 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
-use App\Models\Classroom;
+use App\Generated\Http\Requests\BaseClassroomRequest;
 
-
-class ClassroomRequest extends FormRequest
+/**
+ * Camada de customização da request de Classroom.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * As regras geradas ficam em App\Generated\Http\Requests\BaseClassroomRequest (app/Generated/Http/Requests/BaseClassroomRequest.php), que não deve ser editada.
+ */
+class ClassroomRequest extends BaseClassroomRequest
 {
-
-	/**
-	 * Determine if the user is authorized to make this request.
+	/*
+	 * Hook e método que você pode sobrescrever aqui:
 	 *
-	 * @return bool
+	 *   protected function extraRules(): array; // regras somadas às geradas (a mesma chave de campo substitui a gerada)
+	 *   public function authorize(): bool; // a base libera tudo (return true)
 	 */
-	public function authorize()
-	{
-		return true;
-	}
-
-	/**
-	 * Prepare the data for validation.
-	 *
-	 * @return void
-	 */
-	protected function prepareForValidation()
-	{
-			$classroom = $this->route('classroom');
-	
-			if ($classroom instanceof Classroom)
-			{
-					$this->merge(['id' => $classroom->id]);
-	
-					if ( ! $this->has('id'))
-					{
-							$this->merge(['id' => $classroom->id]);
-					}
-	
-					if ( ! $this->has('name'))
-					{
-							$this->merge(['name' => $classroom->name]);
-					}
-	
-					if ( ! $this->has('description'))
-					{
-							$this->merge(['description' => $classroom->description]);
-					}
-	
-			}
-			else
-			{
-					//
-			}
-	}
-
-	/**
-	 * Get the validation rules that apply to the request.
-	 *
-	 * @return array
-	*/
-	public function rules()
-	{
-			return [
-				'name' => array(
-					'bail',
-					'required',
-					'string',
-				),
-				'description' => array(
-					'bail',
-					'nullable',
-					'string',
-				),
-			];
-	}
-
-};
+}

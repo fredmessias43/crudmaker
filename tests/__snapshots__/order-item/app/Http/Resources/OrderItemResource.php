@@ -2,45 +2,19 @@
 
 namespace App\Http\Resources;
 
-use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\App;
+use App\Generated\Http\Resources\BaseOrderItemResource;
 
-
-class OrderItemResource extends JsonResource
+/**
+ * Camada de customização da resource de OrderItem.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * Os campos gerados ficam em App\Generated\Http\Resources\BaseOrderItemResource (app/Generated/Http/Resources/BaseOrderItemResource.php), que não deve ser editada.
+ */
+class OrderItemResource extends BaseOrderItemResource
 {
-
-	/**
-	 * Transform the resource into an array.
+	/*
+	 * Hook que você pode sobrescrever aqui (precisa de `use Illuminate\Http\Request;`):
 	 *
-	 * @param  \Illuminate\Http\Request  $request
-	 * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
+	 *   protected function extra(Request $request): array;   // campos somados aos gerados (a mesma chave substitui o gerado)
 	 */
-	public function toArray($request)
-	{
-		$createdAt = $this->created_at->locale(App::getLocale());
-		$updatedAt = $this->updated_at->locale(App::getLocale());
-	
-		return [
-			'id' => $this->id,
-			'sku' => $this->sku,
-			'quantity' => $this->quantity,
-			'price' => $this->price,
-			'gift' => $this->gift,
-			'options' => $this->options,
-			'shipped_on' => $this->shipped_on,
-			'packed_at' => $this->packed_at,
-			'status' => $this->status,
-			'order_id' => $this->order_id,
-			'author_id' => $this->author_id,
-			'created_at' => array(
-				'timestamp' => $createdAt->timestamp,
-				'description' => $createdAt->diffForHumans(),
-			),
-			'updated_at' => array(
-				'timestamp' => $updatedAt->timestamp,
-				'description' => $updatedAt->diffForHumans(),
-			),
-		];
-	}
-
-};
+}
