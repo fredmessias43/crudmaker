@@ -9,11 +9,11 @@
 - [07 — Migrar os geradores para templates](../fase-2-bugs/07-migrar-para-templates.md)
 - [10 — Camada gerada × customizada com hooks](../fase-3-arquitetura/10-camada-gerada-e-hooks.md)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Critérios de aceite
 
-- [ ] Publicar só o stub do controller muda só os controllers gerados.
-- [ ] Teste do aviso quando o hash do embutido muda.
-- [ ] Os stubs afetam só a camada gerada.
-- [ ] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.
+- [x] Publicar só o stub do controller muda só os controllers gerados.
+- [x] Teste do aviso quando o hash do embutido muda.
+- [x] Os stubs afetam só a camada gerada.
+- [x] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.

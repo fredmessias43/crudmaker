@@ -119,7 +119,7 @@ Para model, controller, request, resource e collection, cada classe existe em du
 
 As rotas (`routes/crudmaker.php`) e as referências entre classes usam **sempre as classes finais**: o controller base recebe `ClientRequest` e `Client` (as finais) e devolve `ClientResource`/`ClientCollection` (as finais), e os relacionamentos da model base apontam para as models finais das outras entidades. Assim uma customização vale em todo lugar, inclusive no route model binding e na validação.
 
-Ordem de preferência para customizar: (1) o manifest, para o que é declarativo; (2) os hooks e as sobrescritas nas classes finais, para regra de negócio; (3) os stubs (templates), para mudar o padrão de um tipo de arquivo inteiro (ainda não implementados).
+Ordem de preferência para customizar: (1) o manifest, para o que é declarativo; (2) os hooks e as sobrescritas nas classes finais, para regra de negócio; (3) os [stubs](#stubs-mudar-o-padrão-de-um-tipo-de-arquivo), para mudar o padrão de um tipo de arquivo inteiro.
 
 ### Hooks do controller
 
@@ -191,6 +191,59 @@ class ClientController extends BaseClientController
 - **Resource** (`ClientResource`): o `toArray()` da base junta os campos gerados com o retorno de `protected function extra(Request $request): array` (campos calculados; chave repetida substitui a gerada). Exemplo: `return ['display_name' => strtoupper($this->name)];`.
 - **Collection** (`ClientCollection`): não tem hook. Cada item da lista sai pela `ClientResource` final, então o `extra()` da resource vale na listagem também. Ajustes só da coleção (`with()`, `paginationInformation()`) vão direto na classe final.
 - **Model** (`Client`): não tem hook; use os recursos do Eloquent na classe final: scopes (inclusive globais), accessors, `$hidden`/`$appends`, relacionamentos extras e eventos em `booted()`. Redeclarar `$casts` ou `$fillable` na final **substitui** os gerados; para somar, use `$this->mergeCasts([...])` e `$this->mergeFillable([...])` num `__construct(array $attributes = [])` que chame `parent::__construct($attributes)`.
+
+## Stubs: mudar o padrão de um tipo de arquivo
+
+Cada arquivo gerado vem de um template (`templates/laravel-api/*.php.eta`, parecido com o PHP final). Um **stub** é uma cópia de um desses templates dentro do seu projeto, que tem prioridade sobre o embutido. Serve para mudar o padrão de **todos** os arquivos de um tipo de uma vez (ex.: o envelope de resposta de todos os controllers).
+
+### Manifest × hooks × stubs
+
+Use a camada mais simples que resolve, nesta ordem:
+
+1. **Manifest**: o que é declarativo e comum (actions, middleware, filtros, `hidden`, regras...).
+2. **Hooks** nas classes finais: regra de negócio de uma entidade (`beforeStore`, `extraRules()`, `extra()`...).
+3. **Stubs**: o formato de um tipo de arquivo para todas as entidades (envelope `data`/`message`, transação, estilo do código gerado).
+
+Stubs só mudam a **camada gerada** (bases, migration e rotas). Não existe stub das classes finais: elas são `create-once` e são do usuário, então mudar o comportamento delas é papel dos hooks (um stub só valeria para classes novas e deixaria o projeto com finais de padrões diferentes). Um `controller.final.php.eta` na pasta de stubs é ignorado, com aviso.
+
+### Publicar, editar e atualizar
+
+```bash
+crudmaker stubs:publish --out <projeto>               # todos os stubs
+crudmaker stubs:publish controller --out <projeto>    # só o do controller
+```
+
+Copia os templates embutidos para `stubs/crudmaker/laravel-api/` do projeto (`--out` é a raiz do projeto, padrão: diretório atual) e lista o que copiou. Publique **só os que vai mudar**: o que não estiver na pasta continua vindo do embutido e recebe as melhorias das novas versões do crudmaker.
+
+- **Nomes**: `model`, `resource`, `collection`, `controller` e `request` são a **base** (`controller` = `controller.base`; o sufixo `.base` também é aceito), mais `migration` e `routes`. Não há `*.final`.
+- **Não sobrescreve**: se o stub já existe, o comando avisa e pula (suas edições ficam). `--force` sobrescreve, mas só stubs (nada fora da pasta de stubs é tocado) e perde suas edições neles.
+- **Editar**: mude o arquivo em `stubs/crudmaker/laravel-api/<nome>.php.eta` e rode `crudmaker generate` (o `--dry-run` mostra o efeito). Versione a pasta `stubs/` junto com o projeto.
+- **Atualizar**: ao publicar, o hash do template embutido vai para `stubs/crudmaker/stubs-lock.json`. Se uma versão nova do crudmaker mudar o embutido, o `generate` mostra na seção `Avisos`: `stub controller.base: foi publicado a partir de uma versão anterior do template embutido...`. Para comparar, publique o embutido atual numa pasta temporária e use o `diff`:
+
+  ```bash
+  crudmaker stubs:publish controller --out /tmp/novo
+  diff -u /tmp/novo/stubs/crudmaker/laravel-api/controller.base.php.eta stubs/crudmaker/laravel-api/controller.base.php.eta
+  ```
+
+  Incorpore o que interessar no seu stub e rode `crudmaker stubs:publish controller --refresh-lock`: ele não copia nada, só registra o hash atual do embutido para o stub, e o aviso some.
+- **Erros**: um stub com erro de sintaxe (ou que referencia uma variável inexistente) para o `generate` antes de escrever qualquer arquivo, com `Erro: Stub "controller.base.php.eta": erro de sintaxe na linha 12: ...`. A linha vem de uma busca textual da linha de código que o JavaScript recusou; se não for achada, a mensagem sai sem linha.
+- **Seus stubs não são checados contra o PHP**: confira a saída com `--dry-run` e rode `php -l`/os testes do projeto.
+
+### Variáveis (`it`) de cada template
+
+Os templates usam [Eta](https://eta.js.org): `<%~ it.x %>` imprime sem escape, e as tags de controle (`<% for (...) { -%>`) ficam sozinhas na linha. Mantenha os tabs e a linha final. Quem calcula as variáveis é o código TypeScript (`src/targets/laravel-api/viewModels/`); o template só imprime. Todos os templates de classe recebem também `entity` (nomes da entidade em cada casing), `namespace`, `imports` (os `use`, sem repetição), `className`, `extends`, e `base`/`final` (as duas classes do par, com `className`, `namespace`, `fqcn` e `path`).
+
+| Stub | Variáveis específicas |
+|---|---|
+| `model.base` | `fillable`, `hidden`, `casts`, `traits`, `relations` (métodos de relacionamento) |
+| `request.base` | `fields`, `rules` (regras de validação por campo) |
+| `resource.base` | `fields`, `relations` (relacionamentos de `api.with`) |
+| `collection.base` | `resourceClass` |
+| `controller.base` | `has` (quais actions existem), `hooks` (hooks mantidos), `index` (`with`, filtros, busca, ordenação, `perPage`), `withShow` |
+| `migration` | `table`, `columns`, `foreignKeys`, `uniques`, `imports` |
+| `routes` | `imports`, `routes` (um item por entidade: `resource`, `controller`, `modifiers`) |
+
+A referência exata é o próprio template embutido (`crudmaker stubs:publish <tipo> --out <pasta>` e leia o arquivo) e o view model correspondente.
 
 ## Regerar
 

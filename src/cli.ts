@@ -2,6 +2,8 @@ import fs from "fs";
 import path from "path";
 import { parseArgs } from "util";
 import { generate } from "./generate";
+import { publishStubs, readStubs } from "./stubFiles";
+import { stubsFolder, stubsLockPath } from "./targets/laravel-api/stubs";
 import { exampleManifestText } from "./initTemplate";
 import { acceptedExtensionsText, manifestFormat, readManifest, UserError } from "./readManifest";
 import { applyPlan, applyRemovals, legacyFinalWarnings, planRemovals, planWrites, PlannedRemoval, PlannedWrite, WriteAction } from "./writeFiles";
@@ -30,6 +32,7 @@ Uso:
 Comandos:
   generate <manifest>   gera os arquivos da API a partir do manifest
   init [arquivo]        cria um manifest de exemplo
+  stubs:publish [tipo...]  copia os templates embutidos para a pasta de stubs do projeto
 
 Opções:
   -h, --help            mostra esta ajuda (também funciona por comando)
@@ -49,6 +52,9 @@ Opções:
                         As duas flags têm prioridade sobre pkg.normalizeNames do manifest (padrão: ligada).
   -h, --help        mostra esta ajuda
 
+Stubs: se existir stubs/crudmaker/laravel-api/ no projeto de destino, cada arquivo dela substitui o template
+embutido de mesmo nome (veja stubs:publish --help).
+
 Cada classe tem duas camadas: a base, em app/Generated/ (sempre sobrescrita; não edite), e a classe final
 no namespace normal (criada uma única vez e nunca sobrescrita; é onde vai o código seu, com os hooks).
 Entidade que sai do manifest tem a base apagada; a final e a migration ficam e são listadas como órfãs.
@@ -65,6 +71,23 @@ Recusa se o arquivo já existir.
 
 Opções:
   -h, --help   mostra esta ajuda
+`;
+
+const stubsPublishHelp = `Uso: crudmaker stubs:publish [tipo...] [--out <dir>] [--force | --refresh-lock]
+
+Copia os templates embutidos da camada gerada para ${stubsFolder}/ no projeto de destino.
+Os arquivos dessa pasta têm prioridade, um a um, sobre os embutidos na hora do generate.
+Sem tipos, copia todos; com tipos, só os pedidos. O tipo curto é a base (controller = controller.base);
+tipos: model, resource, collection, controller, request, migration, routes. As classes finais não têm stub.
+
+Opções:
+  -o, --out <dir>   raiz do projeto de destino (padrão: diretório atual)
+  --force           sobrescreve stubs que já existem (perde as suas edições neles; só vale para stubs)
+  --refresh-lock    não copia nada: registra no ${stubsLockPath} o hash atual do embutido
+                    para os stubs existentes, depois de você incorporar a mudança do embutido
+  -h, --help        mostra esta ajuda
+
+Um stub que já existe nunca é sobrescrito sem --force: o comando avisa e pula.
 `;
 
 const actionLabels: { [key in WriteAction]: string } = {
@@ -184,12 +207,16 @@ function runGenerate(args: string[], io: CliIo): number {
     }
   }
 
+  const projectStubs = readStubs(outDir);
+
   const { files, warnings, obsolete } = generate(manifestObj, {
     now: io.now(),
     existingMigrations,
     existingApiRoutes,
     normalizeNames,
     previousLock,
+    stubs: projectStubs.stubs,
+    stubHashes: projectStubs.hashes,
   });
   const plan = planWrites(files, outDir);
   const removals = planRemovals(obsolete, outDir);
@@ -199,7 +226,7 @@ function runGenerate(args: string[], io: CliIo): number {
     applyRemovals(removals, outDir);
   }
 
-  printPlan(plan, removals, [...warnings, ...lockWarnings, ...legacyFinalWarnings(plan)], io, outDir, Boolean(values["dry-run"]));
+  printPlan(plan, removals, [...warnings, ...lockWarnings, ...projectStubs.warnings, ...legacyFinalWarnings(plan)], io, outDir, Boolean(values["dry-run"]));
   if (existingApiRoutes === null) io.stdout(missingApiRoutesWarning(outDir));
   return 0;
 }
@@ -235,6 +262,46 @@ function runInit(args: string[], io: CliIo): number {
   return 0;
 }
 
+function runStubsPublish(args: string[], io: CliIo): number {
+  const { values, positionals } = parseArgs({
+    args,
+    allowPositionals: true,
+    options: {
+      out: { type: "string", short: "o" },
+      force: { type: "boolean" },
+      "refresh-lock": { type: "boolean" },
+      help: { type: "boolean", short: "h" },
+    },
+  });
+
+  if (values.help) {
+    io.stdout(stubsPublishHelp);
+    return 0;
+  }
+  if (values.force && values["refresh-lock"]) throw new UserError("Use só uma das flags: --force ou --refresh-lock.");
+
+  const outDir = path.resolve(io.cwd, values.out ?? ".");
+  const result = publishStubs(outDir, positionals, { force: values.force, refreshLock: values["refresh-lock"] });
+  const lines: string[] = [];
+
+  if (values["refresh-lock"]) {
+    lines.push(`Hash atualizado no ${stubsLockPath} (${result.refreshed.length}):`, ...result.refreshed.map((name) => `  ${name}`));
+    if (result.refreshed.length === 0) lines.push("  (nenhum stub existente entre os pedidos)");
+  } else {
+    if (result.copied.length > 0) {
+      lines.push(`Stubs copiados para ${path.join(outDir, stubsFolder)} (${result.copied.length}):`, ...result.copied.map((name) => `  ${name}.php.eta`));
+    }
+    if (result.skipped.length > 0) {
+      lines.push(
+        `Aviso: já existem e foram mantidos (${result.skipped.length}); use --force para sobrescrevê-los:`,
+        ...result.skipped.map((name) => `  ${name}.php.eta`),
+      );
+    }
+  }
+  io.stdout(lines.join("\n") + "\n");
+  return 0;
+}
+
 /** Executa a CLI com os argumentos (sem `node` e o script) e devolve o exit code. */
 export function run(argv: string[], io: CliIo = defaultIo): number {
   try {
@@ -250,6 +317,7 @@ export function run(argv: string[], io: CliIo = defaultIo): number {
     }
     if (command === "generate") return runGenerate(rest, io);
     if (command === "init") return runInit(rest, io);
+    if (command === "stubs:publish") return runStubsPublish(rest, io);
 
     throw new UserError(`Comando desconhecido: ${command}. Use crudmaker --help.`);
   } catch (e: any) {

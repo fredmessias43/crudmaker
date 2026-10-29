@@ -2,6 +2,8 @@ import { Entity } from "./models/Entity";
 import { Manifest } from "./models/Manifest";
 import { generateLaravelApi } from "./targets/laravel-api";
 import { FilePolicy, GeneratedFile, ObsoleteFile } from "./targets/types";
+import { Stubs } from "./targets/laravel-api/render";
+import { prepareStubs } from "./targets/laravel-api/stubs";
 import { ManifestEntities } from "./types";
 
 export { FilePolicy, GeneratedFile, ObsoleteFile };
@@ -30,6 +32,18 @@ export type GenerateOptions = {
    * viram `obsolete` no resultado. Um lock sem `entities` válidas é ignorado.
    */
   previousLock?: { entities?: ManifestEntities } | null;
+  /**
+   * Stubs do projeto: nome do template (ex.: `controller.base`, `migration`, `routes`) → conteúdo do arquivo.
+   * Cada um substitui o template embutido de mesmo nome. Só a camada gerada pode ser substituída; nomes
+   * de outros templates (como `*.final`) são ignorados com aviso. Um stub com erro de sintaxe lança erro
+   * (com o nome e a linha) antes de qualquer arquivo ser produzido.
+   */
+  stubs?: Stubs;
+  /**
+   * Hash do template embutido no momento em que cada stub foi publicado (nome → hash; o `stubs-lock.json`).
+   * Se o embutido atual tem outro hash, `warnings` traz o aviso de stub desatualizado.
+   */
+  stubHashes?: { [templateName: string]: string };
 };
 
 export type GenerateResult = {
@@ -58,6 +72,7 @@ function previousEntities(lock: GenerateOptions["previousLock"]): Entity[] {
  * Recebe o manifest cru (já parseado) e devolve os arquivos a gravar e os avisos.
  */
 export function generate(manifestObj: { [key: string]: any }, options: GenerateOptions): GenerateResult {
+  const stubs = prepareStubs(options.stubs ?? {}, options.stubHashes ?? {});
   const manifest = new Manifest(manifestObj, { normalizeNames: options.normalizeNames });
   const entities = Object.keys(manifest.entities).map((key) => new Entity(key, manifest.entities[key]));
 
@@ -67,6 +82,7 @@ export function generate(manifestObj: { [key: string]: any }, options: GenerateO
     existingMigrations: options.existingMigrations,
     existingApiRoutes: options.existingApiRoutes,
     previousEntities: previousEntities(options.previousLock),
+    stubs: stubs.stubs,
   });
 
   const files: GeneratedFile[] = [
@@ -78,5 +94,5 @@ export function generate(manifestObj: { [key: string]: any }, options: GenerateO
     ...api.files,
   ];
 
-  return { files, warnings: manifest.warnings, obsolete: api.obsolete };
+  return { files, warnings: [...manifest.warnings, ...stubs.warnings], obsolete: api.obsolete };
 }

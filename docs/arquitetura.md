@@ -29,7 +29,8 @@ resumo, órfãos e avisos (nomes, finais antigas) no stdout
 A CLI é uma casca fina em volta de `generate` (sem lógica de geração):
 
 - `src/bin.ts`: entrada do binário (shebang `#!/usr/bin/env node`); passa `process.argv` para `run` e usa o retorno como exit code.
-- `src/cli.ts`: `run(argv, io)` interpreta os argumentos (`node:util` `parseArgs`, sem dependência externa), executa `generate` ou `init` e devolve o exit code. `io` (stdout, stderr, cwd, relógio) é injetável, o que permite testar sem subprocesso. Para `generate`, lê os nomes em `<out>/database/migrations` (lista vazia se a pasta não existe) e o `manifest-lock.json` anterior (`previousLock`; `null` se não existe, com aviso se estiver ilegível), resolve `--normalize-names` / `--no-normalize-names` (sem flag, `undefined`: vale o manifest), chama `generate` com a data atual, monta o plano de escrita e o de remoção e, sem `--dry-run`, aplica os dois; depois imprime o resumo (com `removidos`, o total e a seção `Órfãos`) e, se houver, a seção `Avisos` (nomes alterados e finais antigas que não estendem a base) (no stdout, como o aviso do `routes/api.php`; o stderr fica para erros).
+- `src/cli.ts`: `run(argv, io)` interpreta os argumentos (`node:util` `parseArgs`, sem dependência externa), executa `generate`, `init` ou `stubs:publish` e devolve o exit code. `io` (stdout, stderr, cwd, relógio) é injetável, o que permite testar sem subprocesso. Para `generate`, lê os nomes em `<out>/database/migrations` (lista vazia se a pasta não existe) e o `manifest-lock.json` anterior (`previousLock`; `null` se não existe, com aviso se estiver ilegível), resolve `--normalize-names` / `--no-normalize-names` (sem flag, `undefined`: vale o manifest), chama `generate` com a data atual, monta o plano de escrita e o de remoção e, sem `--dry-run`, aplica os dois; depois imprime o resumo (com `removidos`, o total e a seção `Órfãos`) e, se houver, a seção `Avisos` (nomes alterados e finais antigas que não estendem a base) (no stdout, como o aviso do `routes/api.php`; o stderr fica para erros).
+- `src/stubFiles.ts`: leitura dos stubs do projeto e `stubs:publish` (veja [Stubs do projeto](#stubs-do-projeto)). O `generate` lê `stubs/crudmaker/laravel-api/*.php.eta` e o `stubs-lock.json` do destino e os passa a `generate`; avisos de stub (ignorado, desatualizado, lock ilegível) saem na seção `Avisos`.
 - `src/readManifest.ts`: único ponto de leitura do manifest: escolhe o parser pela extensão (`.yaml`/`.yml` → YAML 1.2 via lib `yaml`, um documento só e mapa na raiz; `.json` → `JSON.parse`; outra extensão é erro). Erros esperados viram `UserError`; a CLI imprime `Erro: <mensagem>` no stderr e sai com código 1, sem stack trace (defina `CRUDMAKER_DEBUG=1` para vê-lo).
 - `src/initTemplate.ts`: conteúdo do manifest criado por `crudmaker init`.
 
@@ -162,7 +163,14 @@ Um arquivo por projeto (como as rotas) não passa por `entityFileTypes`: renderi
 
 O `generate` continua puro: a CLI lê o `routes/api.php` do destino (ou `null` se não existe) e passa o texto em `options.existingApiRoutes`. Com texto, o `generate` devolve o `routes/api.php` com o include (idêntico ao atual se já estiver lá), e o `planWrites` o classifica como qualquer outro arquivo (sobrescrito ou sem mudança), o que mantém o `--dry-run` fiel. Com `null`, o arquivo não é gerado e a CLI imprime o aviso sobre `php artisan install:api`.
 
-Ainda não existem stubs do projeto (prioridade arquivo a arquivo sobre os templates embutidos) nem variantes por versão do Laravel; `renderTemplate` é o ponto onde a resolução do template passará a considerar essas camadas.
+#### Stubs do projeto
+
+`renderTemplate(name, data, stubs)` (`render.ts`) é o ponto único de resolução: se `stubs[name]` existe, o Eta renderiza essa string (`renderString`); senão, usa o embutido de `templates/laravel-api`. Não há variantes por versão do Laravel ainda; seriam mais uma camada nessa resolução.
+
+- `generate` continua puro: recebe `options.stubs` (nome do template → conteúdo) e `options.stubHashes` (o `stubs-lock.json`, nome → hash do embutido na publicação) e devolve os avisos em `warnings`. Quem lê a pasta é a CLI (`src/stubFiles.ts`: `readStubs`, `publishStubs`).
+- `src/targets/laravel-api/stubs.ts` define `replaceableTemplates` (as bases, `migration` e `routes`; **sem** `*.final`, por serem `create-once` e do usuário), os caminhos (`stubs/crudmaker/laravel-api/`, `stubs/crudmaker/stubs-lock.json`), o hash (sha256 do arquivo embutido) e `prepareStubs`, que ignora com aviso os nomes não substituíveis, valida a sintaxe de cada stub (`validateStub`, que traduz o erro do Eta em `Stub "<nome>.php.eta": erro de sintaxe na linha N: ...`, sem stack trace, antes de qualquer arquivo ser produzido) e gera o aviso de stub desatualizado.
+- O hash fica num arquivo próprio ao lado dos stubs, e não no `manifest-lock.json`: o lock do manifest é uma saída que o `generate` reescreve a cada execução a partir do manifest, enquanto o hash é estado do projeto que nasce na publicação e deve ser versionado junto com os stubs (um `generate` não pode apagá-lo nem precisa conhecê-lo para gerar o lock).
+- `stubs:publish` copia os embutidos pedidos (nome curto = base), pula os existentes (`--force` só para stubs) e grava o hash; `--refresh-lock` só atualiza o hash dos stubs existentes.
 
 ## Dependências
 
@@ -181,6 +189,8 @@ Ainda não existem stubs do projeto (prioridade arquivo a arquivo sobre os templ
 `tests/cli.test.ts` cobre a CLI: chama `run(argv, io)` em diretórios temporários (criação, regeração, `--dry-run`, `init`, erros, ajuda) e tem um teste que roda o binário em subprocesso.
 
 `tests/layers.test.ts` cobre o ticket 10: a política e o cabeçalho de cada camada, as finais vazias que estendem as bases, a ordem dos 7 hooks e a `DB::transaction` no controller base, o `extraRules()`/`extra()`, as rotas e relacionamentos com as classes finais, os caminhos obsoletos de `generate`, a segurança de `planRemovals`/`applyRemovals`, e a CLI em diretório temporário (hook implementado sobrevive à regeração e a base é atualizada, nenhuma combinação de opções sobrescreve uma final, remoção de entidade com `--dry-run`, aviso de final antiga).
+
+`tests/stubs.test.ts` cobre o ticket 13: o stub do controller muda só os controllers gerados, stub de classe final ignorado, aviso de hash, erros de sintaxe e de execução, e `stubs:publish` na CLI (todos, só um, não sobrescreve, `--force`, `--refresh-lock`, generate com stub e erro sem escrever nada).
 
 `tests/validate.test.ts` cobre a validação (fixtures válidos, manifests inválidos com caminho e mensagem, vários erros de uma vez) e confere que `schema/manifest.schema.json` está em dia com o schema zod.
 

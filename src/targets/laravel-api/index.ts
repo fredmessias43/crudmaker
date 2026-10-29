@@ -3,7 +3,7 @@ import { orderByDependency } from "../../dependencyOrder";
 import { Entity } from "../../models/Entity";
 import { GeneratedFile, ObsoleteFile } from "../types";
 import { EntityFileType } from "./fileType";
-import { renderTemplate } from "./render";
+import { renderTemplate, Stubs } from "./render";
 import { collectionBaseFile, collectionFinalFile } from "./viewModels/collection";
 import { controllerBaseFile, controllerFinalFile } from "./viewModels/controller";
 import { existingMigration, foreignKeyTable, migrationFile } from "./viewModels/migration";
@@ -23,6 +23,8 @@ export type LaravelApiInput = {
   existingApiRoutes?: string | null;
   /** Entidades do `manifest-lock.json` anterior do destino, para detectar as que saíram do manifest. */
   previousEntities?: Entity[];
+  /** Stubs do projeto já validados (nome do template → conteúdo), com prioridade sobre os embutidos. */
+  stubs?: Stubs;
 };
 
 /** Tipos de arquivo gerados por entidade, na ordem em que saem. Para um novo tipo, acrescente aqui. */
@@ -108,14 +110,14 @@ export function generateLaravelApi(input: LaravelApiInput): LaravelApiOutput {
       const { path, view, generatedBase } = fileType.build(entity, context);
       files.push({
         path,
-        content: renderTemplate(fileType.template, view),
+        content: renderTemplate(fileType.template, view, input.stubs),
         policy: policyByLayer[fileType.layer],
         ...(generatedBase && { generatedBase }),
       });
     }
   }
 
-  files.push({ path: routesPath, content: renderTemplate("routes", routesView(input.entities)), policy: "overwrite" });
+  files.push({ path: routesPath, content: renderTemplate("routes", routesView(input.entities), input.stubs), policy: "overwrite" });
 
   // O include é calculado a partir do conteúdo recebido; quem grava continua sendo `planWrites`,
   // que classifica o arquivo como sobrescrito (include novo) ou sem mudança (já incluído).

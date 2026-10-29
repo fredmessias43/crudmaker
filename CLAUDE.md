@@ -12,6 +12,7 @@ Gerador de API Laravel a partir de um manifest YAML ou JSON: lê entidades, camp
 - `npm run lint:php`: gera a saída das 3 fixtures num diretório temporário (data fixa, nada em `generated/`) e roda `php -l` em todos os `.php` num único container Docker `php:8.1-cli` (a versão mínima da spec; só precisa de Docker, não de PHP no host). Falha se algum arquivo tiver erro de sintaxe, exceto os listados em `scripts/phpSyntaxAllowlist.ts`.
 - Não há CI no GitHub (decisão do projeto). O hook `.githooks/pre-commit` roda `npx tsc --noEmit`, `npm test` e `npm run lint:php` a cada commit e bloqueia se algo falhar (sem Docker, a checagem PHP é pulada com aviso). O `npm install` ativa o hook pelo script `prepare` (`core.hooksPath`). Não use `--no-verify` para contornar uma falha: corrija.
 - **Allowlist do `lint:php`** (`scripts/phpSyntaxAllowlist.ts`): falhas conhecidas do gerador, cada uma com arquivo, motivo e ticket que corrige (hoje vazia: o ticket 09 removeu as últimas entradas). Só mexa nela para remover uma entrada quando o ticket corrigir (a checagem falha se uma entrada deixar de falhar). Nunca acrescente entradas para esconder um erro novo: corrija o gerador.
+- `crudmaker stubs:publish [tipo...] [--out <dir>]` (`npm run cli -- stubs:publish ...`): copia os templates embutidos da camada gerada para `stubs/crudmaker/laravel-api/` do projeto de destino; esses stubs têm prioridade, arquivo a arquivo, no `generate`. Em tests, use sempre `--out` num diretório temporário (nunca em `generated/`).
 - `npx tsc --noEmit`: checagem de tipos. Passa sem erros. Ainda não há lint.
 
 ## Onde está cada coisa
@@ -30,6 +31,7 @@ Gerador de API Laravel a partir de um manifest YAML ou JSON: lê entidades, camp
 - `src/models/Entity.ts`: nome da entidade em vários casings e nome da tabela.
 - `src/targets/types.ts`: `GeneratedFile` (`{ path, content, policy, generatedBase? }`), `FilePolicy`, `ObsoleteFile` e `GENERATED_MARKER` (o cabeçalho que marca arquivo gerado).
 - `src/targets/laravel-api/`: o target que transforma o modelo normalizado em arquivos Laravel. `index.ts` (`generateLaravelApi`, lista `entityFileTypes`), `render.ts` (motor Eta), `names.ts`, `fileType.ts` e `viewModels/<tipo>.ts` (variáveis de cada template, caminho do arquivo; também `routes.ts` com `ensureRoutesInclude`).
+- `src/stubFiles.ts` e `src/targets/laravel-api/stubs.ts`: leitura/publicação dos stubs do projeto e lista dos templates substituíveis (só a camada gerada; as finais não têm stub).
 - `templates/laravel-api/`: os templates do PHP gerado: `<tipo>.base.php.eta` (camada gerada) e `<tipo>.final.php.eta` (camada de customização) para model, request, resource, collection e controller, mais `migration.php.eta` e `routes.php.eta`. Vão no pacote publicado (`files` do `package.json`).
 - `generated/<pkg.code>/`: saída. Está no `.gitignore` e costuma conter projetos Laravel reais (com código escrito à mão).
 
