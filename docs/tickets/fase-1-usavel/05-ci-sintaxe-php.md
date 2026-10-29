@@ -16,4 +16,4 @@
 - [x] Um PHP propositalmente inválido faz a checagem falhar.
 - [x] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.
 
-> **Sem CI no GitHub, por decisão do usuário:** a verificação é local. Antes de commitar, rode `npx tsc --noEmit`, `npm test` e `npm run lint:php`. A checagem (`npm run lint:php`) roda `php -l` na saída de `generate` para as fixtures e tem uma allowlist de falhas conhecidas em `scripts/phpSyntaxAllowlist.ts` (entidade `class` do fixture `curso`, a ser corrigida pela validação de palavras reservadas, ticket 09).
+> **Sem CI no GitHub, por decisão do usuário:** a verificação é local, pelo hook `.githooks/pre-commit` (tipos, testes e `lint:php` a cada commit). A checagem (`npm run lint:php`) roda `php -l` na saída de `generate` para as fixtures e tem uma allowlist de falhas conhecidas em `scripts/phpSyntaxAllowlist.ts` (entidade `class` do fixture `curso`, a ser corrigida pela validação de palavras reservadas, ticket 09).

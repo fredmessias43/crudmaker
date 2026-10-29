@@ -1,0 +1,22 @@
+#!/bin/sh
+# Hook de pre-commit do crudmaker: roda as mesmas verificações que antes ficavam no CI.
+# Ativado pelo `npm install` (script `prepare` configura `core.hooksPath`).
+# Para pular numa emergência: git commit --no-verify
+
+set -u
+
+echo "pre-commit: checagem de tipos"
+npx tsc --noEmit || exit 1
+
+echo "pre-commit: testes"
+npm test --silent || exit 1
+
+echo "pre-commit: sintaxe do PHP gerado"
+npm run --silent lint:php
+status=$?
+if [ "$status" -eq 2 ]; then
+  # O script sai com 2 quando o Docker não está disponível: avisa, mas não bloqueia o commit.
+  echo "pre-commit: Docker indisponível, checagem de sintaxe PHP pulada. Rode 'npm run lint:php' depois." >&2
+elif [ "$status" -ne 0 ]; then
+  exit 1
+fi

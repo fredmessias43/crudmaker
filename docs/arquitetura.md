@@ -123,7 +123,7 @@ A checagem olha a saída de `generate`, e não os snapshots, para não depender 
 
 `scripts/phpSyntaxAllowlist.ts` lista as falhas conhecidas (arquivo, motivo e ticket que corrige). Elas aparecem como "conhecido" e não quebram a checagem; uma entrada que deixa de falhar também quebra a checagem, para a lista não apodrecer. `tests/phpSyntax.test.ts` testa a classificação sem Docker e, com `PHP_DOCKER_TESTS=1`, prova com Docker que um PHP inválido reprova (a variável `CRUDMAKER_INJECT_INVALID_PHP=1` faz o script injetar um arquivo inválido).
 
-Não há CI no GitHub: a checagem roda localmente, junto com `npx tsc --noEmit` e `npm test`.
+Não há CI no GitHub: o hook versionado `.githooks/pre-commit` roda `npx tsc --noEmit`, `npm test` e `npm run lint:php` a cada commit (cerca de 5 s) e bloqueia o commit se algo falhar. Sem Docker (o script sai com 2), a checagem PHP é pulada com aviso. O script `prepare` do `package.json` ativa o hook com `git config core.hooksPath .githooks`.
 
 ## Próximos passos
 

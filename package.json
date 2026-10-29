@@ -5,7 +5,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "cli": "tsx src/bin.ts",
-    "prepare": "npm run build",
+    "prepare": "git config core.hooksPath .githooks 2>/dev/null || true; npm run build",
     "test": "vitest run",
     "schema": "tsx scripts/generateSchema.ts",
     "lint:php": "tsx scripts/checkPhpSyntax.ts"
