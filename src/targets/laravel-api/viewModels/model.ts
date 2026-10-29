@@ -74,6 +74,8 @@ export const modelBaseFile: EntityFileType = {
         traits: ["HasFactory", "SoftDeletes", "HasUuids"],
         casts,
         fillable: fields.map(([key]) => key),
+        // `hidden` também esconde o campo de `toArray()`/`toJson()` da model, para não vazar fora da resource.
+        hidden: fields.filter(([, field]) => field.hidden).map(([, field]) => field.name),
         relations,
       },
     };

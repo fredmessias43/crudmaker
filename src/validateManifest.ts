@@ -84,6 +84,11 @@ function collectIssues(issues: any[], basePath: PropertyKey[], out: ManifestProb
 
     if (issue.code === "invalid_union") {
       const branches: any[][] = issue.errors;
+      // `default` aceita texto, número ou booleano; fora disso o erro é do próprio valor, não da forma curta/longa do campo.
+      if (basePath.length > 0 && issue.path.length === 1 && issue.path[0] === "default") {
+        out.push({ path: formatPath(path), message: `deve ser texto, número ou verdadeiro/falso (true/false), recebido ${describeValue(issue.input)}` });
+        continue;
+      }
       if (typeof issue.input === "string") {
         collectIssues(branches[0], path, out);
       } else if (issue.input !== null && typeof issue.input === "object" && !Array.isArray(issue.input) && branches[1]) {
@@ -123,6 +128,69 @@ function validateEnums(manifest: ManifestInput): ManifestProblem[] {
           ? { path: `${base}.fields.${fieldKey}`, message: `campo enum precisa de enumItems; use a forma { "type": "enum", "enumItems": [...] }` }
           : { path: `${base}.fields.${fieldKey}.enumItems`, message: items ? "campo enum precisa de ao menos um item" : "campo enum precisa de enumItems" },
       );
+    }
+  }
+
+  return problems;
+}
+
+const DATE_FORMATS = {
+  date: { regex: /^\d{4}-\d{2}-\d{2}$/, label: "Y-m-d", example: "2025-01-31" },
+  datetime: { regex: /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/, label: "Y-m-d H:i:s", example: "2025-01-31 08:30:00" },
+} as const;
+
+/** Data/hora no formato esperado e existente no calendário (`2025-02-30` não passa). */
+function isValidDate(value: string, type: keyof typeof DATE_FORMATS): boolean {
+  if (!DATE_FORMATS[type].regex.test(value)) return false;
+
+  const [year, month, day] = value.slice(0, 10).split("-").map(Number);
+  const [hour, minute, second] = type === "datetime" ? value.slice(11).split(":").map(Number) : [0, 0, 0];
+  const date = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+    && hour < 24 && minute < 60 && second < 60;
+}
+
+/** Mensagem de erro se o `default` não combina com o tipo; `undefined` se combina. */
+function defaultProblem(type: string, value: string | number | boolean, enumItems: string[]): string | undefined {
+  const got = `recebido ${describeValue(value)} ${JSON.stringify(value)}`;
+
+  switch (type) {
+    case "uuid":
+    case "string":
+    case "text":
+      return typeof value === "string" ? undefined : `default de campo ${type} deve ser texto, ${got}`;
+    case "date":
+    case "datetime": {
+      const { label, example } = DATE_FORMATS[type];
+      if (typeof value === "string" && isValidDate(value, type)) return undefined;
+      return `default de campo ${type} deve ser uma data no formato ${label} (ex.: ${JSON.stringify(example)}), ${got}`;
+    }
+    case "integer":
+      return typeof value === "number" && Number.isInteger(value) ? undefined : `default de campo integer deve ser um número inteiro, ${got}`;
+    case "double":
+      return typeof value === "number" && Number.isFinite(value) ? undefined : `default de campo double deve ser um número, ${got}`;
+    case "boolean":
+      return typeof value === "boolean" ? undefined : `default de campo boolean deve ser true ou false, ${got}`;
+    case "enum":
+      if (typeof value === "string" && enumItems.includes(value)) return undefined;
+      return `default de campo enum deve ser um dos enumItems (${enumItems.map((item) => JSON.stringify(item)).join(", ")}), ${got}`;
+    default:
+      return `default não é suportado em campo ${type}; remova o default ou use outro tipo`;
+  }
+}
+
+/** `default` de cada campo contra o tipo. Roda com os nomes originais, para os caminhos baterem com o arquivo. */
+function validateFieldDefaults(manifest: ManifestInput): ManifestProblem[] {
+  const problems: ManifestProblem[] = [];
+
+  for (const [entityName, entity] of Object.entries(manifest.pkg.entities)) {
+    for (const [fieldKey, field] of Object.entries(entity.fields ?? {})) {
+      if (typeof field === "string" || field.default === undefined) continue;
+
+      const type = field.type === "int" ? "integer" : field.type === "displayName" ? "string" : field.type;
+      const message = defaultProblem(type, field.default, field.enumItems ?? []);
+      if (message !== undefined) problems.push({ path: `pkg.entities.${entityName}.fields.${fieldKey}.default`, message });
     }
   }
 
@@ -333,7 +401,7 @@ export function validateManifest(obj: unknown, options: ValidateOptions = {}): V
   }
 
   const enabled = options.normalizeNames ?? result.data.pkg.normalizeNames ?? true;
-  const problems = [...validateEnums(result.data), ...validateDefaultsApi(obj)];
+  const problems = [...validateEnums(result.data), ...validateFieldDefaults(result.data), ...validateDefaultsApi(obj)];
 
   const normalized = normalizeNames(result.data, enabled);
   problems.push(...normalized.problems);

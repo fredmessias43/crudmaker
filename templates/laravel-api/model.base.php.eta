@@ -41,6 +41,19 @@ abstract class <%~ it.className %> extends <%~ it.extends %>
 <% } -%>
 	];
 
+<% if (it.hidden.length > 0) { -%>
+	/**
+	 * The attributes that should be hidden for serialization.
+	 *
+	 * @var array
+	 */
+	protected $hidden = [
+<% for (const name of it.hidden) { -%>
+		'<%~ name %>',
+<% } -%>
+	];
+
+<% } -%>
 <% for (const relation of it.relations) { -%>
 	public function <%~ relation.name %>(): <%~ relation.returnType %>
 	{

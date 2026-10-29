@@ -28,12 +28,22 @@ const fieldObjectSchema = z.object({
   required: z.boolean().describe("false deixa a coluna nullable. Padrão: true."),
   unique: z.boolean().describe("true cria índice único e a regra Rule::unique. Padrão: false."),
   enumItems: z.array(z.string()).describe(`Valores permitidos quando type é "enum" (ao menos um). Padrão: [].`),
-}).partial({ name: true, required: true, unique: true, enumItems: true });
+  hidden: z.boolean().describe("true tira o campo da resource (e o põe em $hidden da model); continua no $fillable e na validação. Padrão: false."),
+  rules: z.array(z.string().min(1)).describe(
+    `Regras extras de validação do Laravel (ex.: ["max:120", "email"]), somadas às derivadas do tipo, depois delas e sem repetir. ` +
+    `O crudmaker não confere se a regra existe; o hook extraRules() da request final pode substituir tudo.`,
+  ),
+  default: z.union([z.string(), z.number(), z.boolean()]).describe(
+    `Valor padrão da coluna (->default(...) na migration). Deve combinar com o tipo: texto para string, text, uuid, date ("Y-m-d"), ` +
+    `datetime ("Y-m-d H:i:s") e enum (um dos enumItems; substitui o padrão, que é o primeiro item); inteiro para integer; número para double; ` +
+    `true/false para boolean. Não vale para json.`,
+  ),
+}).partial({ name: true, required: true, unique: true, enumItems: true, hidden: true, rules: true, default: true });
 
 const fieldSchema = z.union([
   fieldTypeSchema,
   fieldObjectSchema,
-]).describe(`Campo: forma curta (só o tipo, ex.: "string") ou objeto com type, name, required, unique e enumItems.`);
+]).describe(`Campo: forma curta (só o tipo, ex.: "string") ou objeto com type, name, required, unique, enumItems, hidden, rules e default.`);
 
 const relationKeySchema = z.enum([...RELATION_KEYS, ...OWNER_KEYS]);
 

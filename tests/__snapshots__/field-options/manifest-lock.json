@@ -1,0 +1,151 @@
+{
+  "code": "field-options",
+  "version": "0.1.0",
+  "entities": {
+    "account": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "password": {
+          "type": "string",
+          "name": "password",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "hidden": true,
+          "rules": [
+            "min:8"
+          ]
+        },
+        "email": {
+          "type": "string",
+          "name": "email",
+          "required": true,
+          "unique": true,
+          "enumItems": [],
+          "rules": [
+            "email",
+            "max:120",
+            "string",
+            "required"
+          ]
+        },
+        "nickname": {
+          "type": "string",
+          "name": "nickname",
+          "required": false,
+          "unique": false,
+          "enumItems": [],
+          "default": "O'Brien \\ Co"
+        },
+        "bio": {
+          "type": "text",
+          "name": "bio",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "default": "sem bio"
+        },
+        "owner_ref": {
+          "type": "uuid",
+          "name": "owner_ref",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "default": "00000000-0000-0000-0000-000000000000"
+        },
+        "status": {
+          "type": "enum",
+          "name": "status",
+          "required": true,
+          "unique": false,
+          "enumItems": [
+            "pending",
+            "active",
+            "blocked"
+          ],
+          "default": "active"
+        },
+        "plan": {
+          "type": "enum",
+          "name": "plan",
+          "required": true,
+          "unique": false,
+          "enumItems": [
+            "free",
+            "pro"
+          ]
+        },
+        "age": {
+          "type": "integer",
+          "name": "age",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "default": 18
+        },
+        "credit": {
+          "type": "double",
+          "name": "credit",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "default": 12.5
+        },
+        "score": {
+          "type": "integer",
+          "name": "score",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "default": 0
+        },
+        "active": {
+          "type": "boolean",
+          "name": "active",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "default": true
+        },
+        "newsletter": {
+          "type": "boolean",
+          "name": "newsletter",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "default": false
+        },
+        "birthday": {
+          "type": "date",
+          "name": "birthday",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "default": "2000-01-31"
+        },
+        "last_seen": {
+          "type": "datetime",
+          "name": "last_seen",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "default": "2025-01-02 03:04:05"
+        },
+        "settings": {
+          "type": "json",
+          "name": "settings",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        }
+      },
+      "relationships": {}
+    }
+  }
+}

@@ -15,7 +15,13 @@ export type Field = {
   required: boolean,
   unique: boolean,
   enumItems: string[],
-  relationship?: boolean
+  relationship?: boolean,
+  /** Só presente se declarado. Sai da resource e entra em `$hidden` da model. */
+  hidden?: boolean,
+  /** Só presente se declarado. Regras extras do Laravel, em texto, somadas às derivadas do tipo. */
+  rules?: string[],
+  /** Só presente se declarado. Vale na migration e na factory (ticket 18); em enum substitui o primeiro item. */
+  default?: string | number | boolean,
 };
 
 export type Fields = {

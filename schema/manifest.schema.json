@@ -104,6 +104,26 @@
                             "type": "string"
                           },
                           "description": "Valores permitidos quando type é \"enum\" (ao menos um). Padrão: []."
+                        },
+                        "hidden": {
+                          "type": "boolean",
+                          "description": "true tira o campo da resource (e o põe em $hidden da model); continua no $fillable e na validação. Padrão: false."
+                        },
+                        "rules": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "description": "Regras extras de validação do Laravel (ex.: [\"max:120\", \"email\"]), somadas às derivadas do tipo, depois delas e sem repetir. O crudmaker não confere se a regra existe; o hook extraRules() da request final pode substituir tudo."
+                        },
+                        "default": {
+                          "description": "Valor padrão da coluna (->default(...) na migration). Deve combinar com o tipo: texto para string, text, uuid, date (\"Y-m-d\"), datetime (\"Y-m-d H:i:s\") e enum (um dos enumItems; substitui o padrão, que é o primeiro item); inteiro para integer; número para double; true/false para boolean. Não vale para json.",
+                          "type": [
+                            "string",
+                            "number",
+                            "boolean"
+                          ]
                         }
                       },
                       "required": [
@@ -111,7 +131,7 @@
                       ]
                     }
                   ],
-                  "description": "Campo: forma curta (só o tipo, ex.: \"string\") ou objeto com type, name, required, unique e enumItems."
+                  "description": "Campo: forma curta (só o tipo, ex.: \"string\") ou objeto com type, name, required, unique, enumItems, hidden, rules e default."
                 },
                 "description": "Campos da entidade (chave = nome do campo). Declare sempre \"id\": \"uuid\"."
               },

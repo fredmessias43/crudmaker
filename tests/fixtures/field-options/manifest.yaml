@@ -1,0 +1,31 @@
+# Fixture das opções de campo (ticket 12): hidden, rules e default em todos os tipos suportados.
+$schema: ../../../schema/manifest.schema.json
+system:
+  title: Field Options
+  code: field-options
+pkg:
+  code: field-options
+  entities:
+    account:
+      fields:
+        id: uuid
+        # Campo oculto: fora da resource, em $hidden da model; segue no $fillable e na validação.
+        password: { type: string, hidden: true, rules: ["min:8"] }
+        # Regras extras depois das derivadas; "string" e "required" já existem e não se repetem.
+        email: { type: string, unique: true, rules: [email, "max:120", string, required] }
+        # Valores com aspas e barra, para o escape no PHP.
+        nickname: { type: string, required: false, default: "O'Brien \\ Co" }
+        bio: { type: text, default: "sem bio" }
+        owner_ref: { type: uuid, default: 00000000-0000-0000-0000-000000000000 }
+        # Enum: o default declarado substitui o primeiro item.
+        status: { type: enum, enumItems: [pending, active, blocked], default: active }
+        # Enum sem default: continua valendo o primeiro item.
+        plan: { type: enum, enumItems: [free, pro] }
+        age: { type: integer, default: 18 }
+        credit: { type: double, default: 12.5 }
+        score: { type: int, default: 0 }
+        active: { type: boolean, default: true }
+        newsletter: { type: boolean, default: false }
+        birthday: { type: date, default: "2000-01-31" }
+        last_seen: { type: datetime, default: "2025-01-02 03:04:05" }
+        settings: json

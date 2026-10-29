@@ -3,11 +3,17 @@ import { format } from "date-fns";
 import { plural } from "pluralize";
 import { Field, RelationshipValue } from "../../../types";
 import { EntityFileType } from "../fileType";
+import { phpString } from "../entityApi";
 import { entityNames } from "../names";
 
 /** Tabela referenciada por um `belongsTo`: snake_case plural da entidade (a mesma de `Entity.getTableName`). */
 export function foreignKeyTable(relationship: RelationshipValue): string {
   return plural(snakeCase(relationship.entity));
+}
+
+/** Valor escalar como literal PHP: texto entre aspas simples (com `\` e `'` escapados), número e booleano crus. */
+function phpLiteral(value: string | number | boolean): string {
+  return typeof value === "string" ? phpString(value) : String(value);
 }
 
 /** Declaração de uma coluna no Blueprint, com o `;` final. */
@@ -18,9 +24,12 @@ function column(field: Field): string {
 
   if (field.type === "enum") {
     line = line.substring(0, line.length - 1);
-    line += `, ${JSON.stringify(field.enumItems).replaceAll('"', "'")})`;
-    line += `->default('${field.enumItems[0]}')`;
+    line += `, [${field.enumItems.map(phpString).join(",")}])`;
   }
+
+  // Enum sem `default` declarado usa o primeiro item; os demais tipos só têm default se declarado.
+  const defaultValue = field.default ?? (field.type === "enum" ? field.enumItems[0] : undefined);
+  if (defaultValue !== undefined) line += `->default(${phpLiteral(defaultValue)})`;
 
   if (!field.required) line += "->nullable()";
 

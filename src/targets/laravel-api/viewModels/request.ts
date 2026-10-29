@@ -1,4 +1,5 @@
 import { Field } from "../../../types";
+import { phpString } from "../entityApi";
 import { EntityFileType } from "../fileType";
 import { BASE_NAMESPACE, entityNames } from "../names";
 import { classHeader, classPair, finalClassFile } from "./classHeader";
@@ -25,7 +26,7 @@ function ruleItems(field: Field, table: string, routeParam: string): string[] {
   } else if (field.type === "datetime") {
     items.push("'date_format:Y-m-d H:i'");
   } else if (field.type === "enum") {
-    items.push(`Rule::in(array(${field.enumItems.map((item) => `'${item}'`).join()}))`);
+    items.push(`Rule::in(array(${field.enumItems.map(phpString).join()}))`);
   }
 
   if (field.unique) {
@@ -33,6 +34,13 @@ function ruleItems(field: Field, table: string, routeParam: string): string[] {
     // registro desligaria a checagem). O Laravel aceita model (route model binding), id cru ou `null`
     // (criação, sem parâmetro na rota: nada é ignorado) e usa a chave primária `id`.
     items.push(`Rule::unique('${table}', '${field.name}')->ignore($this->route('${routeParam}'))`);
+  }
+
+  // Regras extras do manifest vêm depois das derivadas e não repetem uma que já está na lista
+  // (comparação textual: `"required"` repete `'required'`, mas não `Rule::in(...)`).
+  for (const rule of field.rules ?? []) {
+    const item = phpString(rule);
+    if (!items.includes(item)) items.push(item);
   }
 
   return items;

@@ -26,7 +26,8 @@ export const resourceBaseFile: EntityFileType = {
           extends: "JsonResource",
           layer: "base",
         }),
-        fields: Object.keys(entity.fields).map((key) => ({ key })),
+        // Campos `hidden` não saem no JSON.
+        fields: Object.entries(entity.fields).filter(([, field]) => !field.hidden).map(([key]) => ({ key })),
         /** Relacionamentos de `api.with`: entram só se carregados (`whenLoaded`), com o nome do método como chave. */
         relations,
       },

@@ -1,0 +1,13 @@
+manifest-lock.json
+app/Generated/Models/BaseAccount.php
+app/Models/Account.php
+app/Generated/Http/Resources/BaseAccountResource.php
+app/Http/Resources/AccountResource.php
+app/Generated/Http/Resources/BaseAccountCollection.php
+app/Http/Resources/AccountCollection.php
+app/Generated/Http/Controllers/Api/BaseAccountController.php
+app/Http/Controllers/Api/AccountController.php
+app/Generated/Http/Requests/BaseAccountRequest.php
+app/Http/Requests/AccountRequest.php
+database/migrations/2025_01_02_030405_create_accounts_table.php
+routes/crudmaker.php

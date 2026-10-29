@@ -83,6 +83,9 @@ Propriedades da forma completa:
 | `required` | `true` | `false` deixa a coluna `nullable` e a regra de validação `nullable`. |
 | `unique` | `false` | Cria índice único na migration e regra `Rule::unique` na request, que ignora o próprio registro na edição (veja [Regra `unique` na edição](#regra-unique-na-edição)). |
 | `enumItems` | `[]` | Valores permitidos quando `type` é `enum`. |
+| `hidden` | `false` | `true` tira o campo da resource base (não aparece no JSON) e o põe em `$hidden` da model. Veja [Opções de campo](#opções-de-campo-hidden-rules-e-default). |
+| `rules` | `[]` | Lista de regras extras do Laravel (ex.: `["max:120", "email"]`), somadas às derivadas do tipo. |
+| `default` | — | Valor padrão da coluna (`->default(...)` na migration). Em `enum`, substitui o primeiro item. Deve combinar com o tipo. |
 
 > **Declare sempre `"id": "uuid"`.** A model usa `HasUuids` e chave do tipo string, e a migration só marca como `primary()` a coluna chamada `id`. Entidade sem campo `id` (a chave ou o `name` do campo) é erro de validação.
 
@@ -99,13 +102,57 @@ Propriedades da forma completa:
 | `date` | `date()` | `date_format:Y-m-d` | `date` |
 | `datetime` | `datetime()` | `date_format:Y-m-d H:i` | `datetime` |
 | `json` | `json()` | `array` | `array` |
-| `enum` | `enum(..., [itens])` com default no primeiro item | `Rule::in([itens])` | — |
+| `enum` | `enum(..., [itens])` com default no primeiro item (ou o `default` declarado) | `Rule::in([itens])` | — |
 
 Todas as regras geradas existem no Laravel 10–12 (`bail`, `required`, `nullable`, `uuid`, `string`, `numeric`, `integer`, `boolean`, `array`, `date_format`, `Rule::in`, `Rule::unique`). O `json` usa `array` (e não a regra `json` do Laravel, que valida uma string JSON) porque o corpo chega já decodificado e o cast da model é `array`.
 
 O tipo especial `displayName` vira um campo `string` chamado `display_name`, seja qual for a chave usada.
 
 Os casts ficam no `$casts` da model. Como `date` e `datetime` viram `Carbon` na leitura, o `prepareForValidation` da request devolve esses campos ao formato da regra (`->format('Y-m-d')` / `->format('Y-m-d H:i')`) ao completar os campos ausentes numa atualização; e a resource passa a devolvê-los serializados pelo Laravel (ISO 8601), não mais como texto cru do banco.
+
+### Opções de campo: `hidden`, `rules` e `default`
+
+```yaml
+fields:
+  password: { type: string, hidden: true, rules: ["min:8"] }
+  email: { type: string, unique: true, rules: [email, "max:120"] }
+  status: { type: enum, enumItems: [pending, active, blocked], default: active }
+  age: { type: integer, default: 18 }
+  birthday: { type: date, default: "2000-01-31" }
+```
+
+**`hidden: true`**
+- O campo sai da resource base (`toArray`), então não aparece no JSON da API.
+- Também entra em `$hidden` da model base. Sem isso o valor vazaria por qualquer `$model->toArray()` / `toJson()` / retorno direto da model feito à mão (na final ou em outro controller). A model sem campos ocultos não ganha `$hidden`.
+- Continua no `$fillable`, na migration e na validação da request (a escrita funciona normalmente). O `$hidden` só afeta a serialização: ler `$model->password` segue funcionando. Um `extra()` escrito à mão na resource final pode, claro, devolvê-lo de novo.
+
+**`rules`**
+- Lista de strings não vazias, no formato do Laravel (`"max:120"`, `"email"`, `"regex:/^[a-z]+$/"`). Cada item vira uma regra do array, **depois** das derivadas do tipo (`bail`, `required`/`nullable`, regra do tipo, `Rule::in`, `Rule::unique`) e na ordem em que foram declaradas.
+- Não duplica: uma regra igual (texto idêntico) a uma já presente é ignorada, então `required` ou `string` em `rules` não repetem as geradas. Itens repetidos na própria lista também contam uma vez. `Rule::in`/`Rule::unique` são objetos, não texto, e não entram nessa comparação.
+- O crudmaker **não confere se a regra existe** nem se os parâmetros fazem sentido (`"maxx:3"` passa na validação do manifest e só falha quando a request roda). Use o nome e a sintaxe do Laravel. Cada item é uma regra: não junte várias com `|` (no formato array do Laravel o `|` só vale dentro de regras como `regex:`).
+- O hook `extraRules()` da request final continua valendo por último e pode substituir qualquer regra de um campo (a mesma chave sobrescreve), inclusive as de `rules`.
+
+**`default`**
+- Vai para a migration (`->default(...)`) e fica guardado no modelo normalizado (`entity.fields.<campo>.default`) para a factory usar (ticket 18).
+- Em `enum`, substitui o default de sempre (o primeiro item de `enumItems`); sem `default`, continua o primeiro item.
+- Não muda a request: o campo segue `required` (ou `nullable` com `required: false`) e o `prepareForValidation` não aplica o default. O default vale para quem insere sem informar a coluna (migration/seed/factory), não dispensa o campo na API; para torná-lo opcional na API declare também `required: false`.
+- Compatibilidade com o tipo (a validação do manifest recusa o resto, com o caminho `...fields.<campo>.default`):
+
+| Tipo | `default` aceito | Exemplo na migration |
+|---|---|---|
+| `string`, `text`, `uuid` | texto | `->default('sem bio')` |
+| `enum` | texto que seja um dos `enumItems` | `->default('active')` |
+| `integer` (e `int`) | número inteiro | `->default(18)` |
+| `double` | número (inteiro ou decimal) | `->default(12.5)` |
+| `boolean` | `true` ou `false` | `->default(true)` |
+| `date` | texto no formato `Y-m-d`, data existente | `->default('2000-01-31')` |
+| `datetime` | texto no formato `Y-m-d H:i:s`, data/hora existente | `->default('2025-01-02 03:04:05')` |
+| `json` | **não suportado** (erro) | — |
+
+- Em YAML, datas sem aspas podem ser lidas como outro tipo por alguns leitores; escreva `date`/`datetime` entre aspas. Valores de texto são escapados no PHP (`'` e `\`).
+- `json` fica sem `default` porque o valor teria de ser um array/objeto, que a migration (`->default(json)`) e a factory tratam de forma diferente por banco; use a factory ou o hook da model para isso.
+
+As três opções não são afetadas pela normalização de nomes (só a chave e o `name` do campo são normalizados).
 
 ### Regra `unique` na edição
 
@@ -368,6 +415,10 @@ O comando sai com código 1 e nenhum arquivo é escrito.
 | `o nome vira "x", o mesmo de ...` | duas entidades (ou dois campos da mesma entidade) com o mesmo nome depois da normalização |
 | `a entidade "x" não tem o campo "id"; declare "id": "uuid" ...` | entidade sem campo `id` (pela chave ou pelo `name`). O caminho é `pkg.entities.x.fields` (ou a própria entidade, se não tem `fields`) |
 | `o nome gera a classe "X", que é palavra reservada do PHP; renomeie a entidade ...` | o nome da entidade (já normalizado) gera uma classe com palavra reservada do PHP, sem diferenciar maiúsculas: `class` → `Class`. Vale a lista oficial de palavras reservadas do PHP 8 mais os nomes de classe reservados (`self`, `parent`, `int`, `string`, `null`...). Nomes que só *contêm* a palavra (`classroom`, `listing`) são válidos |
+| `default de campo <tipo> deve ser ...` / `default não é suportado em campo json ...` | `default` incompatível com o tipo (veja [Opções de campo](#opções-de-campo-hidden-rules-e-default)); em enum, fora dos `enumItems`. Caminho `...fields.<campo>.default` |
+| `deve ser texto, número ou verdadeiro/falso (true/false), recebido ...` | `default` que é lista, objeto ou nulo |
+| `rules[n]: não pode ser vazio` / `deve ser texto, recebido ...` | item de `rules` vazio ou que não é texto (`rules` precisa ser uma lista) |
+| `hidden: deve ser verdadeiro/falso (true/false), recebido ...` | `hidden` não booleano |
 | (opções de `api`) | veja [Validação das opções](#validação-das-opções) |
 | `dependência circular entre FKs (a → b → a) ...` | ciclo de `belongsTo` entre entidades (veja [Ordem das migrations](#ordem-das-migrations)); o caminho aponta para o `belongsTo` que sai da primeira entidade do ciclo |
 

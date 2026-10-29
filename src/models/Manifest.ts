@@ -13,6 +13,10 @@ function normalizeField(fieldKey: string, fieldValue: FieldInput): [string, Fiel
       required: fieldValue.required ?? true,
       unique: fieldValue.unique ?? false,
       enumItems: fieldValue.enumItems ?? [],
+      // Opcionais: só aparecem se declaradas (o lock das fixtures antigas não muda).
+      ...(fieldValue.hidden !== undefined && { hidden: fieldValue.hidden }),
+      ...(fieldValue.rules !== undefined && { rules: fieldValue.rules }),
+      ...(fieldValue.default !== undefined && { default: fieldValue.default }),
     };
 
   // Aliases. O `name` do displayName permanece o original; só a chave vira `display_name`.

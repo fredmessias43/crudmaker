@@ -39,7 +39,7 @@ afterEach(() => {
   fs.rmSync(tmp, { recursive: true, force: true });
 });
 
-describe.each(["bingo", "curso", "vende-que-vende-api", "api-options"])("YAML equivalente ao JSON (%s)", (name) => {
+describe.each(["bingo", "curso", "vende-que-vende-api", "api-options", "field-options"])("YAML equivalente ao JSON (%s)", (name) => {
   it("lê o mesmo objeto e gera exatamente a mesma saída", () => {
     const json = readManifest(path.join(fixturesDir, name, "manifest.json"));
     const yaml = readManifest(path.join(fixturesDir, name, "manifest.yaml"));
