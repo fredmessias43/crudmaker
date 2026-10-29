@@ -5,7 +5,9 @@ import {
   ControllerFile,
   RequestFile,
   MigrationFile,
+  RoutesFile,
 } from "./fileCreators";
+import { ensureRoutesInclude } from "./fileCreators/RoutesFile";
 import { Entity } from "./models/Entity";
 import { Manifest } from "./models/Manifest";
 
@@ -28,6 +30,14 @@ export type GenerateOptions = {
   now: Date;
   /** Nomes de arquivo (sem pasta) das migrations que já existem no destino. */
   existingMigrations: string[];
+  /**
+   * Conteúdo atual do `routes/api.php` do destino, ou `null` se o arquivo não existe.
+   * Quando há conteúdo, `generate` devolve o `routes/api.php` com o include das rotas geradas
+   * (acrescentado só se faltar). Quando é `null`/omitido, o arquivo não é gerado: criá-lo sozinho
+   * não adiantaria, pois no Laravel 11+ ele só é carregado se registrado em `bootstrap/app.php`
+   * (o `php artisan install:api` faz as duas coisas).
+   */
+  existingApiRoutes?: string | null;
 };
 
 /**
@@ -37,6 +47,7 @@ export type GenerateOptions = {
 export function generate(manifestObj: { [key: string]: any }, options: GenerateOptions): GeneratedFile[] {
   const manifest = new Manifest(manifestObj);
   const files: GeneratedFile[] = [];
+  const entities: Entity[] = [];
 
   files.push({
     path: "manifest-lock.json",
@@ -46,6 +57,7 @@ export function generate(manifestObj: { [key: string]: any }, options: GenerateO
 
   for (const key in manifest.entities) {
     const entity = new Entity(key, manifest.entities[key]);
+    entities.push(entity);
 
     const phpFiles = [
       new ModelFile(entity, manifest.pkgCode, manifest.systemCode),
@@ -63,6 +75,23 @@ export function generate(manifestObj: { [key: string]: any }, options: GenerateO
         policy: "overwrite",
       });
     }
+  }
+
+  const routesFile = new RoutesFile(entities);
+  files.push({
+    path: routesFile.getRelativePath(),
+    content: routesFile.mountFile(),
+    policy: "overwrite",
+  });
+
+  // O include é calculado aqui, a partir do conteúdo recebido; quem grava continua sendo `planWrites`,
+  // que classifica o arquivo como sobrescrito (include novo) ou sem mudança (já incluído).
+  if (options.existingApiRoutes != null) {
+    files.push({
+      path: "routes/api.php",
+      content: ensureRoutesInclude(options.existingApiRoutes),
+      policy: "overwrite",
+    });
   }
 
   return files;

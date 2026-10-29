@@ -35,3 +35,4 @@ app/Http/Resources/DrawnNumbersCollection.php
 app/Http/Controllers/Api/DrawnNumbersController.php
 app/Http/Requests/DrawnNumbersRequest.php
 database/migrations/2025_01_02_030405_create_drawn_numbers_table.php
+routes/crudmaker.php

@@ -23,3 +23,4 @@ app/Http/Resources/AddressCollection.php
 app/Http/Controllers/Api/AddressController.php
 app/Http/Requests/AddressRequest.php
 database/migrations/2025_01_02_030405_create_addresses_table.php
+routes/crudmaker.php

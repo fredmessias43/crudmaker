@@ -67,18 +67,35 @@ Para cada entidade são escritos:
 | `<Entidade>Resource.php` e `<Entidade>Collection.php` | `app/Http/Resources/` |
 | `<data>_create_<tabela>_table.php` | `database/migrations/` |
 
-Além disso, `manifest-lock.json` é gravado na raiz do destino, com o manifest já normalizado. Ele serve para conferir o que o gerador entendeu do manifest.
+Além disso, são gravados na raiz do destino:
+
+| Arquivo | O que é |
+|---|---|
+| `manifest-lock.json` | o manifest já normalizado, para conferir o que o gerador entendeu |
+| `routes/crudmaker.php` | uma `Route::apiResource` por entidade (veja abaixo) |
+| `routes/api.php` | só ganha o include de `routes/crudmaker.php`, uma única vez; o resto fica intacto |
+
+### Rotas
+
+`routes/crudmaker.php` tem um cabeçalho avisando que é gerado e é sobrescrito a cada execução. O recurso na URL é o plural da tabela em kebab-case: a entidade `classLesson` vira `Route::apiResource('class-lessons', ClassLessonController::class);`. O Laravel deriva daí o parâmetro `{class_lesson}`, o mesmo nome que a Request lê com `$this->route('class_lesson')`, então o route model binding funciona sem configuração extra.
+
+O `generate` acrescenta ao fim do `routes/api.php` (só se ainda não houver um `require`/`include` de `crudmaker.php`):
+
+```php
+// Rotas geradas pelo crudmaker (routes/crudmaker.php).
+require __DIR__ . '/crudmaker.php';
+```
+
+Como o arquivo é carregado de dentro do `routes/api.php`, as rotas ganham o prefixo `/api` e os middlewares do grupo `api` do Laravel. Rotas próprias e middlewares (por exemplo `auth:sanctum`) ficam no `routes/api.php`, fora do arquivo gerado.
+
+**Requisito:** o projeto Laravel (11+) precisa do `routes/api.php`, criado por `php artisan install:api`, que também o registra em `bootstrap/app.php`. Se o arquivo não existir, o `generate` não o cria (criar o arquivo sozinho não o faria ser carregado), grava `routes/crudmaker.php` e imprime um aviso. Rode `install:api` e gere de novo. O `--dry-run` mostra o `routes/api.php` como sobrescrito quando o include vai ser acrescentado.
 
 ## 5. Terminar à mão
 
 O gerador ainda não faz estes passos:
 
-1. **Rotas.** Registre em `routes/api.php`:
-   ```php
-   Route::apiResource('clients', ClientController::class);
-   ```
-2. **Ordem das migrations.** Todas são criadas no mesmo segundo. Se uma tabela com FK for criada antes da tabela que ela referencia, o `migrate` falha; renomeie o timestamp da migration para corrigir a ordem.
-3. **Rodar:** `php artisan migrate`.
+1. **Ordem das migrations.** Todas são criadas no mesmo segundo. Se uma tabela com FK for criada antes da tabela que ela referencia, o `migrate` falha; renomeie o timestamp da migration para corrigir a ordem.
+2. **Rodar:** `php artisan migrate`.
 
 ## Regerar
 
@@ -89,11 +106,11 @@ O gerador ainda não faz estes passos:
 
 | Action | Rota | Resposta |
 |---|---|---|
-| `index` | `GET /clients` | 200, todos os registros (sem paginação) |
-| `store` | `POST /clients` | 201, registro criado |
-| `show` | `GET /clients/{client}` | 200 |
-| `update` | `PUT /clients/{client}` | 201 (deveria ser 200) |
-| `destroy` | `DELETE /clients/{client}` | 204 (o corpo é descartado) |
+| `index` | `GET /api/clients` | 200, todos os registros (sem paginação) |
+| `store` | `POST /api/clients` | 201, registro criado |
+| `show` | `GET /api/clients/{client}` | 200 |
+| `update` | `PUT /api/clients/{client}` | 201 (deveria ser 200) |
+| `destroy` | `DELETE /api/clients/{client}` | 204 (o corpo é descartado) |
 
 Respostas têm o formato `{ "status": ..., "message": ..., "data": ... }`. Qualquer exceção dentro de uma action é relançada como erro 500. Os registros usam soft delete, e a resource devolve `created_at`/`updated_at` como `{ timestamp, description }`.
 

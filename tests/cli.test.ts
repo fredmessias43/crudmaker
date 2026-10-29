@@ -142,6 +142,72 @@ describe("crudmaker generate", () => {
   });
 });
 
+describe("rotas e routes/api.php", () => {
+  const apiRoutes = `<?php
+
+use Illuminate\\Http\\Request;
+use Illuminate\\Support\\Facades\\Route;
+
+Route::get('/user', function (Request $request) {
+    return $request->user();
+})->middleware('auth:sanctum');
+`;
+  const apiPath = () => path.join(out, "routes/api.php");
+  const writeApi = (content = apiRoutes) => {
+    fs.mkdirSync(path.join(out, "routes"), { recursive: true });
+    fs.writeFileSync(apiPath(), content);
+  };
+
+  it("gera routes/crudmaker.php e inclui no routes/api.php existente", () => {
+    writeApi();
+    expect(run(["generate", fixture, "--out", out], io())).toBe(0);
+
+    expect(fs.readFileSync(path.join(out, "routes/crudmaker.php"), "utf8")).toContain("Route::apiResource('courses'");
+    const api = fs.readFileSync(apiPath(), "utf8");
+    expect(api.startsWith(apiRoutes)).toBe(true);
+    expect(api.match(/crudmaker\.php/g)?.length).toBe(2); // comentário + require
+    expect(stdout).toMatch(/sobrescritos \(1\):\n {2}routes\/api\.php/);
+    expect(stdout).toMatch(/criados \(\d+\):[\s\S]*routes\/crudmaker\.php/);
+    expect(stdout).not.toContain("Aviso");
+  });
+
+  it("regerar não duplica o include e classifica o api.php como sem mudança", () => {
+    writeApi();
+    run(["generate", fixture, "--out", out], io());
+    const after = fs.readFileSync(apiPath(), "utf8");
+
+    stdout = "";
+    run(["generate", fixture, "--out", out], io());
+
+    expect(fs.readFileSync(apiPath(), "utf8")).toBe(after);
+    expect(stdout).toMatch(/sem mudança \(\d+\):[\s\S]*routes\/api\.php/);
+    expect(stdout).toContain("0 sobrescritos");
+  });
+
+  it("--dry-run mostra o api.php como sobrescrito sem alterá-lo", () => {
+    writeApi();
+    expect(run(["generate", fixture, "--out", out, "--dry-run"], io())).toBe(0);
+
+    expect(fs.readFileSync(apiPath(), "utf8")).toBe(apiRoutes);
+    expect(fs.existsSync(path.join(out, "routes/crudmaker.php"))).toBe(false);
+    expect(stdout).toMatch(/sobrescritos \(1\):\n {2}routes\/api\.php/);
+
+    const dry = stdout.replace(/^.*\n/, "");
+    stdout = "";
+    run(["generate", fixture, "--out", out], io());
+    expect(stdout.replace(/^.*\n/, "")).toBe(dry);
+  });
+
+  it("sem routes/api.php não cria o arquivo e avisa para rodar install:api", () => {
+    expect(run(["generate", fixture, "--out", out], io())).toBe(0);
+
+    expect(fs.existsSync(apiPath())).toBe(false);
+    expect(fs.existsSync(path.join(out, "routes/crudmaker.php"))).toBe(true);
+    expect(stdout).toContain("php artisan install:api");
+    expect(stdout).toContain("Aviso");
+  });
+});
+
 describe("crudmaker init", () => {
   it("cria um manifest que o generate aceita", () => {
     expect(run(["init", "manifest.json"], io())).toBe(0);

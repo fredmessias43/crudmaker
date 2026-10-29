@@ -53,3 +53,4 @@ app/Http/Resources/StudentCollection.php
 app/Http/Controllers/Api/StudentController.php
 app/Http/Requests/StudentRequest.php
 database/migrations/2025_01_02_030405_create_students_table.php
+routes/crudmaker.php

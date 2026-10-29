@@ -38,7 +38,8 @@ Opções:
 
 const generateHelp = `Uso: crudmaker generate <manifest> [--out <dir>] [--dry-run]
 
-Gera Model, Migration, Controller, Request, Resource e Collection de cada entidade.
+Gera Model, Migration, Controller, Request, Resource e Collection de cada entidade,
+mais o arquivo de rotas (routes/crudmaker.php), incluído uma única vez no routes/api.php.
 
 Opções:
   -o, --out <dir>   raiz do projeto Laravel de destino (padrão: diretório atual)
@@ -72,6 +73,15 @@ function readVersion(): string {
   // Funciona tanto em src/ (tsx) quanto em dist/ (build): o package.json fica um nível acima.
   const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "../package.json"), "utf8"));
   return pkg.version;
+}
+
+function missingApiRoutesWarning(outDir: string): string {
+  return [
+    "",
+    `Aviso: ${path.join(outDir, "routes/api.php")} não existe, então as rotas geradas (routes/crudmaker.php) ainda não são carregadas.`,
+    'No projeto Laravel, rode "php artisan install:api" (cria o arquivo e o registra em bootstrap/app.php) e rode o generate de novo.',
+    "",
+  ].join("\n");
 }
 
 function printPlan(plan: PlannedWrite[], io: CliIo, baseDir: string, dryRun: boolean): void {
@@ -121,12 +131,16 @@ function runGenerate(args: string[], io: CliIo): number {
   const migrationsDir = path.join(outDir, "database/migrations");
   const existingMigrations = fs.existsSync(migrationsDir) ? fs.readdirSync(migrationsDir) : [];
 
-  const files = generate(manifestObj, { now: io.now(), existingMigrations });
+  const apiRoutesPath = path.join(outDir, "routes/api.php");
+  const existingApiRoutes = fs.existsSync(apiRoutesPath) ? fs.readFileSync(apiRoutesPath, "utf8") : null;
+
+  const files = generate(manifestObj, { now: io.now(), existingMigrations, existingApiRoutes });
   const plan = planWrites(files, outDir);
 
   if (!values["dry-run"]) applyPlan(plan);
 
   printPlan(plan, io, outDir, Boolean(values["dry-run"]));
+  if (existingApiRoutes === null) io.stdout(missingApiRoutesWarning(outDir));
   return 0;
 }
 

@@ -24,7 +24,7 @@ Gerador de API Laravel a partir de um manifest YAML ou JSON: lê entidades, camp
 - `src/models/Manifest.ts`: valida via `validateManifest` e normaliza (formas curtas, aliases, campos de FK).
 - `src/models/Entity.ts`: nome da entidade em vários casings e nome da tabela.
 - `src/fileCreators/PhpFile.ts`: classe base dos geradores (casca do arquivo PHP e caminho relativo; não escreve no disco).
-- `src/fileCreators/*File.ts`: um gerador por tipo de arquivo PHP.
+- `src/fileCreators/*File.ts`: um gerador por tipo de arquivo PHP. `RoutesFile.ts` gera `routes/crudmaker.php` e o include no `routes/api.php` (não estende `PhpFile`).
 - `generated/<pkg.code>/`: saída. Está no `.gitignore` e costuma conter projetos Laravel reais (com código escrito à mão).
 
 ## Documentação

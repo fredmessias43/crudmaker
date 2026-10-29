@@ -90,6 +90,9 @@ O PHP é montado concatenando strings linha a linha, com `\t` como indentação.
 | `RequestFile` | FormRequest com `prepareForValidation` (completa campos ausentes a partir da model da rota) e `rules` |
 | `ResourceFile` / `CollectionFile` | JsonResource e ResourceCollection com os campos e as datas formatadas |
 | `ControllerFile` | Controller de API com `index`, `store`, `show`, `update` e `destroy` |
+| `RoutesFile` | `routes/crudmaker.php`, com uma `apiResource` por entidade (recurso = tabela em kebab-case). Não estende `PhpFile`: não há classe, só `use` e chamadas `Route::`. Também exporta `ensureRoutesInclude`, que acrescenta o `require` ao conteúdo do `routes/api.php` se faltar |
+
+O `generate` continua puro: a CLI lê o `routes/api.php` do destino (ou `null` se não existe) e passa o texto em `options.existingApiRoutes`. Com texto, o `generate` devolve o `routes/api.php` com o include (idêntico ao atual se já estiver lá), e o `planWrites` o classifica como qualquer outro arquivo (sobrescrito ou sem mudança), o que mantém o `--dry-run` fiel. Com `null`, o arquivo não é gerado e a CLI imprime o aviso sobre `php artisan install:api`.
 
 ## Dependências
 
@@ -110,7 +113,7 @@ O PHP é montado concatenando strings linha a linha, com `\t` como indentação.
 
 `tests/yaml.test.ts` cobre o YAML: cada fixture tem um `manifest.yaml` que precisa ler o mesmo objeto e gerar a mesma saída do JSON, os erros de sintaxe/vazio/multi-documento/extensão, e o `init` em cada formato (o exemplo YAML tem de ser igual ao JSON).
 
-`tests/generate.test.ts` chama `generate` para os três manifests de `tests/fixtures/` com data fixa e sem migrations existentes. O conteúdo de cada arquivo é comparado com um snapshot em `tests/__snapshots__/<fixture>/<path>`, e a lista de caminhos com `_paths.txt`. Os snapshots registram a saída atual, inclusive bugs conhecidos.
+`tests/generate.test.ts` também cobre as rotas (nome do recurso, include, idempotência, detecção por variações de espaço e aspas). Ele chama `generate` para os três manifests de `tests/fixtures/` com data fixa e sem migrations existentes. O conteúdo de cada arquivo é comparado com um snapshot em `tests/__snapshots__/<fixture>/<path>`, e a lista de caminhos com `_paths.txt`. Os snapshots registram a saída atual, inclusive bugs conhecidos.
 
 ## Próximos passos
 
