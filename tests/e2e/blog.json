@@ -1,0 +1,27 @@
+{
+  "system": { "title": "Blog", "code": "blog" },
+  "pkg": {
+    "code": "blog",
+    "entities": {
+      "author": {
+        "fields": {
+          "id": "uuid",
+          "name": "string",
+          "email": { "type": "string", "unique": true }
+        },
+        "relationships": { "hasMany": ["post"] }
+      },
+      "post": {
+        "fields": {
+          "id": "uuid",
+          "author_id": "uuid",
+          "title": "string",
+          "body": { "type": "text", "required": false },
+          "status": { "type": "enum", "enumItems": ["draft", "published"] },
+          "publishedAt": { "type": "datetime", "required": false }
+        },
+        "relationships": { "belongsTo": ["author"] }
+      }
+    }
+  }
+}

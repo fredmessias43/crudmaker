@@ -9,12 +9,12 @@
 - [15 — Versão alvo do Laravel/PHP](../fase-4-modernizar/15-versao-alvo.md)
 - [06 — Gerar as rotas](../fase-1-usavel/06-gerar-rotas.md)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Critérios de aceite
 
-- [ ] Testes com executor de comandos falso: imagem por versão de PHP, versão do Laravel, UID/GID, volume, passos por versão, banco do Sail.
-- [ ] Testes da recusa em diretório não vazio e do erro sem Docker.
-- [ ] Teste de ponta a ponta opcional, com Docker de verdade, fora do `npm test` padrão.
-- [ ] Em execução manual, `sail up` e `sail artisan migrate` funcionam e os endpoints respondem.
-- [ ] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.
+- [x] Testes com executor de comandos falso: imagem por versão de PHP, versão do Laravel, UID/GID, volume, passos por versão, banco do Sail.
+- [x] Testes da recusa em diretório não vazio e do erro sem Docker.
+- [x] Teste de ponta a ponta opcional, com Docker de verdade, fora do `npm test` padrão.
+- [x] Em execução manual, `sail up` e `sail artisan migrate` funcionam e os endpoints respondem.
+- [x] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.

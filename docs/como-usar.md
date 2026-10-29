@@ -5,7 +5,8 @@ Este guia descreve o fluxo atual do crudmaker, pela CLI `crudmaker`. O manifest 
 ## Pré-requisitos
 
 - Node.js e npm.
-- Um projeto Laravel 10, 11 ou 12 (PHP 8.1 ou superior) com a API instalada (no 11 e no 12, `php artisan install:api`), se você quiser rodar o resultado. Veja [Versão do Laravel e do PHP](#versão-do-laravel-e-do-php).
+- Para criar um projeto do zero com `crudmaker new`: só o **Docker** (instalado e com o daemon rodando; o seu usuário precisa poder usá-lo, grupo `docker`). Não é preciso PHP nem composer na máquina. Veja [Criar um projeto do zero](#criar-um-projeto-do-zero-crudmaker-new).
+- Para gerar num projeto que já existe: um projeto Laravel 10, 11 ou 12 (PHP 8.1 ou superior) com a API instalada (no 11 e no 12, `php artisan install:api`). Veja [Versão do Laravel e do PHP](#versão-do-laravel-e-do-php).
 
 ```bash
 npm install
@@ -25,7 +26,84 @@ crudmaker init manifest.json  # a extensão escolhe o formato: .json cria o exem
 
 Edite o arquivo conforme o formato descrito em [manifest.md](manifest.md). YAML é o formato recomendado (aceita comentários); JSON continua funcionando. O formato é detectado pela extensão (`.yaml`, `.yml` ou `.json`); qualquer outra dá erro. Para ter autocomplete no VS Code, veja [Autocomplete no editor](manifest.md#autocomplete-no-editor-json-schema).
 
+## Criar um projeto do zero: `crudmaker new`
+
+```bash
+crudmaker new minha-api manifest.yaml                      # Laravel 12, PHP 8.2, Sail com MySQL
+crudmaker new minha-api manifest.yaml --laravel 11 --php 8.3 --db pgsql
+crudmaker new minha-api manifest.yaml --db sqlite          # Sail só com a aplicação; o banco é o sqlite do Laravel 11+
+crudmaker new minha-api manifest.yaml --no-sail            # sem Sail
+crudmaker new minha-api manifest.yaml --skip-generate      # cria o projeto, sem gerar a API
+```
+
+Cria o projeto Laravel em `minha-api/` e gera nele a API do manifest. Tudo roda em containers efêmeros (`docker run --rm`): você não precisa de PHP nem de composer na máquina. A saída do composer e do artisan aparece em tempo real.
+
+| Flag | Efeito |
+|---|---|
+| `--laravel <10\|11\|12>` | major do Laravel (padrão: `pkg.target.laravel` do manifest, senão 12) |
+| `--php <x.y>` | PHP da imagem: 8.1, 8.2, 8.3 ou 8.4 (padrão: `pkg.target.php`, senão 8.2). Mínimo do Laravel 10: 8.1; do 11 e do 12: 8.2 |
+| `--db <banco>` | banco configurado no Sail: `mysql` (padrão), `pgsql`, `mariadb` ou `sqlite`. Não combina com `--no-sail` |
+| `--no-sail` | não instala o Sail |
+| `--skip-generate` | não roda o `generate` no fim (depois: `crudmaker generate manifest.yaml --out minha-api`) |
+
+A versão segue a mesma prioridade do `generate` (flag, `pkg.target` do manifest, padrão), menos a detecção pelo composer, porque o destino ainda não existe. O resumo mostra a versão usada e de onde veio.
+
+### Antes de tocar em qualquer coisa
+
+O comando confere, nesta ordem, e para no primeiro problema sem criar nada: argumentos e flags; o manifest (lido e **validado**, como no `generate`, para não criar um projeto e só depois falhar); a versão (PHP compatível com o Laravel e com imagem disponível); o diretório (se existe e tem qualquer arquivo, inclusive oculto, é recusado; vazio ou inexistente passa); e o Docker (`docker info`: sem o Docker instalado ou com o daemon parado, a mensagem diz o que fazer).
+
+### O que acontece em cada passo
+
+Cada passo é um `docker run --rm --user UID:GID -v <dir>:/var/www/html -w /var/www/html -v <cache>:/composer -e COMPOSER_HOME=/composer laravelsail/phpXX-composer:latest <comando>`, com `XX` = PHP sem o ponto (`php82`, `php83`...). Os arquivos criados pertencem ao seu usuário.
+
+1. `composer create-project laravel/laravel:^<N>.0 .`
+2. Laravel 11 e 12: `php artisan install:api --no-interaction --without-migration-prompt` (cria `routes/api.php`, registra-o em `bootstrap/app.php` e instala o Sanctum; não roda as migrations). No Laravel 10 não há o que fazer: o `routes/api.php` já vem no esqueleto.
+3. `composer require --dev pestphp/pest pestphp/pest-plugin-laravel --with-all-dependencies` (o composer escolhe o Pest compatível com o PHP: com o PHP 8.2 sai o Pest 3). Prepara o terreno para os testes gerados.
+4. `php vendor/bin/pest --init --no-interaction` (cria `tests/Pest.php` e `tests/TestCase.php`; o plugin do Laravel não tem um `artisan pest:install`).
+5. Sem `--no-sail`: `php artisan sail:install --with=<banco> --php=<PHP> --no-interaction` (o `laravel/sail` já vem no esqueleto; com `--db sqlite` usa `--with=none`, porque sqlite não é um serviço do Sail). Cria o `compose.yaml` e ajusta o `.env` para o serviço.
+6. Sem `--skip-generate`: o mesmo fluxo do `crudmaker generate` (versão detectada no `composer.lock` do projeto novo), no próprio processo.
+
+O `COMPOSER_HOME` é uma pasta do host, `~/.cache/crudmaker/composer` (ou `$XDG_CACHE_HOME/crudmaker/composer`), montada em `/composer`: o composer precisa de um diretório gravável para o usuário sem nome que o `--user` cria, e o cache de pacotes fica entre execuções (a segunda criação de projeto é bem mais rápida). Apagar essa pasta é seguro.
+
+### Se um passo falhar
+
+O comando para, diz qual passo falhou (`O passo 3/5 falhou (composer require ...)`) e imprime o `docker run` equivalente para você repetir à mão. **O diretório parcial é mantido**, nunca apagado: pode ter coisa útil, e apagar automaticamente é o tipo de ação difícil de desfazer. Para recomeçar, apague o diretório e rode o `crudmaker new` de novo; para continuar, rode o passo que falhou e os seguintes à mão e depois `crudmaker generate manifest.yaml --out minha-api`.
+
+### Próximos passos (o resumo final repete)
+
+Com o Sail:
+
+```bash
+cd minha-api
+./vendor/bin/sail up -d            # sobe a aplicação e o banco (a primeira vez constrói a imagem do Sail: leva alguns minutos)
+./vendor/bin/sail artisan migrate
+# a API responde em http://localhost/api  (rotas: ./vendor/bin/sail artisan route:list)
+./vendor/bin/sail down             # para tudo (sail down -v também apaga o volume do banco)
+```
+
+Se as portas 80 ou 3306 já estão em uso, defina antes `APP_PORT=8080 FORWARD_DB_PORT=3307` (variáveis do Sail).
+
+Com `--no-sail` (ou `--skip-generate` sem Sail), sem PHP local, pelo Docker:
+
+```bash
+cd minha-api
+alias artisan='docker run --rm --user $(id -u):$(id -g) -v "$PWD":/var/www/html -w /var/www/html laravelsail/php82-composer:latest php artisan'
+artisan migrate        # usa o banco do .env: no Laravel 11+ é sqlite; no 10 é MySQL em 127.0.0.1, que você precisa configurar
+docker run --rm --user $(id -u):$(id -g) -v "$PWD":/var/www/html -w /var/www/html -p 8000:8000 laravelsail/php82-composer:latest php artisan serve --host=0.0.0.0
+```
+
+### Solução de problemas
+
+- **"Docker não encontrado" / "o daemon não respondeu"**: instale o Docker ou inicie o serviço (`sudo systemctl start docker`); se for permissão, coloque o usuário no grupo `docker` e abra um novo terminal.
+- **"não está vazio"**: escolha outro diretório. Para gerar num projeto que já existe, use `crudmaker generate`.
+- **"Não existe a imagem laravelsail/phpXX-composer"**: só há imagens para o PHP 8.1 a 8.4; use `--php` (ou `pkg.target.php`) com um desses.
+- **Falha no `composer require` do Pest**: geralmente rede ou conflito de versões; repita o `docker run` impresso na mensagem para ver o erro completo.
+- **Entidade chamada `user` no manifest**: colide com o `User` e a migration `create_users_table` do esqueleto do Laravel (o `generate` sobrescreve a migration dos users e preserva o `app/Models/User.php`, com aviso). Use outro nome ou revise à mão.
+- **`sail up` falha por porta ocupada**: veja `APP_PORT`/`FORWARD_DB_PORT` acima.
+
 ## 2. Ter o projeto Laravel de destino
+
+Se você criou o projeto com `crudmaker new`, pule para o passo 3.
 
 ```bash
 composer create-project laravel/laravel minha-api

@@ -9,6 +9,8 @@ import { capabilitiesFor, Capabilities } from "./targets/laravel-api/capabilitie
 import { describeTarget, resolveTarget, ResolvedTarget } from "./targetVersion";
 import { exampleManifestText } from "./initTemplate";
 import { acceptedExtensionsText, manifestFormat, readManifest, UserError } from "./readManifest";
+import { CommandRunner, spawnRunner } from "./commandRunner";
+import { assertDockerAvailable, composerImage, assertEmptyTarget, DEFAULT_DATABASE, defaultComposerHome, runScaffold, SAIL_DATABASES, SailDatabase } from "./scaffold";
 import { applyPlan, applyRemovals, legacyFinalWarnings, planRemovals, planWrites, PlannedRemoval, PlannedWrite, WriteAction } from "./writeFiles";
 
 export type CliIo = {
@@ -18,6 +20,12 @@ export type CliIo = {
   cwd: string;
   /** Data usada no nome das migrations novas. */
   now: () => Date;
+  /** Executor de comandos externos (Docker) do `new`. Padrão: o real; os testes injetam um falso. */
+  runner?: CommandRunner;
+  /** Pasta do host usada como COMPOSER_HOME nos containers do `new` (padrão: ~/.cache/crudmaker/composer). */
+  composerHome?: string;
+  /** UID/GID passados ao `docker run --user` (padrão: os do processo; sem eles, o container roda com o usuário da imagem). */
+  user?: { uid: number; gid: number };
 };
 
 const defaultIo: CliIo = {
@@ -34,6 +42,7 @@ Uso:
 
 Comandos:
   generate <manifest>   gera os arquivos da API a partir do manifest
+  new <dir> <manifest>  cria um projeto Laravel do zero (via Docker) já com a API gerada
   init [arquivo]        cria um manifest de exemplo
   stubs:publish [tipo...]  copia os templates embutidos para a pasta de stubs do projeto
 
@@ -69,6 +78,28 @@ Entidade que sai do manifest tem a base apagada; a final e a migration ficam e s
 
 Atenção: os demais arquivos existentes (a camada gerada, as migrations, as rotas) são sobrescritos,
 inclusive edições feitas à mão. Use --dry-run primeiro e mantenha o projeto de destino sob controle de versão.
+`;
+
+const newHelp = `Uso: crudmaker new <dir> <manifest> [--laravel <10|11|12>] [--php <x.y>] [--db <banco>] [--no-sail] [--skip-generate]
+
+Cria um projeto Laravel em <dir> e gera nele a API do manifest. Só precisa do Docker: o composer e o
+artisan rodam em containers efêmeros (imagem laravelsail/phpXX-composer, com o seu UID/GID).
+
+Passos: composer create-project laravel/laravel → artisan install:api (Laravel 11+) →
+composer require --dev pestphp/pest pestphp/pest-plugin-laravel → pest --init →
+artisan sail:install → generate.
+
+Opções:
+  --laravel <n>      major do Laravel: 10, 11 ou 12
+  --php <x.y>        PHP da imagem: 8.1, 8.2, 8.3 ou 8.4 (mínimo do Laravel 10: 8.1; do 11 e do 12: 8.2)
+                     A versão de cada parte vem, nesta ordem, de: flag, pkg.target do manifest, padrão (Laravel 12, PHP 8.2).
+  --db <banco>       banco configurado no Sail: mysql (padrão), pgsql, mariadb ou sqlite
+  --no-sail          não instala o Sail (não combina com --db)
+  --skip-generate    cria só o projeto, sem gerar a API (depois: crudmaker generate <manifest> --out <dir>)
+  -h, --help         mostra esta ajuda
+
+<dir> não pode existir com conteúdo: nesse caso nada é tocado. O manifest é validado antes de qualquer container.
+Se um passo falhar, o diretório parcial é mantido e a mensagem diz qual passo falhou.
 `;
 
 const initHelp = `Uso: crudmaker init [arquivo]
@@ -200,11 +231,24 @@ function runGenerate(args: string[], io: CliIo): number {
   const outDir = path.resolve(io.cwd, values.out ?? ".");
   const manifestObj = readManifest(manifestPath);
 
+  generateProject(manifestObj, outDir, { dryRun: Boolean(values["dry-run"]), normalizeNames, flags: { laravel: values.laravel, php: values.php } }, io);
+  return 0;
+}
+
+/** O fluxo do `generate` (versão alvo, plano, escrita, resumo), compartilhado com o `new`. */
+function generateProject(
+  manifestObj: { [key: string]: any },
+  outDir: string,
+  options: { dryRun: boolean; normalizeNames?: boolean; flags: { laravel?: string; php?: string } },
+  io: CliIo,
+): void {
+  const normalizeNames = options.normalizeNames;
+
   // Versão alvo: flag → pkg.target do manifest → composer.lock/composer.json do destino → padrão.
   const detection = detectTarget(outDir);
   const pkg = manifestObj.pkg;
   const resolved = resolveTarget({
-    flags: { laravel: values.laravel, php: values.php },
+    flags: options.flags,
     manifest: typeof pkg === "object" && pkg !== null ? pkg.target : undefined,
     detected: detection.detected,
   });
@@ -242,14 +286,13 @@ function runGenerate(args: string[], io: CliIo): number {
   const plan = planWrites(files, outDir);
   const removals = planRemovals(obsolete, outDir);
 
-  if (!values["dry-run"]) {
+  if (!options.dryRun) {
     applyPlan(plan);
     applyRemovals(removals, outDir);
   }
 
-  printPlan(plan, removals, [...resolved.warnings, ...detection.warnings, ...warnings, ...lockWarnings, ...projectStubs.warnings, ...legacyFinalWarnings(plan)], io, outDir, Boolean(values["dry-run"]), resolved);
+  printPlan(plan, removals, [...resolved.warnings, ...detection.warnings, ...warnings, ...lockWarnings, ...projectStubs.warnings, ...legacyFinalWarnings(plan)], io, outDir, options.dryRun, resolved);
   if (existingApiRoutes === null) io.stdout(missingApiRoutesWarning(outDir, capabilitiesFor(resolved.target)));
-  return 0;
 }
 
 function runInit(args: string[], io: CliIo): number {
@@ -323,6 +366,93 @@ function runStubsPublish(args: string[], io: CliIo): number {
   return 0;
 }
 
+function runNew(args: string[], io: CliIo): number {
+  const { values, positionals } = parseArgs({
+    args,
+    allowPositionals: true,
+    options: {
+      laravel: { type: "string" },
+      php: { type: "string" },
+      db: { type: "string" },
+      "no-sail": { type: "boolean" },
+      "skip-generate": { type: "boolean" },
+      help: { type: "boolean", short: "h" },
+    },
+  });
+
+  if (values.help) {
+    io.stdout(newHelp);
+    return 0;
+  }
+  if (positionals.length !== 2) throw new UserError("Informe o diretório e o manifest: crudmaker new <dir> <manifest> [opções]");
+
+  const database = (values.db ?? DEFAULT_DATABASE) as SailDatabase;
+  if (!SAIL_DATABASES.includes(database)) throw new UserError(`Banco inválido em --db: ${JSON.stringify(values.db)}. Use um destes: ${SAIL_DATABASES.join(", ")}.`);
+  if (values["no-sail"] && values.db !== undefined) throw new UserError("--db configura o Sail e não combina com --no-sail.");
+  const sail = !values["no-sail"];
+
+  // Pré-checagens: nada aqui toca o disco nem o Docker, até a última.
+  const dir = path.resolve(io.cwd, positionals[0]);
+  const manifestObj = readManifest(path.resolve(io.cwd, positionals[1]));
+
+  // Ainda não há composer.json no destino, então a versão vem só de flag → manifest → padrão.
+  const pkg = manifestObj.pkg;
+  const resolved = resolveTarget({
+    flags: { laravel: values.laravel, php: values.php },
+    manifest: typeof pkg === "object" && pkg !== null ? pkg.target : undefined,
+  });
+
+  // A validação do manifest é a do generate (função pura): um manifest inválido falha antes de criar o projeto.
+  generate(manifestObj, { now: io.now(), existingMigrations: [], target: resolved.target });
+
+  composerImage(resolved.target.php); // erro cedo se não existe imagem para esse PHP
+  assertEmptyTarget(dir);
+  const runner = io.runner ?? spawnRunner;
+  assertDockerAvailable(runner);
+
+  io.stdout(`Criando o projeto em ${dir}\nVersão alvo: ${describeTarget(resolved)}\n`);
+  for (const warning of resolved.warnings) io.stdout(`Aviso: ${warning}\n`);
+
+  const user = io.user ?? (process.getuid && process.getgid ? { uid: process.getuid(), gid: process.getgid() } : undefined);
+  runScaffold(
+    { dir, laravel: resolved.target.laravel, php: resolved.target.php, database, sail, composerHome: io.composerHome ?? defaultComposerHome(), user },
+    runner,
+    io.stdout,
+  );
+
+  if (!values["skip-generate"]) {
+    io.stdout("\nGerando a API do manifest\n");
+    generateProject(manifestObj, dir, { dryRun: false, flags: { laravel: values.laravel, php: values.php } }, io);
+  }
+
+  io.stdout(newSummary(dir, io.cwd, resolved, { sail, database, generated: !values["skip-generate"], manifestArg: positionals[1] }));
+  return 0;
+}
+
+function newSummary(dir: string, cwd: string, resolved: ResolvedTarget, o: { sail: boolean; database: SailDatabase; generated: boolean; manifestArg: string }): string {
+  // Caminho relativo só quando o projeto está dentro do diretório atual; senão, o absoluto (evita ../../..).
+  const relative = path.relative(cwd, dir);
+  const rel = relative === "" ? "." : relative.startsWith("..") ? dir : relative;
+  const lines = ["", `Projeto criado em ${dir}`, `Versão usada: ${describeTarget(resolved)}`, `Sail: ${o.sail ? `instalado (banco: ${o.database})` : "não instalado (--no-sail)"}`];
+  lines.push(`API gerada: ${o.generated ? "sim" : `não (--skip-generate); rode: crudmaker generate ${o.manifestArg} --out ${rel}`}`, "", "Próximos passos:", `  cd ${rel}`);
+
+  if (o.sail) {
+    lines.push("  ./vendor/bin/sail up -d");
+    if (o.database !== "sqlite") lines.push("  ./vendor/bin/sail artisan migrate");
+    else lines.push("  ./vendor/bin/sail artisan migrate   # o banco é o sqlite do .env (Laravel 11+); no Laravel 10 ajuste DB_CONNECTION=sqlite no .env antes");
+    lines.push("  # a API responde em http://localhost/api (rotas: ./vendor/bin/sail artisan route:list)");
+  } else {
+    const image = `laravelsail/php${resolved.target.php.replace(".", "")}-composer:latest`;
+    lines.push(
+      "  # sem Sail e sem PHP local, via Docker (o banco do .env precisa estar acessível; no Laravel 11+ o padrão é sqlite):",
+      `  docker run --rm --user $(id -u):$(id -g) -v "$PWD":/var/www/html -w /var/www/html ${image} php artisan migrate`,
+      `  docker run --rm --user $(id -u):$(id -g) -v "$PWD":/var/www/html -w /var/www/html -p 8000:8000 ${image} php artisan serve --host=0.0.0.0`,
+      "  # a API responde em http://localhost:8000/api",
+    );
+  }
+  return lines.join("\n") + "\n";
+}
+
 /** Executa a CLI com os argumentos (sem `node` e o script) e devolve o exit code. */
 export function run(argv: string[], io: CliIo = defaultIo): number {
   try {
@@ -337,6 +467,7 @@ export function run(argv: string[], io: CliIo = defaultIo): number {
       return 0;
     }
     if (command === "generate") return runGenerate(rest, io);
+    if (command === "new") return runNew(rest, io);
     if (command === "init") return runInit(rest, io);
     if (command === "stubs:publish") return runStubsPublish(rest, io);
 

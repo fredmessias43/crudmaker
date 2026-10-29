@@ -13,12 +13,13 @@ Gerador de API Laravel a partir de um manifest YAML ou JSON: lê entidades, camp
 - Não há CI no GitHub (decisão do projeto). O hook `.githooks/pre-commit` roda `npx tsc --noEmit`, `npm test` e `npm run lint:php` a cada commit e bloqueia se algo falhar (sem Docker, a checagem PHP é pulada com aviso). O `npm install` ativa o hook pelo script `prepare` (`core.hooksPath`). Não use `--no-verify` para contornar uma falha: corrija.
 - **Allowlist do `lint:php`** (`scripts/phpSyntaxAllowlist.ts`): falhas conhecidas do gerador, cada uma com arquivo, motivo e ticket que corrige (hoje vazia: o ticket 09 removeu as últimas entradas). Só mexa nela para remover uma entrada quando o ticket corrigir (a checagem falha se uma entrada deixar de falhar). Nunca acrescente entradas para esconder um erro novo: corrija o gerador.
 - `crudmaker stubs:publish [tipo...] [--out <dir>]` (`npm run cli -- stubs:publish ...`): copia os templates embutidos da camada gerada para `stubs/crudmaker/laravel-api/` do projeto de destino; esses stubs têm prioridade, arquivo a arquivo, no `generate`. Em tests, use sempre `--out` num diretório temporário (nunca em `generated/`).
+- `crudmaker new <dir> <manifest> [--laravel N] [--php X.Y] [--db ...] [--no-sail] [--skip-generate]`: cria um projeto Laravel do zero em containers (`laravelsail/phpXX-composer`; só precisa de Docker) e gera a API nele. Em testes manuais, use sempre um diretório no scratchpad (nunca `generated/`). O teste de ponta a ponta com Docker de verdade fica fora do `npm test`: `CRUDMAKER_E2E=1 npx vitest run tests/new.e2e.test.ts` (baixa imagens e pacotes; leva ~30 s com cache). Deixe sempre `docker ps -a` limpo depois de testar com `sail up` (`sail down -v`).
 - `npx tsc --noEmit`: checagem de tipos. Passa sem erros. Ainda não há lint.
 
 ## Onde está cada coisa
 
 - `src/bin.ts`: entrada do binário (shebang); chama `run` de `src/cli.ts`.
-- `src/cli.ts`: `run(argv, io)` devolve o exit code; comandos `generate` e `init`, ajuda e versão. Casca fina em volta de `generate`.
+- `src/cli.ts`: `run(argv, io)` devolve o exit code; comandos `generate`, `new`, `init` e `stubs:publish`, ajuda e versão. Casca fina em volta de `generate`.
 - `src/readManifest.ts`: único ponto de leitura do manifest (caminho → objeto; YAML ou JSON pela extensão) e `UserError`.
 - `src/writeFiles.ts`: `planWrites` classifica cada arquivo (criado/sobrescrito/sem mudança/preservado) sem escrever; `applyPlan` grava (nunca um `create-once` existente). `planRemovals`/`applyRemovals` tratam as entidades que saíram do manifest (apagam só bases de `app/Generated/` com cabeçalho de gerado; o resto vira órfão) e `legacyFinalWarnings` avisa finais antigas que não estendem a base. O `--dry-run` e a escrita real usam o mesmo plano.
 - `src/initTemplate.ts`: manifest de exemplo do `init` (YAML comentado e JSON; devem gerar o mesmo objeto).
@@ -33,6 +34,7 @@ Gerador de API Laravel a partir de um manifest YAML ou JSON: lê entidades, camp
 - `src/models/Entity.ts`: nome da entidade em vários casings e nome da tabela.
 - `src/targets/types.ts`: `GeneratedFile` (`{ path, content, policy, generatedBase? }`), `FilePolicy`, `ObsoleteFile` e `GENERATED_MARKER` (o cabeçalho que marca arquivo gerado).
 - `src/targets/laravel-api/`: o target que transforma o modelo normalizado em arquivos Laravel. `index.ts` (`generateLaravelApi`, lista `entityFileTypes`), `render.ts` (motor Eta), `names.ts`, `fileType.ts` e `viewModels/<tipo>.ts` (variáveis de cada template, caminho do arquivo; também `routes.ts` com `ensureRoutesInclude`).
+- `src/commandRunner.ts` e `src/scaffold.ts`: `crudmaker new` (scaffold via Docker). Toda chamada ao Docker passa pela interface `CommandRunner`; os testes usam um executor falso.
 - `src/stubFiles.ts` e `src/targets/laravel-api/stubs.ts`: leitura/publicação dos stubs do projeto e lista dos templates substituíveis (só a camada gerada; as finais não têm stub).
 - `templates/laravel-api/`: os templates do PHP gerado: `<tipo>.base.php.eta` (camada gerada) e `<tipo>.final.php.eta` (camada de customização) para model, request, resource, collection e controller, mais `migration.php.eta` e `routes.php.eta`. Vão no pacote publicado (`files` do `package.json`).
 - `generated/<pkg.code>/`: saída. Está no `.gitignore` e costuma conter projetos Laravel reais (com código escrito à mão).
