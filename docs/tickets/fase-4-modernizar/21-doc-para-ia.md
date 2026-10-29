@@ -9,11 +9,13 @@
 - [11 — Opções `api` da entidade no manifest](../fase-3-arquitetura/11-opcoes-api-da-entidade.md)
 - [12 — Opções de campo no manifest](../fase-3-arquitetura/12-opcoes-de-campo.md)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Critérios de aceite
 
-- [ ] O guia cabe em poucas centenas de tokens e aponta para o JSON Schema.
-- [ ] `docs/como-usar.md`, `docs/manifest.md`, `docs/arquitetura.md` e `CLAUDE.md` descrevem a v2.
-- [ ] O README tem uma introdução curta e aponta para os docs.
-- [ ] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.
+- [x] O guia cabe em poucas centenas de tokens e aponta para o JSON Schema.
+- [x] `docs/como-usar.md`, `docs/manifest.md`, `docs/arquitetura.md` e `CLAUDE.md` descrevem a v2.
+- [x] O README tem uma introdução curta e aponta para os docs.
+- [x] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.
+
+> **Entregue:** [`docs/guia-ia.md`](../../guia-ia.md) (≈ 800 tokens: o que é, fluxo, manifest de exemplo, JSON Schema, hooks, o que nunca editar, avisos), incluído no pacote publicado (`files` do `package.json`) e gravado por `crudmaker init --ai` como `CRUDMAKER.md`. O exemplo do `init` e o `manifest.example.json` mostram `api`, `hidden`, `rules` e `default`. `docs/`, `CLAUDE.md` e `README.md` foram revisados para descrever a v2 de ponta a ponta. `tests/aiGuide.test.ts` protege o tamanho, o exemplo e os hooks do guia.

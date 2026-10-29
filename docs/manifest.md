@@ -4,6 +4,8 @@ O manifest descreve as entidades da API. Pode ser escrito em **YAML** (`.yaml`/`
 
 O crudmaker valida o manifest, normaliza (formas curtas viram formas completas, campos de FK são derivados dos relacionamentos, nomes fora da convenção são corrigidos) e gera o PHP a partir do resultado.
 
+Este documento é a referência do formato: estrutura, [versão alvo](#versão-alvo-target), [campos](#campos-fields), [relacionamentos](#relacionamentos-relationships), [opções da API](#opções-da-api-api), [normalização de nomes](#normalização-de-nomes), [YAML](#escrevendo-em-yaml), [validação e JSON Schema](#validação-e-json-schema) um [exemplo completo](#exemplo-completo) e as [limitações conhecidas](#limitações-conhecidas). O passo a passo de uso está em [como-usar.md](como-usar.md), e [guia-ia.md](guia-ia.md) é o resumo para colocar no contexto de uma IA. A referência exaustiva de chaves, tipos e descrições é o JSON Schema (`schema/manifest.schema.json`).
+
 ## Estrutura
 
 ```yaml
@@ -35,18 +37,18 @@ Em JSON:
 }
 ```
 
-Os demais exemplos deste documento estão em JSON; a tradução para YAML é direta (`"chave": valor` vira `chave: valor`, listas viram `- item` ou `[a, b]`).
+Os exemplos seguintes aparecem em YAML ou JSON, conforme o trecho; a tradução é direta (`"chave": valor` vira `chave: valor`, listas viram `- item` ou `[a, b]`).
 
 | Chave | Obrigatória | Uso |
 |---|---|---|
-| `system.code` | sim | Lido e guardado, mas hoje não afeta a saída (o namespace é sempre `App`). |
+| `system.code` | sim | Lido e guardado, mas não afeta a saída (o namespace é sempre `App`). |
 | `system.title` | não | Não usado. |
 | `$schema` | não | Caminho do JSON Schema, para autocomplete no editor. Ignorado pelo crudmaker. |
-| `pkg.code` | sim | Nome da pasta de saída: os arquivos vão para `generated/<pkg.code>/`. |
+| `pkg.code` | sim | Nome do projeto; é guardado como `code` no `manifest-lock.json`. Não define onde os arquivos são escritos (isso é o `--out` da CLI). |
 | `pkg.entities` | sim | Mapa `nomeDaEntidade → definição`. |
 | `pkg.normalizeNames` | não | `true` (padrão) ou `false`. Liga/desliga a [normalização de nomes](#normalização-de-nomes). |
 | `pkg.target` | não | [Versão alvo](#versão-alvo-target) do código gerado: `laravel` (10, 11 ou 12) e/ou `php` (8.1 ou superior). |
-| `pkg.defaults.api` | não | Valores padrão do bloco [`api`](#opções-da-api-api) de todas as entidades (só `actions`, `middleware` e `perPage`). |
+| `pkg.defaults.api` | não | Valores padrão do bloco [`api`](#opções-da-api-api) de todas as entidades (`actions`, `middleware`, `perPage`, `nested` e `tests`; as demais opções dependem dos campos de cada entidade). |
 | `pkg.entities.<nome>.api` | não | [Opções da API](#opções-da-api-api) da entidade: actions, middleware, paginação, filtros, busca, ordenação e eager loading. |
 
 Antes de gerar, o manifest é validado (veja [Validação](#validação-e-json-schema)). Se houver qualquer problema, nada é gerado.
@@ -118,6 +120,8 @@ Propriedades da forma completa:
 | `json` | `json()` | `array` | `array` |
 | `enum` | `enum(..., [itens])` com default no primeiro item (ou o `default` declarado) | `Rule::enum(<Entidade><Campo>::class)` | o PHP enum gerado (veja [Enums](#enums)) |
 
+O tipo especial `displayName` vira um campo `string` chamado `display_name`, seja qual for a chave usada.
+
 Todas as regras geradas existem no Laravel 10–12 (`bail`, `required`, `nullable`, `uuid`, `string`, `numeric`, `integer`, `boolean`, `array`, `date_format`, `Rule::enum`, `Rule::exists`, `Rule::unique`). O `json` usa `array` (e não a regra `json` do Laravel, que valida uma string JSON) porque o corpo chega já decodificado e o cast da model é `array`.
 
 ### Enums
@@ -141,8 +145,6 @@ enum OrderItemStatus: string
 ### FKs validadas com `exists`
 
 Cada campo de FK de um `belongsTo` ganha `Rule::exists('<tabela>', 'id')` na request, com a mesma tabela do `->on('<tabela>')` da migration: snake_case plural da entidade referenciada, mesmo para entidades `camelCase` (`orderItem` → `order_items`) e com FK customizada (`author_id` → `users`). A regra vem depois de `uuid`. Observação: ela não exclui registros apagados (soft delete) da tabela referenciada.
-
-O tipo especial `displayName` vira um campo `string` chamado `display_name`, seja qual for a chave usada.
 
 Os casts ficam no `casts()` da model (Laravel 11+) ou no `$casts` (Laravel 10). Como `date` e `datetime` viram `Carbon` na leitura, o `prepareForValidation` da request devolve esses campos ao formato da regra (`->format('Y-m-d')` / `->format('Y-m-d H:i')`) ao completar os campos ausentes numa atualização; e a resource passa a devolvê-los serializados pelo Laravel (ISO 8601), não mais como texto cru do banco.
 
@@ -258,11 +260,6 @@ Regerar não renomeia migrations existentes: se já há um arquivo terminado em 
 
 - A entidade `user` (tabela `users`) sobre a migration `create_users_table` do esqueleto do Laravel não recria a tabela: os campos que faltam vão numa `alter_users_table`, o `id: uuid` é ignorado (o id continua bigint), a model base é autenticável e as FKs que apontam para `users` viram `unsignedBigInteger`. Os detalhes e a migração do `User.php` estão em [Como usar](como-usar.md#a-entidade-user).
 - Para as demais tabelas que já existem por uma migration que não é do crudmaker (sem o cabeçalho de gerado e fora do `manifest-lock.json`), as colunas existentes são desconhecidas: o crudmaker não gera migration para elas e só avisa. Veja [Tabelas que já existem](como-usar.md#tabelas-que-já-existem-migrations-que-não-são-do-crudmaker).
-
-### Limitações conhecidas
-
-- `owned` e `morphed` adicionam os campos `owner_id` e `owner_class`, mas `ownOne`, `ownMany`, `morphOne`, `morphMany` e `morphTo` ainda **não** geram métodos válidos na model. Não use.
-- `indexes` (por entidade) e `pkg.enums` são aceitos no manifest, mas ignorados.
 
 ## Opções da API (`api`)
 
@@ -399,7 +396,7 @@ Desligada, os nomes passam como estão (a saída é a de antes da normalização
 
 ## Escrevendo em YAML
 
-YAML 1.2, um único documento, com um mapa na raiz (`system`, `pkg`...). Vantagens sobre o JSON: comentários (`#`), sem aspas e sem vírgulas. O `crudmaker init` gera um exemplo comentado que cobre a forma curta × longa, `required`, `unique`, `enum`, `belongsTo` e `hasMany`.
+YAML 1.2, um único documento, com um mapa na raiz (`system`, `pkg`...). Vantagens sobre o JSON: comentários (`#`), sem aspas e sem vírgulas. O `crudmaker init` gera um exemplo comentado que cobre a forma curta × longa, `required`, `unique`, `enum`, `rules`, `default`, `hidden`, `belongsTo`, `hasMany` e o bloco `api`.
 
 ```yaml
 fields:
@@ -582,4 +579,15 @@ O mesmo manifest em JSON:
 }
 ```
 
-O arquivo `manifest.example.json` na raiz do repositório mostra todos os tipos de campo e de relacionamento aceitos pelo parser (é um catálogo de formas, mas é um manifest válido: a entidade `entity`, usada nos relacionamentos, está declarada nele).
+O arquivo `manifest.example.json` na raiz do repositório é um catálogo de formas: todos os tipos de campo, as opções de campo (`unique`, `hidden`, `rules`, `default`), os tipos de relacionamento (inclusive os que ainda não geram código, veja as [limitações](#limitações-conhecidas)), `pkg.target`, `pkg.defaults.api` e o bloco `api`. É um manifest válido, mas serve de consulta, não de modelo para copiar; para começar, use `crudmaker init`.
+
+## Limitações conhecidas
+
+- `owned` e `morphed` adicionam os campos `owner_id` e `owner_class`, mas `ownOne`, `ownMany`, `morphOne`, `morphMany` e `morphTo` ainda **não** geram métodos válidos na model. Não use.
+- `indexes` (por entidade) e `pkg.enums` são aceitos no manifest, mas ignorados.
+- Não há relacionamento muitos-para-muitos (tabela pivô) nem polimórfico além do `owner_id`/`owner_class`.
+- O `authorize()` da request gerada libera tudo; policies e autorização ficam na sua classe final. Multi-tenancy não é gerado.
+- Renomear campo ou entidade não é detectável: vira remover + adicionar (veja [Ordem das migrations](#ordem-das-migrations)).
+- A regra `exists` das FKs não exclui registros apagados (soft delete) da tabela referenciada.
+- O `default` não vale para `json`, e não muda a request (veja [`default`](#opções-de-campo-hidden-rules-e-default)).
+- Autocomplete: o JSON Schema é gerado e publicado, mas o autocomplete e a validação no VS Code ainda não foram conferidos num editor real (ticket 04, o único critério em aberto da v2).

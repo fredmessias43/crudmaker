@@ -1,11 +1,13 @@
 # Como usar
 
-Este guia descreve o fluxo atual do crudmaker, pela CLI `crudmaker`. O manifest pode ser YAML ou JSON. As demais melhorias estão planejadas em [specs/crudmaker-v2.md](specs/crudmaker-v2.md).
+Este guia percorre o uso do crudmaker pela CLI, do manifest ao projeto Laravel rodando, e depois mostra como customizar (hooks, stubs), regerar com segurança e o que a API gerada faz. O formato do manifest está em [manifest.md](manifest.md); para quem usa uma IA, [guia-ia.md](guia-ia.md) resume o essencial em poucas centenas de tokens (`crudmaker init --ai` o grava no seu projeto).
+
+**Roteiro:** 1. escrever o manifest → 2. ter o projeto Laravel (criar com `crudmaker new` ou usar um existente) → 3. conferir com `--dry-run` → 4. gerar → 5. migrar o banco. Depois: [duas camadas](#duas-camadas-onde-escrever-código), [factories e seeders](#factories-e-seeders), [testes gerados](#testes-gerados-pest), [stubs](#stubs-mudar-o-padrão-de-um-tipo-de-arquivo) e [regerar](#regerar).
 
 ## Pré-requisitos
 
 - Node.js e npm.
-- Para criar um projeto do zero com `crudmaker new`: só o **Docker** (instalado e com o daemon rodando; o seu usuário precisa poder usá-lo, grupo `docker`). Não é preciso PHP nem composer na máquina. Veja [Criar um projeto do zero](#criar-um-projeto-do-zero-crudmaker-new).
+- Para criar um projeto do zero com `crudmaker new`: só o **Docker** (instalado e com o daemon rodando; o seu usuário precisa poder usá-lo, grupo `docker`). Não é preciso PHP nem composer na máquina. Veja [Criar um projeto do zero](#opção-a-criar-um-projeto-do-zero-com-crudmaker-new).
 - Para gerar num projeto que já existe: um projeto Laravel 10, 11 ou 12 (PHP 8.1 ou superior) com a API instalada (no 11 e no 12, `php artisan install:api`). Veja [Versão do Laravel e do PHP](#versão-do-laravel-e-do-php).
 
 ```bash
@@ -26,7 +28,11 @@ crudmaker init manifest.json  # a extensão escolhe o formato: .json cria o exem
 
 Edite o arquivo conforme o formato descrito em [manifest.md](manifest.md). YAML é o formato recomendado (aceita comentários); JSON continua funcionando. O formato é detectado pela extensão (`.yaml`, `.yml` ou `.json`); qualquer outra dá erro. Para ter autocomplete no VS Code, veja [Autocomplete no editor](manifest.md#autocomplete-no-editor-json-schema).
 
-## Criar um projeto do zero: `crudmaker new`
+## 2. Ter o projeto Laravel de destino
+
+O destino é a raiz de um projeto Laravel 10, 11 ou 12. Os arquivos gerados caem direto em `app/`, `database/` e `routes/` dele. Há duas formas de tê-lo.
+
+### Opção A: criar um projeto do zero com `crudmaker new`
 
 ```bash
 crudmaker new minha-api manifest.yaml                      # Laravel 12, PHP 8.2, Sail com MySQL
@@ -49,11 +55,11 @@ Cria o projeto Laravel em `minha-api/` e gera nele a API do manifest. Tudo roda 
 
 A versão segue a mesma prioridade do `generate` (flag, `pkg.target` do manifest, padrão), menos a detecção pelo composer, porque o destino ainda não existe. O resumo mostra a versão usada e de onde veio.
 
-### Antes de tocar em qualquer coisa
+#### Antes de tocar em qualquer coisa
 
 O comando confere, nesta ordem, e para no primeiro problema sem criar nada: argumentos e flags; o manifest (lido e **validado**, como no `generate`, para não criar um projeto e só depois falhar); a versão (PHP compatível com o Laravel e com imagem disponível); o diretório (se existe e tem qualquer arquivo, inclusive oculto, é recusado; vazio ou inexistente passa); e o Docker (`docker info`: sem o Docker instalado ou com o daemon parado, a mensagem diz o que fazer).
 
-### O que acontece em cada passo
+#### O que acontece em cada passo
 
 Cada passo é um `docker run --rm --user UID:GID -v <dir>:/var/www/html -w /var/www/html -v <cache>:/composer -e COMPOSER_HOME=/composer laravelsail/phpXX-composer:latest <comando>`, com `XX` = PHP sem o ponto (`php82`, `php83`...). Os arquivos criados pertencem ao seu usuário.
 
@@ -66,11 +72,11 @@ Cada passo é um `docker run --rm --user UID:GID -v <dir>:/var/www/html -w /var/
 
 O `COMPOSER_HOME` é uma pasta do host, `~/.cache/crudmaker/composer` (ou `$XDG_CACHE_HOME/crudmaker/composer`), montada em `/composer`: o composer precisa de um diretório gravável para o usuário sem nome que o `--user` cria, e o cache de pacotes fica entre execuções (a segunda criação de projeto é bem mais rápida). Apagar essa pasta é seguro.
 
-### Se um passo falhar
+#### Se um passo falhar
 
 O comando para, diz qual passo falhou (`O passo 3/5 falhou (composer require ...)`) e imprime o `docker run` equivalente para você repetir à mão. **O diretório parcial é mantido**, nunca apagado: pode ter coisa útil, e apagar automaticamente é o tipo de ação difícil de desfazer. Para recomeçar, apague o diretório e rode o `crudmaker new` de novo; para continuar, rode o passo que falhou e os seguintes à mão e depois `crudmaker generate manifest.yaml --out minha-api`.
 
-### Próximos passos (o resumo final repete)
+#### Próximos passos (o resumo final repete)
 
 Com o Sail:
 
@@ -93,7 +99,7 @@ artisan migrate        # usa o banco do .env: no Laravel 11+ é sqlite; no 10 é
 docker run --rm --user $(id -u):$(id -g) -v "$PWD":/var/www/html -w /var/www/html -p 8000:8000 laravelsail/php82-composer:latest php artisan serve --host=0.0.0.0
 ```
 
-### Solução de problemas
+#### Solução de problemas
 
 - **"Docker não encontrado" / "o daemon não respondeu"**: instale o Docker ou inicie o serviço (`sudo systemctl start docker`); se for permissão, coloque o usuário no grupo `docker` e abra um novo terminal.
 - **"não está vazio"**: escolha outro diretório. Para gerar num projeto que já existe, use `crudmaker generate`.
@@ -104,16 +110,14 @@ docker run --rm --user $(id -u):$(id -g) -v "$PWD":/var/www/html -w /var/www/htm
 - **Aviso "A tabela X já existe ... as colunas dela são desconhecidas"**: o crudmaker não gerou migration para ela. Crie à mão a `alter` do que faltar, ou faça o crudmaker assumir a tabela (veja a seção acima).
 - **`sail up` falha por porta ocupada**: veja `APP_PORT`/`FORWARD_DB_PORT` acima.
 
-## 2. Ter o projeto Laravel de destino
-
-Se você criou o projeto com `crudmaker new`, pule para o passo 3.
+### Opção B: usar um projeto que já existe
 
 ```bash
 composer create-project laravel/laravel minha-api
-cd minha-api && php artisan install:api
+cd minha-api && php artisan install:api     # Laravel 11 e 12; no 10 o routes/api.php já vem no esqueleto
 ```
 
-O destino é a raiz desse projeto. Os arquivos gerados caem direto em `app/` e `database/migrations/`.
+Depois é só gerar com `--out` apontando para ele (passos 3 e 4). A versão do Laravel e do PHP é detectada no `composer.lock` (veja a seção seguinte).
 
 ## Versão do Laravel e do PHP
 
@@ -236,7 +240,7 @@ require __DIR__ . '/crudmaker.php';
 
 Como o arquivo é carregado de dentro do `routes/api.php`, as rotas ganham o prefixo `/api` e os middlewares do grupo `api` do Laravel. Rotas próprias ficam no `routes/api.php`, fora do arquivo gerado.
 
-**Middleware e actions pelo manifest.** Não é preciso mais envolver o `require` à mão num grupo para proteger as rotas: o `api.middleware` (por entidade ou em `pkg.defaults.api`) vira `->middleware([...])` em cada `apiResource`, e o `api.actions` vira `->only([...])`. Por exemplo, com `middleware: [auth:sanctum]` no padrão e `actions: [index, show]` em `tag`:
+**Middleware e actions pelo manifest.** Para proteger as rotas não é preciso envolver o `require` num grupo: o `api.middleware` (por entidade ou em `pkg.defaults.api`) vira `->middleware([...])` em cada `apiResource`, e o `api.actions` vira `->only([...])`. Por exemplo, com `middleware: [auth:sanctum]` no padrão e `actions: [index, show]` em `tag`:
 
 ```php
 Route::apiResource('clients', ClientController::class)->middleware(['auth:sanctum']);
@@ -275,9 +279,9 @@ Route::post('clients/{client}/address', [ClientAddressController::class, 'nested
 
 **Requisito:** o projeto precisa do `routes/api.php`. No Laravel 11 e 12 ele é criado por `php artisan install:api`, que também o registra em `bootstrap/app.php`; no Laravel 10 ele já vem no esqueleto e é carregado pelo `RouteServiceProvider`. Se o arquivo não existir, o `generate` não o cria (no 11+ criar o arquivo sozinho não o faria ser carregado), grava `routes/crudmaker.php` e imprime um aviso conforme a versão: no 11+, para rodar `install:api`; no 10, para conferir o `--out` ou restaurar o arquivo. Depois gere de novo. O `--dry-run` mostra o `routes/api.php` como sobrescrito quando o include vai ser acrescentado.
 
-## 5. Terminar à mão
+## 5. Migrar o banco
 
-O gerador não roda o `migrate`. Rode `php artisan migrate`: as migrations já saem ordenadas por dependência de FK (a tabela referenciada vem antes), com timestamps consecutivos (`now` + 1 segundo por migration), então não há ordem para acertar à mão.
+O gerador não roda o `migrate`; rode `php artisan migrate` (ou `sail artisan migrate`): as migrations já saem ordenadas por dependência de FK (a tabela referenciada vem antes), com timestamps consecutivos (`now` + 1 segundo por migration), então não há ordem para acertar à mão.
 
 ## Duas camadas: onde escrever código
 
@@ -629,7 +633,7 @@ Os templates usam [Eta](https://eta.js.org): `<%~ it.x %>` imprime sem escape, e
 | `nested-controller.base` | `kind` (`many`/`one`), `hasRead`, `hasStore`, `parent` (nomes do pai e `variable`, o parâmetro como variável PHP), `relation` (método da model), `foreignKey` (já como literal PHP), `childController`, `index` e `withShow` (os do filho) |
 | `routes` | `imports`, `routes` (um item por entidade: `resource`, `controller`, `modifiers`), `nestedRoutes` (um item por rota aninhada: `method`, `uri`, `controller`, `action`, `name`, `modifiers`) |
 
-Capacidades (`it.capabilities.<flag>`, booleanas): `castsMethod` (model com `casts()` em vez de `$casts`), `apiRoutesViaBootstrap`, `nativeColumnChange`, `backedEnums`, `readonlyClasses` e `typedClassConstants`. Exemplo num stub: `<% if (it.capabilities.castsMethod) { -%> ... <% } else { -%> ... <% } -%>`. Se você publicou o stub `model.base` antes do ticket 15, ele continua gerando `$casts` (válido em todas as versões); o aviso de hash indica que o embutido mudou.
+Capacidades (`it.capabilities.<flag>`, booleanas): `castsMethod` (model com `casts()` em vez de `$casts`), `apiRoutesViaBootstrap`, `nativeColumnChange`, `backedEnums`, `readonlyClasses` e `typedClassConstants`. Exemplo num stub: `<% if (it.capabilities.castsMethod) { -%> ... <% } else { -%> ... <% } -%>`. Um stub `model.base` publicado antes de existirem as capacidades continua gerando `$casts` (válido em todas as versões); o aviso de hash indica que o embutido mudou.
 
 A referência exata é o próprio template embutido (`crudmaker stubs:publish <tipo> --out <pasta>` e leia o arquivo) e o view model correspondente.
 
@@ -744,7 +748,6 @@ Formato das respostas com corpo:
 
 Os controllers não têm try/catch: erros chegam ao handler do Laravel e saem com o status certo. Registro inexistente na rota dá 404, validação falha com 422 (`{ "message": ..., "errors": { ... } }`), autorização negada dá 403, e só exceções não tratadas viram 500. Os registros usam soft delete, e a resource devolve `created_at`/`updated_at` como `{ timestamp, description }`.
 
-## Problemas conhecidos
+## Limitações conhecidas
 
-Os bugs do código gerado e as limitações do manifest estão listados em [manifest.md](manifest.md#limitações-conhecidas) e na spec da v2. Os principais:
-
+Estão em [manifest.md](manifest.md#limitações-conhecidas): relacionamentos que ainda não geram código válido, opções aceitas e ignoradas, o que o crudmaker não faz (many-to-many, policies, OpenAPI...) e as pendências de verificação.

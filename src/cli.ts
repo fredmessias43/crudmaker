@@ -44,7 +44,7 @@ Uso:
 Comandos:
   generate <manifest>   gera os arquivos da API a partir do manifest
   new <dir> <manifest>  cria um projeto Laravel do zero (via Docker) já com a API gerada
-  init [arquivo]        cria um manifest de exemplo
+  init [arquivo]        cria um manifest de exemplo (--ai: também o guia para IA)
   stubs:publish [tipo...]  copia os templates embutidos para a pasta de stubs do projeto
 
 Opções:
@@ -55,8 +55,9 @@ Opções:
 const generateHelp = `Uso: crudmaker generate <manifest> [--out <dir>] [--dry-run] [--seeders] [--normalize-names | --no-normalize-names]
                                   [--laravel <10|11|12>] [--php <x.y>]
 
-Gera Model, Factory, Migration, Controller, Request, Resource e Collection de cada entidade,
-mais o arquivo de rotas (routes/crudmaker.php), incluído uma única vez no routes/api.php.
+Gera Model, Factory, Migration, Controller, Request, Resource, Collection e o teste Pest de cada entidade
+(mais os PHP enums dos campos enum e os controllers aninhados de hasMany/hasOne), e o arquivo de rotas
+(routes/crudmaker.php), incluído uma única vez no routes/api.php.
 
 Opções:
   -o, --out <dir>   raiz do projeto Laravel de destino (padrão: diretório atual)
@@ -106,13 +107,21 @@ Opções:
 Se um passo falhar, o diretório parcial é mantido e a mensagem diz qual passo falhou.
 `;
 
-const initHelp = `Uso: crudmaker init [arquivo]
+/** Guia para IA gravado por `init --ai`; a fonte é docs/guia-ia.md (publicado no pacote). */
+const aiGuidePath = path.join(__dirname, "../docs/guia-ia.md");
+const aiGuideFileName = "CRUDMAKER.md";
+
+const initHelp = `Uso: crudmaker init [arquivo] [--ai]
 
 Cria um manifest de exemplo (padrão: manifest.yaml no diretório atual).
 O formato vem da extensão: .yaml/.yml (com comentários explicativos) ou .json.
 Recusa se o arquivo já existir.
 
 Opções:
+  --ai         grava também o guia para IA (CRUDMAKER.md, no diretório do manifest): formato do manifest, fluxo,
+               hooks e o que não editar, em poucas centenas de tokens. Referencie-o no CLAUDE.md ou AGENTS.md do
+               projeto (ex.: "@CRUDMAKER.md"). Se o manifest já existir, ele é mantido e só o guia é gravado;
+               se o CRUDMAKER.md já existir, o comando recusa e nada é escrito.
   -h, --help   mostra esta ajuda
 `;
 
@@ -314,7 +323,7 @@ function runInit(args: string[], io: CliIo): number {
   const { values, positionals } = parseArgs({
     args,
     allowPositionals: true,
-    options: { help: { type: "boolean", short: "h" } },
+    options: { help: { type: "boolean", short: "h" }, ai: { type: "boolean" } },
   });
 
   if (values.help) {
@@ -330,14 +339,29 @@ function runInit(args: string[], io: CliIo): number {
   }
 
   const target = path.resolve(io.cwd, name);
-  if (fs.existsSync(target)) {
+  const guideTarget = path.join(path.dirname(target), aiGuideFileName);
+  const manifestExists = fs.existsSync(target);
+  if (manifestExists && !values.ai) {
     throw new UserError(`${target} já existe; não vou sobrescrever. Escolha outro nome: crudmaker init <arquivo>`);
+  }
+  if (values.ai && fs.existsSync(guideTarget)) {
+    throw new UserError(`${guideTarget} já existe; não vou sobrescrever. Apague-o para gravar o guia de novo.`);
   }
 
   fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.writeFileSync(target, exampleManifestText(format));
+  let output = "";
+  if (manifestExists) {
+    output += `Manifest ${target} já existe; mantido.\n`;
+  } else {
+    fs.writeFileSync(target, exampleManifestText(format));
+    output += `Manifest de exemplo criado em ${target}\n`;
+  }
+  if (values.ai) {
+    fs.writeFileSync(guideTarget, fs.readFileSync(aiGuidePath, "utf8"));
+    output += `Guia para IA criado em ${guideTarget}\nReferencie-o no CLAUDE.md ou AGENTS.md do projeto (ex.: "@${aiGuideFileName}").\n`;
+  }
 
-  io.stdout(`Manifest de exemplo criado em ${target}\nPróximo passo: crudmaker generate ${name} --out <projeto-laravel> --dry-run\n`);
+  io.stdout(`${output}Próximo passo: crudmaker generate ${name} --out <projeto-laravel> --dry-run\n`);
   return 0;
 }
 

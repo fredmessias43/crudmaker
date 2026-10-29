@@ -5,7 +5,7 @@ Gerador de API Laravel a partir de um manifest YAML ou JSON: lê entidades, camp
 ## Comandos
 
 - `npm install`
-- `npm run cli -- generate <manifest> --out <dir> [--dry-run]`: roda a CLI pelo código-fonte (`tsx`). `init [arquivo]` cria um manifest de exemplo (padrão `manifest.yaml`; o formato vem da extensão). Não existe mais caminho fixo nem `npm run dev`.
+- `npm run cli -- generate <manifest> --out <dir> [--dry-run]`: roda a CLI pelo código-fonte (`tsx`). `init [arquivo] [--ai]` cria um manifest de exemplo (padrão `manifest.yaml`; o formato vem da extensão); com `--ai` grava também o guia para IA (`CRUDMAKER.md`, cópia de `docs/guia-ia.md`).
 - `npm run build`: compila para `dist/` (o `bin` `crudmaker` aponta para `dist/bin.js`; `npm link` ou `npx .` o expõem).
 - `npm test`: roda a suíte (vitest): snapshots de `generate` e testes da CLI em diretório temporário. Os snapshots ficam em `tests/__snapshots__/` (completos no Laravel 12; o Laravel 10 tem só as diferenças em `laravel-10/`, e o 11 é comparado com o 12 em `tests/targetVersion.test.ts`) e as fixtures em `tests/fixtures/`. Se uma mudança de saída for intencional, revise o diff e atualize com `npx vitest run -u`.
 - `npm run schema`: regenera `schema/manifest.schema.json` a partir do schema zod. **Depois de mudar `src/manifestSchema.ts`, rode `npm run schema`** e versione o resultado (um teste falha se o arquivo estiver desatualizado).
@@ -14,7 +14,7 @@ Gerador de API Laravel a partir de um manifest YAML ou JSON: lê entidades, camp
 - **Allowlist do `lint:php`** (`scripts/phpSyntaxAllowlist.ts`): falhas conhecidas do gerador, cada uma com arquivo, motivo e ticket que corrige (hoje vazia: o ticket 09 removeu as últimas entradas). Só mexa nela para remover uma entrada quando o ticket corrigir (a checagem falha se uma entrada deixar de falhar). Nunca acrescente entradas para esconder um erro novo: corrija o gerador.
 - `crudmaker stubs:publish [tipo...] [--out <dir>]` (`npm run cli -- stubs:publish ...`): copia os templates embutidos da camada gerada para `stubs/crudmaker/laravel-api/` do projeto de destino; esses stubs têm prioridade, arquivo a arquivo, no `generate`. Em tests, use sempre `--out` num diretório temporário (nunca em `generated/`).
 - `crudmaker new <dir> <manifest> [--laravel N] [--php X.Y] [--db ...] [--no-sail] [--skip-generate]`: cria um projeto Laravel do zero em containers (`laravelsail/phpXX-composer`; só precisa de Docker) e gera a API nele. Em testes manuais, use sempre um diretório no scratchpad (nunca `generated/`). O teste de ponta a ponta com Docker de verdade fica fora do `npm test`: `CRUDMAKER_E2E=1 npx vitest run tests/new.e2e.test.ts` (baixa imagens e pacotes; leva ~30 s com cache; inclui rodar `php vendor/bin/pest` nos testes gerados, e `CRUDMAKER_E2E_LARAVEL=10,11,12` escolhe as versões dessa parte). Deixe sempre `docker ps -a` limpo depois de testar com `sail up` (`sail down -v`).
-- `npx tsc --noEmit`: checagem de tipos. Passa sem erros. Ainda não há lint.
+- `npx tsc --noEmit`: checagem de tipos (passa sem erros). Não há linter de TypeScript; o `lint:php` só confere a sintaxe do PHP gerado.
 
 ## Onde está cada coisa
 
@@ -22,7 +22,7 @@ Gerador de API Laravel a partir de um manifest YAML ou JSON: lê entidades, camp
 - `src/cli.ts`: `run(argv, io)` devolve o exit code; comandos `generate`, `new`, `init` e `stubs:publish`, ajuda e versão. Casca fina em volta de `generate`.
 - `src/readManifest.ts`: único ponto de leitura do manifest (caminho → objeto; YAML ou JSON pela extensão) e `UserError`.
 - `src/writeFiles.ts`: `planWrites` classifica cada arquivo (criado/sobrescrito/sem mudança/preservado) sem escrever; `applyPlan` grava (nunca um `create-once` existente). `planRemovals`/`applyRemovals` tratam as entidades que saíram do manifest (apagam só bases de `app/Generated/` com cabeçalho de gerado; o resto vira órfão) e `legacyFinalWarnings` avisa finais antigas que não estendem a base. O `--dry-run` e a escrita real usam o mesmo plano.
-- `src/initTemplate.ts`: manifest de exemplo do `init` (YAML comentado e JSON; devem gerar o mesmo objeto).
+- `src/initTemplate.ts`: manifest de exemplo do `init` (YAML comentado e JSON; devem gerar o mesmo objeto, e o exemplo mostra `api`, `hidden`, `rules` e `default`). `manifest.example.json` (raiz) é o catálogo de formas.
 - `src/generate.ts`: `generate(manifest, { now, existingMigrations, target, ... })`, função pura (sem disco) que devolve `{ files, warnings, obsolete }`: `files` é a lista `{ path, content, policy }` (`path` relativo à raiz do projeto Laravel), `warnings` os avisos de nomes alterados e `obsolete` os caminhos de entidades que saíram do manifest (calculados com `previousLock`, o lock anterior que a CLI lê). A opção `normalizeNames` vence `pkg.normalizeNames`.
 - `src/targetVersion.ts` e `src/detectTarget.ts`: versão alvo (Laravel 10–12, PHP 8.1+): tipos, validação, `resolveTarget` (flag `--laravel`/`--php` → `pkg.target` → `composer.lock`/`composer.json` do destino → padrão Laravel 12/PHP 8.2) e a leitura do composer. `generate` recebe o resultado em `options.target`.
 - `src/targets/laravel-api/capabilities.ts`: traduz a versão alvo em flags de recurso (`it.capabilities.castsMethod`, `nativeColumnChange`...). **É o único lugar que compara números de versão**: templates e view models só consultam as flags. Diferença nova entre versões = flag nova + teste em `tests/targetVersion.test.ts`.
@@ -38,14 +38,19 @@ Gerador de API Laravel a partir de um manifest YAML ou JSON: lê entidades, camp
 - `src/stubFiles.ts` e `src/targets/laravel-api/stubs.ts`: leitura/publicação dos stubs do projeto e lista dos templates substituíveis (só a camada gerada; as finais não têm stub).
 - `templates/laravel-api/`: os templates do PHP gerado: `<tipo>.base.php.eta` (camada gerada) e `<tipo>.final.php.eta` (camada de customização) para model, request, resource, collection e controller, mais `migration.php.eta` e `routes.php.eta`. Vão no pacote publicado (`files` do `package.json`).
 - `src/targets/laravel-api/viewModels/test.ts` e `templates/laravel-api/test.php.eta`: testes Pest gerados por entidade (`tests/Feature/Crudmaker/`, `overwrite`; `api.tests: false` desliga).
-- `generated/<pkg.code>/`: saída. Está no `.gitignore` e costuma conter projetos Laravel reais (com código escrito à mão).
+- `generated/`: pasta ignorada pelo git que costuma conter projetos Laravel reais (com código escrito à mão); era a saída fixa da v1, hoje só recebe algo se alguém passar `--out generated/...`. Veja Cuidados.
 
 ## Documentação
 
-- `docs/como-usar.md`: fluxo atual de uso e passos manuais.
+Ordem de leitura: `README.md` → `docs/como-usar.md` → `docs/manifest.md` → `docs/arquitetura.md`.
+
+- `README.md`: introdução, instalação e os comandos principais.
+- `docs/como-usar.md`: uso de ponta a ponta (manifest, projeto Laravel, `generate`, hooks, factories, testes, stubs, regeração).
 - `docs/manifest.md`: referência do formato do manifest e limitações conhecidas.
 - `docs/arquitetura.md`: módulos e fluxo interno.
-- `docs/specs/crudmaker-v2.md`: spec da reestruturação planejada (CLI, YAML, schema, templates, testes). Siga a ordem de implementação que está nela.
+- `docs/guia-ia.md`: guia curto (alvo ≈ 800 tokens) para colocar no contexto de uma IA que usa o crudmaker; é o que `init --ai` grava e vai no pacote publicado. `tests/aiGuide.test.ts` confere o tamanho, o exemplo e os hooks citados: mudou hook, opção de `api` ou comando, atualize o guia (e mantenha-o curto).
+- `docs/specs/crudmaker-v2.md`: spec da v2 (decisões, histórias de usuário, fora de escopo e a v3).
+- `docs/tickets/`: os tickets da v2 e o status de cada um (`docs/tickets/README.md`).
 
 Atualize os docs quando mudar o comportamento do gerador ou o formato do manifest.
 

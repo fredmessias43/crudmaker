@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: done
 ---
 
 # crudmaker v2 — gerador de API Laravel a partir de manifest
@@ -293,4 +293,4 @@ O fluxo do ponto de vista do desenvolvedor:
 - **v3 (fora desta spec):** novos targets sobre o mesmo manifest. Inertia, com páginas de CRUD sobre os controllers gerados; Filament, com Resources de painel admin a partir das entidades; Next.js, com um front separado consumindo a API gerada (cliente tipado, páginas de listagem e formulário). Cada um vira uma spec própria quando a v2 estiver pronta. O manifest provavelmente vai precisar de metadados de UI (rótulos, campo de exibição, ordem, visibilidade em listagem e formulário); a v2 não os define, mas o schema deve aceitar extensões futuras sem quebrar manifests existentes.
 - Capturar os snapshots antes da migração para templates garante que a troca de implementação não muda a saída sem intenção.
 - Motivação de custo: nos projetos existentes o manifest tem 1,8–3,4 KB e o PHP gerado tem 47–73 KB. Escrever o manifest em vez do PHP sai cerca de 15–30x mais barato em tokens, e a geração é determinística.
-- O TODO do README fica obsoleto quando esta spec for adotada.
+- O TODO antigo do README saiu; as ideias que não viraram ticket estão na seção "Ideias futuras" do README.
