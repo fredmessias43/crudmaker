@@ -1,0 +1,180 @@
+import fs from "fs";
+import path from "path";
+import { parseArgs } from "util";
+import { generate } from "./generate";
+import { exampleManifestText } from "./initTemplate";
+import { readManifest, UserError } from "./readManifest";
+import { applyPlan, planWrites, PlannedWrite, WriteAction } from "./writeFiles";
+
+export type CliIo = {
+  stdout: (text: string) => void;
+  stderr: (text: string) => void;
+  /** Diretório atual (padrão de `--out` e de `init`). */
+  cwd: string;
+  /** Data usada no nome das migrations novas. */
+  now: () => Date;
+};
+
+const defaultIo: CliIo = {
+  stdout: (text) => process.stdout.write(text),
+  stderr: (text) => process.stderr.write(text),
+  cwd: process.cwd(),
+  now: () => new Date(),
+};
+
+const mainHelp = `crudmaker: gera uma API Laravel a partir de um manifest.
+
+Uso:
+  crudmaker <comando> [opções]
+
+Comandos:
+  generate <manifest>   gera os arquivos da API a partir do manifest
+  init [arquivo]        cria um manifest de exemplo
+
+Opções:
+  -h, --help            mostra esta ajuda (também funciona por comando)
+  -v, --version         mostra a versão
+`;
+
+const generateHelp = `Uso: crudmaker generate <manifest> [--out <dir>] [--dry-run]
+
+Gera Model, Migration, Controller, Request, Resource e Collection de cada entidade.
+
+Opções:
+  -o, --out <dir>   raiz do projeto Laravel de destino (padrão: diretório atual)
+  -n, --dry-run     não escreve nada; lista o que seria criado, sobrescrito ou preservado
+  -h, --help        mostra esta ajuda
+
+Atenção: arquivos existentes são sobrescritos, inclusive edições feitas à mão.
+Use --dry-run primeiro e mantenha o projeto de destino sob controle de versão.
+`;
+
+const initHelp = `Uso: crudmaker init [arquivo]
+
+Cria um manifest de exemplo (padrão: manifest.json no diretório atual).
+Recusa se o arquivo já existir.
+
+Opções:
+  -h, --help   mostra esta ajuda
+`;
+
+const actionLabels: { [key in WriteAction]: string } = {
+  created: "criados",
+  overwritten: "sobrescritos",
+  unchanged: "sem mudança",
+  preserved: "preservados",
+};
+
+const actionOrder: WriteAction[] = ["created", "overwritten", "unchanged", "preserved"];
+
+function readVersion(): string {
+  // Funciona tanto em src/ (tsx) quanto em dist/ (build): o package.json fica um nível acima.
+  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "../package.json"), "utf8"));
+  return pkg.version;
+}
+
+function printPlan(plan: PlannedWrite[], io: CliIo, baseDir: string, dryRun: boolean): void {
+  const lines: string[] = [];
+  const verb = dryRun ? "Seria" : "Resumo";
+
+  lines.push(`${dryRun ? "Simulação (nada foi escrito)" : verb} em ${baseDir}`, "");
+
+  for (const action of actionOrder) {
+    const items = plan.filter((item) => item.action === action);
+    if (items.length === 0) continue;
+
+    lines.push(`${actionLabels[action]} (${items.length}):`);
+    for (const item of items) lines.push(`  ${item.file.path}`);
+    lines.push("");
+  }
+
+  const counts = actionOrder.map((action) => `${plan.filter((i) => i.action === action).length} ${actionLabels[action]}`);
+  lines.push(`Total: ${plan.length} arquivos (${counts.join(", ")})`);
+
+  io.stdout(lines.join("\n") + "\n");
+}
+
+function runGenerate(args: string[], io: CliIo): number {
+  const { values, positionals } = parseArgs({
+    args,
+    allowPositionals: true,
+    options: {
+      out: { type: "string", short: "o" },
+      "dry-run": { type: "boolean", short: "n" },
+      help: { type: "boolean", short: "h" },
+    },
+  });
+
+  if (values.help) {
+    io.stdout(generateHelp);
+    return 0;
+  }
+  if (positionals.length !== 1) {
+    throw new UserError("Informe o caminho do manifest: crudmaker generate <manifest> [--out <dir>] [--dry-run]");
+  }
+
+  const manifestPath = path.resolve(io.cwd, positionals[0]);
+  const outDir = path.resolve(io.cwd, values.out ?? ".");
+  const manifestObj = readManifest(manifestPath);
+
+  const migrationsDir = path.join(outDir, "database/migrations");
+  const existingMigrations = fs.existsSync(migrationsDir) ? fs.readdirSync(migrationsDir) : [];
+
+  const files = generate(manifestObj, { now: io.now(), existingMigrations });
+  const plan = planWrites(files, outDir);
+
+  if (!values["dry-run"]) applyPlan(plan);
+
+  printPlan(plan, io, outDir, Boolean(values["dry-run"]));
+  return 0;
+}
+
+function runInit(args: string[], io: CliIo): number {
+  const { values, positionals } = parseArgs({
+    args,
+    allowPositionals: true,
+    options: { help: { type: "boolean", short: "h" } },
+  });
+
+  if (values.help) {
+    io.stdout(initHelp);
+    return 0;
+  }
+  if (positionals.length > 1) throw new UserError("Informe no máximo um arquivo: crudmaker init [arquivo]");
+
+  const target = path.resolve(io.cwd, positionals[0] ?? "manifest.json");
+  if (fs.existsSync(target)) {
+    throw new UserError(`${target} já existe; não vou sobrescrever. Escolha outro nome: crudmaker init <arquivo>`);
+  }
+
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, exampleManifestText);
+
+  io.stdout(`Manifest de exemplo criado em ${target}\nPróximo passo: crudmaker generate ${positionals[0] ?? "manifest.json"} --out <projeto-laravel> --dry-run\n`);
+  return 0;
+}
+
+/** Executa a CLI com os argumentos (sem `node` e o script) e devolve o exit code. */
+export function run(argv: string[], io: CliIo = defaultIo): number {
+  try {
+    const [command, ...rest] = argv;
+
+    if (command === undefined || command === "--help" || command === "-h" || command === "help") {
+      io.stdout(mainHelp);
+      return command === undefined ? 1 : 0;
+    }
+    if (command === "--version" || command === "-v") {
+      io.stdout(readVersion() + "\n");
+      return 0;
+    }
+    if (command === "generate") return runGenerate(rest, io);
+    if (command === "init") return runInit(rest, io);
+
+    throw new UserError(`Comando desconhecido: ${command}. Use crudmaker --help.`);
+  } catch (e: any) {
+    // Erros de uso (parseArgs) e de entrada (UserError, erros do Manifest) saem só com a mensagem.
+    io.stderr(`Erro: ${e.message}\n`);
+    if (process.env.CRUDMAKER_DEBUG) io.stderr(String(e.stack) + "\n");
+    return 1;
+  }
+}

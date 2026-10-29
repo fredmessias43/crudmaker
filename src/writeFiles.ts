@@ -3,21 +3,60 @@ import path from "path";
 import { GeneratedFile } from "./generate";
 
 /**
- * Camada de escrita: grava no disco os arquivos devolvidos por `generate`,
- * criando as pastas necessárias. Arquivos `create-once` que já existem são mantidos.
+ * O que acontece com um arquivo ao gravar:
+ * - `created`: não existia, será criado;
+ * - `overwritten`: existia, a política é `overwrite` e o conteúdo muda;
+ * - `unchanged`: existia, a política é `overwrite` e o conteúdo já é idêntico (nada a gravar);
+ * - `preserved`: existia e a política é `create-once`, então é mantido como está.
  */
-export function writeFiles(files: GeneratedFile[], baseDir: string): void {
-  for (const file of files) {
-    const fullPath = path.join(baseDir, file.path);
+export type WriteAction = "created" | "overwritten" | "unchanged" | "preserved";
 
-    if (file.policy === "create-once" && fs.existsSync(fullPath)) {
-      console.log("File Skipped: " + fullPath);
-      continue;
+export type PlannedWrite = {
+  file: GeneratedFile;
+  /** Caminho absoluto (ou relativo ao cwd, se `baseDir` for relativo) do destino. */
+  fullPath: string;
+  action: WriteAction;
+};
+
+/**
+ * Plano de escrita: só lê o disco, nunca escreve. É a única fonte da classificação,
+ * usada tanto pelo `--dry-run` quanto pela escrita real, para as duas nunca divergirem.
+ */
+export function planWrites(files: GeneratedFile[], baseDir: string): PlannedWrite[] {
+  return files.map((file) => {
+    const fullPath = path.join(baseDir, file.path);
+    let action: WriteAction;
+
+    if (!fs.existsSync(fullPath)) {
+      action = "created";
+    } else if (file.policy === "create-once") {
+      action = "preserved";
+    } else if (fs.readFileSync(fullPath, "utf8") === file.content) {
+      action = "unchanged";
+    } else {
+      action = "overwritten";
     }
 
-    fs.mkdirSync(path.dirname(fullPath), { recursive: true });
-    fs.writeFileSync(fullPath, file.content);
+    return { file, fullPath, action };
+  });
+}
 
-    console.log("File Created: " + fullPath);
+/**
+ * Camada de escrita: executa o plano, criando as pastas necessárias.
+ * Só grava `created` e `overwritten`. Não imprime nada; quem chama decide o que mostrar.
+ */
+export function applyPlan(plan: PlannedWrite[]): void {
+  for (const item of plan) {
+    if (item.action !== "created" && item.action !== "overwritten") continue;
+
+    fs.mkdirSync(path.dirname(item.fullPath), { recursive: true });
+    fs.writeFileSync(item.fullPath, item.file.content);
   }
+}
+
+/** Atalho: planeja e grava, devolvendo o plano executado. */
+export function writeFiles(files: GeneratedFile[], baseDir: string): PlannedWrite[] {
+  const plan = planWrites(files, baseDir);
+  applyPlan(plan);
+  return plan;
 }

@@ -1,6 +1,6 @@
 # Como usar
 
-Este guia descreve o fluxo **atual** do crudmaker. A CLI de verdade (`crudmaker generate`, YAML, `--out`) ainda não existe; ela está planejada em [specs/crudmaker-v2.md](specs/crudmaker-v2.md).
+Este guia descreve o fluxo atual do crudmaker, pela CLI `crudmaker`. YAML e as demais melhorias estão planejados em [specs/crudmaker-v2.md](specs/crudmaker-v2.md).
 
 ## Pré-requisitos
 
@@ -9,39 +9,52 @@ Este guia descreve o fluxo **atual** do crudmaker. A CLI de verdade (`crudmaker 
 
 ```bash
 npm install
+npm run build        # compila para dist/ (necessário para o binário `crudmaker`)
+npm link             # opcional: instala o comando `crudmaker` no seu PATH
 ```
 
-## 1. Preparar a pasta do projeto
+Sem build, dá para rodar direto do código-fonte: `npm run cli -- <comando> ...` (equivale a `crudmaker <comando> ...`). Os exemplos abaixo usam `crudmaker`.
 
-A saída vai sempre para `generated/<pkg.code>/`, onde `pkg.code` vem do manifest. A pasta `generated/` está no `.gitignore` do crudmaker, então o jeito mais prático é criar o projeto Laravel ali dentro, com o mesmo nome:
+## 1. Escrever o manifest
 
 ```bash
-cd generated
+crudmaker init                # cria manifest.json de exemplo (recusa se já existir)
+crudmaker init outro.json     # ou com outro nome
+```
+
+Edite o arquivo conforme o formato descrito em [manifest.md](manifest.md).
+
+## 2. Ter o projeto Laravel de destino
+
+```bash
 composer create-project laravel/laravel minha-api
 cd minha-api && php artisan install:api
 ```
 
-Os arquivos gerados caem direto em `app/` e `database/migrations/` desse projeto.
+O destino é a raiz desse projeto. Os arquivos gerados caem direto em `app/` e `database/migrations/`.
 
-## 2. Escrever o manifest
+## 3. Conferir com `--dry-run`
 
-Crie `generated/minha-api/manifest.json` com `"pkg": { "code": "minha-api", ... }`. O formato está em [manifest.md](manifest.md).
-
-## 3. Apontar o gerador para o manifest
-
-O caminho do manifest está fixo no `src/main.ts`. Troque para o seu:
-
-```ts
-const manifestObj = JSON.parse(
-  fs.readFileSync("./generated/minha-api/manifest.json", { encoding: "utf8" }),
-);
+```bash
+crudmaker generate manifest.json --out ../minha-api --dry-run
 ```
+
+Não escreve nada. Lista cada arquivo com o que aconteceria:
+
+| Classificação | Significado |
+|---|---|
+| criados | o arquivo não existe e será criado |
+| sobrescritos | existe, o conteúdo é diferente e será reescrito (edições à mão se perdem) |
+| sem mudança | existe com conteúdo idêntico ao que seria gerado; nada é gravado |
+| preservados | existe e é de código que o usuário mantém (`create-once`); não é tocado (os geradores atuais ainda não produzem esse tipo) |
 
 ## 4. Gerar
 
 ```bash
-npm run dev
+crudmaker generate manifest.json --out ../minha-api
 ```
+
+`--out` é a raiz do projeto Laravel e, se omitido, vale o diretório atual. No fim a CLI imprime o resumo: a lista de arquivos por classificação e as contagens (`Total: 13 arquivos (13 criados, 0 sobrescritos, 0 sem mudança, 0 preservados)`). Erros (manifest inexistente, JSON inválido, manifest inválido) vão para o stderr com exit code 1.
 
 Para cada entidade são escritos:
 
@@ -53,7 +66,7 @@ Para cada entidade são escritos:
 | `<Entidade>Resource.php` e `<Entidade>Collection.php` | `app/Http/Resources/` |
 | `<data>_create_<tabela>_table.php` | `database/migrations/` |
 
-Além disso, `manifest-lock.json` é gravado na raiz da pasta, com o manifest já normalizado. Ele serve para conferir o que o gerador entendeu do manifest.
+Além disso, `manifest-lock.json` é gravado na raiz do destino, com o manifest já normalizado. Ele serve para conferir o que o gerador entendeu do manifest.
 
 ## 5. Terminar à mão
 
@@ -68,7 +81,7 @@ O gerador ainda não faz estes passos:
 
 ## Regerar
 
-- **Tudo é sobrescrito**, exceto o nome das migrations: se já existe uma migration terminada em `_create_<tabela>_table.php`, o mesmo arquivo é reaproveitado (e o conteúdo é reescrito). Qualquer edição feita à mão nos arquivos gerados se perde. Use git no projeto Laravel para recuperar o que precisar.
+- **Tudo é sobrescrito** (veja o `--dry-run`), exceto o nome das migrations: se já existe uma migration terminada em `_create_<tabela>_table.php`, o mesmo arquivo é reaproveitado (e o conteúdo é reescrito). Qualquer edição feita à mão nos arquivos gerados se perde. Use git no projeto Laravel para recuperar o que precisar.
 - Mudanças de schema não viram migration de alteração; a migration de criação é reescrita. Num banco que já rodou a migration, você precisa criar a alteração à mão ou usar `migrate:fresh`.
 
 ## Comportamento da API gerada

@@ -1,12 +1,12 @@
 # Arquitetura
 
-O crudmaker é um script TypeScript (rodado com `tsx`) que transforma um manifest JSON em arquivos PHP de uma API Laravel.
+O crudmaker é uma CLI TypeScript (`crudmaker`, compilada para `dist/` ou rodada com `tsx`) que transforma um manifest JSON em arquivos PHP de uma API Laravel.
 
 ## Fluxo
 
 ```
-manifest.json
-    │  JSON.parse
+crudmaker generate <manifest> --out <dir> [--dry-run]     src/bin.ts → src/cli.ts
+    │  readManifest(caminho)      lê e faz o parse do JSON
     ▼
 generate(manifest, { now, existingMigrations })     função pura, sem acesso ao disco
     │  Manifest        valida e normaliza campos e relacionamentos
@@ -14,12 +14,25 @@ generate(manifest, { now, existingMigrations })     função pura, sem acesso ao
     │  geradores       (PhpFile) Model, Resource, Collection, Controller, Request, Migration
     ▼
 lista de arquivos { path, content, policy }         path relativo à raiz do projeto Laravel
-    │  writeFiles(files, baseDir)
+    │  planWrites(files, out)     classifica: criado / sobrescrito / sem mudança / preservado
+    │  applyPlan(plan)            só sem --dry-run
     ▼
-generated/<pkg>/manifest-lock.json, generated/<pkg>/app/...  e  generated/<pkg>/database/migrations/...
+<out>/manifest-lock.json, <out>/app/...  e  <out>/database/migrations/...
+    │
+    ▼
+resumo no stdout
 ```
 
-`src/main.ts` é o ponto de entrada provisório: lê o manifest, lê os nomes das migrations já existentes em `generated/<pkg>/database/migrations/`, chama `generate` com a data atual e entrega o resultado a `writeFiles`, com `generated/<pkg>/` como diretório base.
+### CLI
+
+A CLI é uma casca fina em volta de `generate` (sem lógica de geração):
+
+- `src/bin.ts`: entrada do binário (shebang `#!/usr/bin/env node`); passa `process.argv` para `run` e usa o retorno como exit code.
+- `src/cli.ts`: `run(argv, io)` interpreta os argumentos (`node:util` `parseArgs`, sem dependência externa), executa `generate` ou `init` e devolve o exit code. `io` (stdout, stderr, cwd, relógio) é injetável, o que permite testar sem subprocesso. Para `generate`, lê os nomes em `<out>/database/migrations` (lista vazia se a pasta não existe), chama `generate` com a data atual, monta o plano de escrita e, sem `--dry-run`, o aplica; depois imprime o resumo.
+- `src/readManifest.ts`: único ponto de leitura do manifest (hoje só JSON). Erros esperados viram `UserError`; a CLI imprime `Erro: <mensagem>` no stderr e sai com código 1, sem stack trace (defina `CRUDMAKER_DEBUG=1` para vê-lo).
+- `src/initTemplate.ts`: conteúdo do manifest criado por `crudmaker init`.
+
+O `npx`/`npm link` usam o campo `bin` do `package.json` (`dist/bin.js`), gerado por `npm run build` (`tsconfig.build.json`, que compila só `src/`).
 
 ### `generate` e a camada de escrita
 
@@ -30,7 +43,12 @@ generated/<pkg>/manifest-lock.json, generated/<pkg>/app/...  e  generated/<pkg>/
 
 Cada arquivo devolvido tem `path`, `content` e `policy` (`overwrite` ou `create-once`). Hoje tudo sai como `overwrite`; `create-once` ainda não é usado pelos geradores. O primeiro item da lista é sempre o `manifest-lock.json`.
 
-`writeFiles` (`src/writeFiles.ts`) grava a lista num diretório base, criando as pastas. Arquivos `create-once` que já existem são mantidos.
+`src/writeFiles.ts` tem a camada de escrita, em dois passos:
+
+- `planWrites(files, baseDir)` só lê o disco e classifica cada arquivo: `created` (não existia), `overwritten` (existia, política `overwrite`, conteúdo diferente), `unchanged` (existia, `overwrite`, conteúdo idêntico) ou `preserved` (existia e a política é `create-once`);
+- `applyPlan(plan)` grava os `created` e `overwritten`, criando as pastas. Não imprime nada.
+
+O `--dry-run` e a escrita real usam o mesmo plano, então nunca divergem. `writeFiles(files, baseDir)` é o atalho que faz os dois passos.
 
 ## Módulos
 
@@ -80,6 +98,8 @@ O PHP é montado concatenando strings linha a linha, com `\t` como indentação.
 | `date-fns` | timestamp do nome da migration |
 
 ## Testes
+
+`tests/cli.test.ts` cobre a CLI: chama `run(argv, io)` em diretórios temporários (criação, regeração, `--dry-run`, `init`, erros, ajuda) e tem um teste que roda o binário em subprocesso.
 
 `tests/generate.test.ts` chama `generate` para os três manifests de `tests/fixtures/` com data fixa e sem migrations existentes. O conteúdo de cada arquivo é comparado com um snapshot em `tests/__snapshots__/<fixture>/<path>`, e a lista de caminhos com `_paths.txt`. Os snapshots registram a saída atual, inclusive bugs conhecidos.
 
