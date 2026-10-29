@@ -35,13 +35,13 @@ class Student extends Model
 	protected $fillable = [
 		'id',
 		'status',
-		'class_id',
+		'classroom_id',
 		'user_id',
 	];
 
-	public function class(): BelongsTo
+	public function classroom(): BelongsTo
 	{
-		return $this->belongsTo(Class::class);
+		return $this->belongsTo(Classroom::class);
 	}
 	
 	public function user(): BelongsTo

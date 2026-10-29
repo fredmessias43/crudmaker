@@ -57,7 +57,7 @@
           "belongsTo": ["user", "course"]
         }
       },
-      "class": {
+      "classroom": {
         "fields": {
           "id": "uuid",
           "name": "string",
@@ -73,7 +73,7 @@
       "class_lesson": {
         "fields": {
           "id": "uuid",
-          "class_id": "uuid",
+          "classroom_id": "uuid",
           "name": "string",
           "description": {
             "required": false,
@@ -84,7 +84,7 @@
         },
         "relationships": {
           "hasMany": ["class_lesson_comment"],
-          "belongsTo": ["class"]
+          "belongsTo": ["classroom"]
         }
       },
       "class_lesson_comment": {
@@ -118,11 +118,11 @@
         "fields": {
           "id": "uuid",
           "status": "string",
-          "class_id": "uuid",
+          "classroom_id": "uuid",
           "user_id": "uuid"
         },
         "relationships": {
-          "belongsTo": ["class", "user"]
+          "belongsTo": ["classroom", "user"]
         }
       }
     },

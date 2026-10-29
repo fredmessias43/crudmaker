@@ -18,13 +18,13 @@ return new class extends Migration
 	{
 		Schema::create('class_lessons', function (Blueprint $table) {
 			$table->uuid('id')->primary();
-			$table->uuid('class_id');
+			$table->uuid('classroom_id');
 			$table->string('name');
 			$table->text('description')->nullable();
 			$table->string('link');
 			$table->string('pdf');
 	
-			$table->foreign('class_id')->references('id')->on('classes');
+			$table->foreign('classroom_id')->references('id')->on('classrooms');
 	
 			$table->timestamps();
 			$table->softDeletes();

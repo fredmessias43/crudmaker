@@ -100,6 +100,78 @@ describe("generate (bingo-2, normalização de nomes ligada)", () => {
   });
 });
 
+// order-item (ticket 09): entidade camelCase, FK customizada e entidade referenciada declarada depois. Normalização ligada.
+describe("generate (order-item)", () => {
+  const files = generate(loadManifest("order-item"), { now, existingMigrations: [] }).files;
+  const content = (p: string) => files.find((file) => file.path === p)!.content;
+
+  it("devolve a lista de caminhos esperada", async () => {
+    await expect(files.map((file) => file.path).join("\n") + "\n").toMatchFileSnapshot(path.join(snapshotsDir, "order-item", "_paths.txt"));
+  });
+
+  it("gera o conteúdo esperado de cada arquivo", async () => {
+    for (const file of files) {
+      await expect(file.content).toMatchFileSnapshot(path.join(snapshotsDir, "order-item", file.path));
+    }
+  });
+
+  it("a FK da forma curta aponta para a tabela em snake_case plural, e a customizada mantém o nome", () => {
+    const migration = content("database/migrations/2025_01_02_030407_create_order_items_table.php");
+
+    expect(migration).toContain("$table->uuid('order_id');");
+    expect(migration).toContain("$table->foreign('order_id')->references('id')->on('orders');");
+    expect(migration).toContain("$table->uuid('author_id');");
+    expect(migration).toContain("$table->foreign('author_id')->references('id')->on('users');");
+  });
+
+  it("migrations na ordem das FKs, com timestamps consecutivos (user e order vêm antes de orderItem, declarado primeiro)", () => {
+    // A ordem de execução do Laravel é a do nome do arquivo; os arquivos saem na ordem das entidades do manifest.
+    const migrations = files.map((file) => file.path).filter((p) => p.startsWith("database/migrations/"));
+
+    expect(migrations).toEqual([
+      "database/migrations/2025_01_02_030407_create_order_items_table.php",
+      "database/migrations/2025_01_02_030406_create_orders_table.php",
+      "database/migrations/2025_01_02_030405_create_users_table.php",
+    ]);
+    expect([...migrations].sort().map((p) => path.basename(p).replace(/^[\d_]+_create_|_table\.php$/g, ""))).toEqual(["users", "orders", "order_items"]);
+  });
+
+  it("a regra unique ignora o registro da rota, não o id do corpo", () => {
+    const request = content("app/Http/Requests/OrderItemRequest.php");
+
+    expect(request).toContain("Rule::unique('order_items', 'sku')->ignore($this->route('order_item'))");
+    expect(request).not.toContain("$this->input(");
+    expect(content("app/Http/Requests/OrderRequest.php")).toContain("Rule::unique('orders', 'number')->ignore($this->route('order'))");
+  });
+
+  it("devolve datas ao formato da regra no prepareForValidation (o cast vira Carbon)", () => {
+    const request = content("app/Http/Requests/OrderItemRequest.php");
+
+    expect(request).toContain("$this->merge(['shipped_on' => $orderItem->shipped_on?->format('Y-m-d')]);");
+    expect(request).toContain("$this->merge(['packed_at' => $orderItem->packed_at?->format('Y-m-d H:i')]);");
+    expect(request).toContain("$this->merge(['quantity' => $orderItem->quantity]);");
+  });
+
+  it("a model tem um cast por tipo que precisa dele", () => {
+    const model = content("app/Models/OrderItem.php");
+
+    for (const cast of [
+      "'quantity' => 'integer',",
+      "'price' => 'double',",
+      "'gift' => 'boolean',",
+      "'options' => 'array',",
+      "'shipped_on' => 'date',",
+      "'packed_at' => 'datetime',",
+    ]) {
+      expect(model).toContain(cast);
+    }
+    // uuid, string e enum não têm cast
+    for (const name of ["id", "sku", "status", "author_id"]) {
+      expect(model).not.toContain(`'${name}' =>`);
+    }
+  });
+});
+
 describe("migrations", () => {
   const manifest = loadManifest("curso");
   const migrationPaths = (existingMigrations: string[]) =>
@@ -112,8 +184,43 @@ describe("migrations", () => {
 
     expect(paths.length).toBeGreaterThan(0);
     for (const p of paths) {
-      expect(path.basename(p)).toMatch(/^2025_01_02_030405_create_\w+_table\.php$/);
+      expect(path.basename(p)).toMatch(/^2025_01_02_0304\d\d_create_\w+_table\.php$/);
     }
+  });
+
+  it("ordena por dependência de FK (empate = ordem do manifest) e soma 1 segundo por migration", () => {
+    expect(migrationPaths([]).map((p) => path.basename(p))).toEqual([
+      "2025_01_02_030405_create_courses_table.php",
+      "2025_01_02_030406_create_course_contents_table.php",
+      "2025_01_02_030407_create_users_table.php",
+      "2025_01_02_030408_create_user_courses_table.php",
+      "2025_01_02_030409_create_classrooms_table.php",
+      "2025_01_02_030410_create_class_lessons_table.php",
+      "2025_01_02_030411_create_class_lesson_comments_table.php",
+      "2025_01_02_030412_create_class_lesson_attendees_table.php",
+      "2025_01_02_030413_create_students_table.php",
+    ]);
+  });
+
+  it("auto-referência (class_lesson_comment hasMany class_lesson_comment) não é ciclo", () => {
+    const m = { ...manifest, pkg: { ...manifest.pkg, entities: { node: { fields: { id: "uuid" }, relationships: { belongsTo: ["node"] } } } } };
+    expect(() => generate(m, { now, existingMigrations: [] })).not.toThrow();
+  });
+
+  it("a ordem não depende da ordem de declaração no manifest", () => {
+    const entities = manifest.pkg.entities;
+    const reversed = Object.fromEntries(Object.entries(entities).reverse());
+    const m = { ...manifest, pkg: { ...manifest.pkg, entities: reversed } };
+    const names = generate(m, { now, existingMigrations: [] }).files
+      .map((file) => path.basename(file.path))
+      .filter((name) => name.includes("_create_"))
+      .sort();
+    const position = (table: string) => names.findIndex((name) => name.endsWith(`_create_${table}_table.php`));
+
+    expect(position("courses")).toBeLessThan(position("course_contents"));
+    expect(position("classrooms")).toBeLessThan(position("class_lessons"));
+    expect(position("class_lessons")).toBeLessThan(position("class_lesson_comments"));
+    expect(position("users")).toBeLessThan(position("students"));
   });
 
   it("reaproveita o nome de uma migration que já existe", () => {
@@ -121,9 +228,34 @@ describe("migrations", () => {
     const paths = migrationPaths([existing]);
 
     expect(paths).toContain(`database/migrations/${existing}`);
-    expect(paths).not.toContain("database/migrations/2025_01_02_030405_create_students_table.php");
-    // as demais continuam com o nome novo
+    expect(paths.filter((p) => p.endsWith("_create_students_table.php"))).toEqual([`database/migrations/${existing}`]);
+    // as demais continuam com o nome novo, sem renomear nem colidir com a existente
     expect(paths).toContain("database/migrations/2025_01_02_030405_create_courses_table.php");
+    expect(new Set(paths).size).toBe(paths.length);
+  });
+
+  it("regerar com as migrations da primeira geração não renomeia nada, mesmo com outro `now`", () => {
+    const first = migrationPaths([]).map((p) => path.basename(p));
+    const later = generate(manifest, { now: new Date(2026, 5, 7, 8, 9, 10), existingMigrations: first }).files
+      .map((file) => file.path)
+      .filter((p) => p.startsWith("database/migrations/"));
+
+    expect(later.map((p) => path.basename(p))).toEqual(first);
+  });
+
+  it("entidade nova ao regerar recebe timestamp novo e as existentes ficam como estão", () => {
+    const first = migrationPaths([]).map((p) => path.basename(p));
+    const withNew = {
+      ...manifest,
+      pkg: { ...manifest.pkg, entities: { ...manifest.pkg.entities, badge: { fields: { id: "uuid" }, relationships: { belongsTo: ["user"] } } } },
+    };
+    const later = generate(withNew, { now: new Date(2026, 5, 7, 8, 9, 10), existingMigrations: first }).files
+      .map((file) => path.basename(file.path))
+      .filter((name) => name.includes("_create_"));
+
+    expect(later.filter((name) => first.includes(name))).toEqual(first);
+    expect(later.filter((name) => !first.includes(name))).toHaveLength(1);
+    expect(later.find((name) => name.endsWith("_create_badges_table.php"))).toMatch(/^2026_06_07_0809\d\d_create_badges_table\.php$/);
   });
 });
 

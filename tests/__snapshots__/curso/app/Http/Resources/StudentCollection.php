@@ -24,7 +24,7 @@ class StudentCollection extends ResourceCollection
 			return [
 				'id' => $student->id,
 				'status' => $student->status,
-				'class_id' => $student->class_id,
+				'classroom_id' => $student->classroom_id,
 				'user_id' => $student->user_id,
 				'created_at' => array(
 					'timestamp' => $createdAt->timestamp,

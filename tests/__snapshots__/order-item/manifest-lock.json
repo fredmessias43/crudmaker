@@ -1,0 +1,180 @@
+{
+  "code": "order-item",
+  "version": "0.1.0",
+  "entities": {
+    "orderItem": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "sku": {
+          "type": "string",
+          "name": "sku",
+          "required": true,
+          "unique": true,
+          "enumItems": []
+        },
+        "quantity": {
+          "type": "integer",
+          "name": "quantity",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "price": {
+          "type": "double",
+          "name": "price",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "gift": {
+          "type": "boolean",
+          "name": "gift",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "options": {
+          "type": "json",
+          "name": "options",
+          "required": false,
+          "unique": false,
+          "enumItems": []
+        },
+        "shipped_on": {
+          "type": "date",
+          "name": "shipped_on",
+          "required": false,
+          "unique": false,
+          "enumItems": []
+        },
+        "packed_at": {
+          "type": "datetime",
+          "name": "packed_at",
+          "required": false,
+          "unique": false,
+          "enumItems": []
+        },
+        "status": {
+          "type": "enum",
+          "name": "status",
+          "required": true,
+          "unique": false,
+          "enumItems": [
+            "pending",
+            "shipped"
+          ]
+        },
+        "order_id": {
+          "type": "uuid",
+          "name": "order_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        },
+        "author_id": {
+          "type": "uuid",
+          "name": "author_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        }
+      },
+      "relationships": {
+        "belongsTo": [
+          {
+            "entity": "order",
+            "field": "order_id",
+            "required": true,
+            "relationship": "belongsTo"
+          },
+          {
+            "entity": "user",
+            "field": "author_id",
+            "required": true,
+            "relationship": "belongsTo"
+          }
+        ]
+      }
+    },
+    "order": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "number": {
+          "type": "string",
+          "name": "number",
+          "required": true,
+          "unique": true,
+          "enumItems": []
+        },
+        "user_id": {
+          "type": "uuid",
+          "name": "user_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        }
+      },
+      "relationships": {
+        "hasMany": [
+          {
+            "entity": "orderItem",
+            "field": "order_item_id",
+            "required": true,
+            "relationship": "hasMany"
+          }
+        ],
+        "belongsTo": [
+          {
+            "entity": "user",
+            "field": "user_id",
+            "required": true,
+            "relationship": "belongsTo"
+          }
+        ]
+      }
+    },
+    "user": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "name": {
+          "type": "string",
+          "name": "name",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        }
+      },
+      "relationships": {
+        "hasMany": [
+          {
+            "entity": "order",
+            "field": "order_id",
+            "required": true,
+            "relationship": "hasMany"
+          }
+        ]
+      }
+    }
+  }
+}

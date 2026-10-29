@@ -6,7 +6,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\App;
 
 
-class ClassResource extends JsonResource
+class OrderItemResource extends JsonResource
 {
 
 	/**
@@ -22,8 +22,16 @@ class ClassResource extends JsonResource
 	
 		return [
 			'id' => $this->id,
-			'name' => $this->name,
-			'description' => $this->description,
+			'sku' => $this->sku,
+			'quantity' => $this->quantity,
+			'price' => $this->price,
+			'gift' => $this->gift,
+			'options' => $this->options,
+			'shipped_on' => $this->shipped_on,
+			'packed_at' => $this->packed_at,
+			'status' => $this->status,
+			'order_id' => $this->order_id,
+			'author_id' => $this->author_id,
 			'created_at' => array(
 				'timestamp' => $createdAt->timestamp,
 				'description' => $createdAt->diffForHumans(),

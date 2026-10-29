@@ -25,6 +25,7 @@ class Alert extends Model
 	 * @var array
 	 */
 	protected $casts = [
+		'alertDate' => 'datetime',
 	];
 	
 	/**

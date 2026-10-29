@@ -92,14 +92,11 @@ Como o arquivo é carregado de dentro do `routes/api.php`, as rotas ganham o pre
 
 ## 5. Terminar à mão
 
-O gerador ainda não faz estes passos:
-
-1. **Ordem das migrations.** Todas são criadas no mesmo segundo. Se uma tabela com FK for criada antes da tabela que ela referencia, o `migrate` falha; renomeie o timestamp da migration para corrigir a ordem.
-2. **Rodar:** `php artisan migrate`.
+O gerador não roda o `migrate`. Rode `php artisan migrate`: as migrations já saem ordenadas por dependência de FK (a tabela referenciada vem antes), com timestamps consecutivos (`now` + 1 segundo por migration), então não há ordem para acertar à mão.
 
 ## Regerar
 
-- **Tudo é sobrescrito** (veja o `--dry-run`), exceto o nome das migrations: se já existe uma migration terminada em `_create_<tabela>_table.php`, o mesmo arquivo é reaproveitado (e o conteúdo é reescrito). Qualquer edição feita à mão nos arquivos gerados se perde. Use git no projeto Laravel para recuperar o que precisar.
+- **Tudo é sobrescrito** (veja o `--dry-run`), exceto o nome das migrations: se já existe uma migration terminada em `_create_<tabela>_table.php`, o mesmo arquivo é reaproveitado (e o conteúdo é reescrito). Tabelas novas ganham o timestamp novo, na ordem de dependência. Qualquer edição feita à mão nos arquivos gerados se perde. Use git no projeto Laravel para recuperar o que precisar.
 - Mudanças de schema não viram migration de alteração; a migration de criação é reescrita. Num banco que já rodou a migration, você precisa criar a alteração à mão ou usar `migrate:fresh`.
 
 ## Comportamento da API gerada
@@ -124,6 +121,6 @@ Os controllers não têm try/catch: erros chegam ao handler do Laravel e saem co
 
 Os bugs do código gerado e as limitações do manifest estão listados em [manifest.md](manifest.md#limitações-conhecidas) e na spec da v2. Os principais:
 
-- a regra `unique` não barra duplicatas na edição;
-- a FK aponta para a tabela errada em entidades camelCase;
-- a model usa `HasFactory`, mas nenhuma factory é gerada.
+- a model usa `HasFactory`, mas nenhuma factory é gerada;
+- a regra de validação `double` não existe no Laravel (use `numeric` à mão se precisar);
+- a model de uma FK com nome customizado (`field: "author_id"`) passa as chaves de `belongsTo`/`hasMany` na ordem trocada.

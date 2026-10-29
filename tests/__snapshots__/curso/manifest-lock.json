@@ -186,7 +186,7 @@
         ]
       }
     },
-    "class": {
+    "classroom": {
       "fields": {
         "id": {
           "type": "uuid",
@@ -236,9 +236,9 @@
           "unique": false,
           "enumItems": []
         },
-        "class_id": {
+        "classroom_id": {
           "type": "uuid",
-          "name": "class_id",
+          "name": "classroom_id",
           "required": true,
           "unique": false,
           "enumItems": [],
@@ -284,8 +284,8 @@
         ],
         "belongsTo": [
           {
-            "entity": "class",
-            "field": "class_id",
+            "entity": "classroom",
+            "field": "classroom_id",
             "required": true,
             "relationship": "belongsTo"
           }
@@ -430,9 +430,9 @@
           "unique": false,
           "enumItems": []
         },
-        "class_id": {
+        "classroom_id": {
           "type": "uuid",
-          "name": "class_id",
+          "name": "classroom_id",
           "required": true,
           "unique": false,
           "enumItems": [],
@@ -450,8 +450,8 @@
       "relationships": {
         "belongsTo": [
           {
-            "entity": "class",
-            "field": "class_id",
+            "entity": "classroom",
+            "field": "classroom_id",
             "required": true,
             "relationship": "belongsTo"
           },

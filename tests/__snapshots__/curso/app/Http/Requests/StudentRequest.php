@@ -42,9 +42,9 @@ class StudentRequest extends FormRequest
 							$this->merge(['status' => $student->status]);
 					}
 	
-					if ( ! $this->has('class_id'))
+					if ( ! $this->has('classroom_id'))
 					{
-							$this->merge(['class_id' => $student->class_id]);
+							$this->merge(['classroom_id' => $student->classroom_id]);
 					}
 	
 					if ( ! $this->has('user_id'))
@@ -72,7 +72,7 @@ class StudentRequest extends FormRequest
 					'required',
 					'string',
 				),
-				'class_id' => array(
+				'classroom_id' => array(
 					'bail',
 					'required',
 					'uuid',

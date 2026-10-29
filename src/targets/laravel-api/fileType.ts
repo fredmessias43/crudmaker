@@ -6,6 +6,8 @@ export type EntityFileContext = {
   now: Date;
   /** Nomes de arquivo (sem pasta) das migrations que já existem no destino. */
   existingMigrations: string[];
+  /** Data/hora de cada entidade nas migrations novas: `now` + posição na ordem de dependência das FKs. */
+  migrationDates: Map<Entity, Date>;
 };
 
 /**

@@ -6,7 +6,7 @@ use Illuminate\Http\Resources\Json\ResourceCollection;
 use Illuminate\Support\Facades\App;
 
 
-class ClassCollection extends ResourceCollection
+class OrderItemCollection extends ResourceCollection
 {
 
 	/**
@@ -17,14 +17,22 @@ class ClassCollection extends ResourceCollection
 	 */
 	public function toArray($request)
 	{
-		return $this->collection->map(function ($class) {
-			$createdAt = $class->created_at->locale(App::getLocale());
-			$updatedAt = $class->updated_at->locale(App::getLocale());
+		return $this->collection->map(function ($order_item) {
+			$createdAt = $order_item->created_at->locale(App::getLocale());
+			$updatedAt = $order_item->updated_at->locale(App::getLocale());
 	
 			return [
-				'id' => $class->id,
-				'name' => $class->name,
-				'description' => $class->description,
+				'id' => $order_item->id,
+				'sku' => $order_item->sku,
+				'quantity' => $order_item->quantity,
+				'price' => $order_item->price,
+				'gift' => $order_item->gift,
+				'options' => $order_item->options,
+				'shipped_on' => $order_item->shipped_on,
+				'packed_at' => $order_item->packed_at,
+				'status' => $order_item->status,
+				'order_id' => $order_item->order_id,
+				'author_id' => $order_item->author_id,
 				'created_at' => array(
 					'timestamp' => $createdAt->timestamp,
 					'description' => $createdAt->diffForHumans(),

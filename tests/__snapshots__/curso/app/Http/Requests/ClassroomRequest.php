@@ -3,10 +3,10 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use App\Models\Class;
+use App\Models\Classroom;
 
 
-class ClassRequest extends FormRequest
+class ClassroomRequest extends FormRequest
 {
 
 	/**
@@ -26,25 +26,25 @@ class ClassRequest extends FormRequest
 	 */
 	protected function prepareForValidation()
 	{
-			$class = $this->route('class');
+			$classroom = $this->route('classroom');
 	
-			if ($class instanceof Class)
+			if ($classroom instanceof Classroom)
 			{
-					$this->merge(['id' => $class->id]);
+					$this->merge(['id' => $classroom->id]);
 	
 					if ( ! $this->has('id'))
 					{
-							$this->merge(['id' => $class->id]);
+							$this->merge(['id' => $classroom->id]);
 					}
 	
 					if ( ! $this->has('name'))
 					{
-							$this->merge(['name' => $class->name]);
+							$this->merge(['name' => $classroom->name]);
 					}
 	
 					if ( ! $this->has('description'))
 					{
-							$this->merge(['description' => $class->description]);
+							$this->merge(['description' => $classroom->description]);
 					}
 	
 			}

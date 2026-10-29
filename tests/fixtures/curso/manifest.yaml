@@ -46,7 +46,7 @@ pkg:
         belongsTo:
           - user
           - course
-    class:
+    classroom:
       fields:
         id: uuid
         name: string
@@ -60,7 +60,7 @@ pkg:
     class_lesson:
       fields:
         id: uuid
-        class_id: uuid
+        classroom_id: uuid
         name: string
         description:
           required: false
@@ -71,7 +71,7 @@ pkg:
         hasMany:
           - class_lesson_comment
         belongsTo:
-          - class
+          - classroom
     class_lesson_comment:
       fields:
         id: uuid
@@ -101,10 +101,10 @@ pkg:
       fields:
         id: uuid
         status: string
-        class_id: uuid
+        classroom_id: uuid
         user_id: uuid
       relationships:
         belongsTo:
-          - class
+          - classroom
           - user
   enums: {}

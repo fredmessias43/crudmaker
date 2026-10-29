@@ -11,7 +11,7 @@ Gerador de API Laravel a partir de um manifest YAML ou JSON: lê entidades, camp
 - `npm run schema`: regenera `schema/manifest.schema.json` a partir do schema zod. **Depois de mudar `src/manifestSchema.ts`, rode `npm run schema`** e versione o resultado (um teste falha se o arquivo estiver desatualizado).
 - `npm run lint:php`: gera a saída das 3 fixtures num diretório temporário (data fixa, nada em `generated/`) e roda `php -l` em todos os `.php` num único container Docker `php:8.1-cli` (a versão mínima da spec; só precisa de Docker, não de PHP no host). Falha se algum arquivo tiver erro de sintaxe, exceto os listados em `scripts/phpSyntaxAllowlist.ts`.
 - Não há CI no GitHub (decisão do projeto). O hook `.githooks/pre-commit` roda `npx tsc --noEmit`, `npm test` e `npm run lint:php` a cada commit e bloqueia se algo falhar (sem Docker, a checagem PHP é pulada com aviso). O `npm install` ativa o hook pelo script `prepare` (`core.hooksPath`). Não use `--no-verify` para contornar uma falha: corrija.
-- **Allowlist do `lint:php`** (`scripts/phpSyntaxAllowlist.ts`): falhas conhecidas do gerador, cada uma com arquivo, motivo e ticket que corrige (hoje: a entidade `class` do fixture `curso`, palavra reservada do PHP). Só mexa nela para remover uma entrada quando o ticket corrigir (a checagem falha se uma entrada deixar de falhar). Nunca acrescente entradas para esconder um erro novo: corrija o gerador.
+- **Allowlist do `lint:php`** (`scripts/phpSyntaxAllowlist.ts`): falhas conhecidas do gerador, cada uma com arquivo, motivo e ticket que corrige (hoje vazia: o ticket 09 removeu as últimas entradas). Só mexa nela para remover uma entrada quando o ticket corrigir (a checagem falha se uma entrada deixar de falhar). Nunca acrescente entradas para esconder um erro novo: corrija o gerador.
 - `npx tsc --noEmit`: checagem de tipos. Passa sem erros. Ainda não há lint.
 
 ## Onde está cada coisa
@@ -24,7 +24,8 @@ Gerador de API Laravel a partir de um manifest YAML ou JSON: lê entidades, camp
 - `src/generate.ts`: `generate(manifest, { now, existingMigrations, ... })`, função pura (sem disco) que devolve `{ files, warnings }`: `files` é a lista `{ path, content, policy }` (`path` relativo à raiz do projeto Laravel) e `warnings` os avisos de nomes alterados. A opção `normalizeNames` vence `pkg.normalizeNames`.
 - `src/manifestSchema.ts`: schema zod do manifest (fonte do JSON Schema em `schema/manifest.schema.json`, publicado no pacote).
 - `src/normalizeNames.ts`: normalização de nomes (entidade singular camelCase, campo snake_case), avisos e colisões; roda entre a validação estrutural e a validação entre entidades.
-- `src/validateManifest.ts`: pipeline de validação (schema → normalização de nomes → entre entidades) e `ManifestValidationError` com `{ path, message }` por problema.
+- `src/dependencyOrder.ts`: ordenação topológica estável e detecção de ciclos (ordem das migrations por FK e erro de ciclo).
+- `src/validateManifest.ts`: pipeline de validação (schema → normalização de nomes → entre entidades: alvos, campo `id`, nomes reservados do PHP, ciclos de FK) e `ManifestValidationError` com `{ path, message }` por problema.
 - `src/models/Manifest.ts`: valida via `validateManifest` e normaliza (formas curtas, aliases, campos de FK, unificação de FK declarada + derivada).
 - `src/models/Entity.ts`: nome da entidade em vários casings e nome da tabela.
 - `src/targets/types.ts`: `GeneratedFile` (`{ path, content, policy }`) e `FilePolicy`.

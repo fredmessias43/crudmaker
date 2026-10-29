@@ -79,10 +79,10 @@ Propriedades da forma completa:
 | `type` | — | Tipo do campo (tabela abaixo). |
 | `name` | a chave | Nome da coluna. |
 | `required` | `true` | `false` deixa a coluna `nullable` e a regra de validação `nullable`. |
-| `unique` | `false` | Cria índice único na migration e regra `Rule::unique` na request. |
+| `unique` | `false` | Cria índice único na migration e regra `Rule::unique` na request, que ignora o próprio registro na edição (veja [Regra `unique` na edição](#regra-unique-na-edição)). |
 | `enumItems` | `[]` | Valores permitidos quando `type` é `enum`. |
 
-> **Declare sempre `"id": "uuid"`.** A model usa `HasUuids` e chave do tipo string, e a migration só marca como `primary()` a coluna chamada `id`. Sem esse campo a tabela fica sem chave primária.
+> **Declare sempre `"id": "uuid"`.** A model usa `HasUuids` e chave do tipo string, e a migration só marca como `primary()` a coluna chamada `id`. Entidade sem campo `id` (a chave ou o `name` do campo) é erro de validação.
 
 ### Tipos
 
@@ -91,15 +91,21 @@ Propriedades da forma completa:
 | `uuid` | `uuid()` | `uuid` | — |
 | `string` | `string()` | `string` | — |
 | `text` | `text()` | `string` | — |
-| `integer` (alias `int`) | `integer()` | `integer` | — |
-| `double` | `double()` | `double` | — |
+| `integer` (alias `int`) | `integer()` | `integer` | `integer` |
+| `double` | `double()` | `double` | `double` |
 | `boolean` | `boolean()` | `boolean` | `boolean` |
-| `date` | `date()` | `date_format:Y-m-d` | — |
-| `datetime` | `datetime()` | `date_format:Y-m-d H:i` | — |
+| `date` | `date()` | `date_format:Y-m-d` | `date` |
+| `datetime` | `datetime()` | `date_format:Y-m-d H:i` | `datetime` |
 | `json` | `json()` | `array` | `array` |
 | `enum` | `enum(..., [itens])` com default no primeiro item | `Rule::in([itens])` | — |
 
 O tipo especial `displayName` vira um campo `string` chamado `display_name`, seja qual for a chave usada.
+
+Os casts ficam no `$casts` da model. Como `date` e `datetime` viram `Carbon` na leitura, o `prepareForValidation` da request devolve esses campos ao formato da regra (`->format('Y-m-d')` / `->format('Y-m-d H:i')`) ao completar os campos ausentes numa atualização; e a resource passa a devolvê-los serializados pelo Laravel (ISO 8601), não mais como texto cru do banco.
+
+### Regra `unique` na edição
+
+A request gera `Rule::unique('<tabela>', '<campo>')->ignore($this->route('<entidade>'))`. O parâmetro da rota é o registro sendo editado (model, via route model binding) e o Laravel usa a chave `id` dele; na criação a rota não tem parâmetro, e nada é ignorado. O `id` do corpo da requisição não é usado, porque vem do cliente. Registros com soft delete continuam contando para a unicidade, como no índice único do banco.
 
 ## Relacionamentos (`relationships`)
 
@@ -136,11 +142,20 @@ O que cada tipo gera:
 
 Quando `field` é diferente de `<entidade>_id`, o método da model recebe o nome do campo sem o `_id` (`author_id` → `author()`) e a FK é passada explicitamente.
 
+Na forma curta a FK é sempre `<entidade em snake_case>_id` (`"belongsTo": ["orderItem"]` gera `order_item_id`), com a [normalização de nomes](#normalização-de-nomes) ligada ou desligada; a FK da migration (`->on('order_items')`) aponta para a tabela em snake_case plural.
+
 **Declare os dois lados.** O gerador não cria o relacionamento inverso: se `client` tem `hasMany: ["alert"]`, `alert` precisa de `belongsTo: ["client"]` para a coluna `client_id` existir.
+
+### Ordem das migrations
+
+As migrations são ordenadas por dependência de FK: a tabela referenciada por um `belongsTo` é criada antes da que a referencia, mesmo que a entidade seja declarada depois no manifest. Entre entidades sem dependência entre si vale a ordem do manifest. Cada migration nova recebe o timestamp `now` + 1 segundo por posição (a primeira em `now`, a seguinte em `now + 1s`...), então a saída é determinística e a ordem de execução do Laravel é a de dependência. Auto-referência (`belongsTo` para a própria entidade) não conta como dependência.
+
+Regerar não renomeia migrations existentes: se já há um arquivo terminado em `_create_<tabela>_table.php` no destino, ele é reaproveitado; só as tabelas novas ganham um nome novo.
+
+**Ciclos de FK** (`a` `belongsTo` `b` e `b` `belongsTo` `a`, direto ou por mais entidades) são erro de validação: nenhuma ordem cria as duas tabelas com a FK já apontando para uma tabela existente. Para resolver, remova um dos `belongsTo` do ciclo (por exemplo, deixe só o `hasMany` no lado "um").
 
 ### Limitações conhecidas
 
-- Com a [normalização de nomes](#normalização-de-nomes) **desligada**, na forma curta (string) a FK é `<nome>_id` **sem** converter para snake_case: `"belongsTo": ["orderItem"]` gera `orderItem_id`. Ligada (o padrão), vira `order_item_id`. A FK da migration (`->on('order_items')`) usa o snake_case plural nos dois casos.
 - `owned` e `morphed` adicionam os campos `owner_id` e `owner_class`, mas `ownOne`, `ownMany`, `morphOne`, `morphMany` e `morphTo` ainda **não** geram métodos válidos na model. Não use.
 - `indexes` (por entidade) e `pkg.enums` são aceitos no manifest, mas ignorados.
 
@@ -227,7 +242,7 @@ Depois do parse, o YAML passa pela mesma validação do JSON, com as mesmas mens
 
 ## Validação e JSON Schema
 
-O manifest passa por quatro etapas antes de gerar qualquer arquivo: **estrutura** (schema zod: chaves obrigatórias, tipos de valor, tipo de campo conhecido), **normalização de nomes** (e as colisões que ela detecta), **consistência entre entidades** (já com os nomes normalizados) e **normalização** das formas curtas. Todos os problemas de uma etapa são reportados de uma vez, com o caminho real no arquivo. Se a estrutura estiver errada, a consistência entre entidades só é checada depois que ela for corrigida.
+O manifest passa por quatro etapas antes de gerar qualquer arquivo: **estrutura** (schema zod: chaves obrigatórias, tipos de valor, tipo de campo conhecido), **normalização de nomes** (e as colisões que ela detecta), **consistência entre entidades** (já com os nomes normalizados: alvos dos relacionamentos, campo `id`, nomes reservados do PHP e ciclos de FK) e **normalização** das formas curtas. Todos os problemas de uma etapa são reportados de uma vez, com o caminho real no arquivo. Se a estrutura estiver errada, a consistência entre entidades só é checada depois que ela for corrigida.
 
 ```
 $ crudmaker generate manifest.json --out ../api
@@ -252,8 +267,11 @@ O comando sai com código 1 e nenhum arquivo é escrito.
 | `campo enum precisa de enumItems` / `... de ao menos um item` | campo `enum` sem `enumItems` ou com lista vazia (na forma curta, use a forma completa) |
 | `entidade "x" não existe em pkg.entities (entidades: ...)` | relacionamento de qualquer tipo de lista (`owned`/`morphed` não contam) apontando para entidade inexistente. Nome e lista de entidades já normalizados; o caminho é o do arquivo |
 | `o nome vira "x", o mesmo de ...` | duas entidades (ou dois campos da mesma entidade) com o mesmo nome depois da normalização |
+| `a entidade "x" não tem o campo "id"; declare "id": "uuid" ...` | entidade sem campo `id` (pela chave ou pelo `name`). O caminho é `pkg.entities.x.fields` (ou a própria entidade, se não tem `fields`) |
+| `o nome gera a classe "X", que é palavra reservada do PHP; renomeie a entidade ...` | o nome da entidade (já normalizado) gera uma classe com palavra reservada do PHP, sem diferenciar maiúsculas: `class` → `Class`. Vale a lista oficial de palavras reservadas do PHP 8 mais os nomes de classe reservados (`self`, `parent`, `int`, `string`, `null`...). Nomes que só *contêm* a palavra (`classroom`, `listing`) são válidos |
+| `dependência circular entre FKs (a → b → a) ...` | ciclo de `belongsTo` entre entidades (veja [Ordem das migrations](#ordem-das-migrations)); o caminho aponta para o `belongsTo` que sai da primeira entidade do ciclo |
 
-O caminho usa `.` para chaves e `[n]` para posições de lista, por exemplo `pkg.entities.alert.relationships.belongsTo[0]`. A ausência do campo `id` ainda não é validada.
+O caminho usa `.` para chaves e `[n]` para posições de lista, por exemplo `pkg.entities.alert.relationships.belongsTo[0]`.
 
 ### Autocomplete no editor (JSON Schema)
 

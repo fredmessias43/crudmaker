@@ -59,10 +59,10 @@ function normalizeEntity(entityValue: ManifestInput["pkg"]["entities"][string], 
 
     // Mesmo com a lista vazia a chave aparece no lock.
     newRelationships[relation] = list.map((element): RelationshipValue => {
-      // Forma curta: com a normalização de nomes a FK passa pelo snake_case (`courseContent` → `course_content_id`).
-      // Desligada, vale o comportamento antigo: `<nome>_id` sem snake_case.
+      // Forma curta: a FK é sempre `<entidade em snake_case>_id` (`courseContent` → `course_content_id`),
+      // com ou sem normalização de nomes: é a mesma regra da forma longa e do `->on('<tabela>')` da migration.
       if (typeof element === "string") {
-        const field = (normalizeNames ? snakeCase(element) : element) + "_id";
+        const field = snakeCase(element) + "_id";
         return { entity: element, field, required: true, relationship: relation };
       }
       return {

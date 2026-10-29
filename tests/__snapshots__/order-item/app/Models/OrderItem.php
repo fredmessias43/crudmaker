@@ -7,10 +7,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 
-class Class extends Model
+class OrderItem extends Model
 {
 	use HasFactory;
 	use SoftDeletes;
@@ -25,6 +25,12 @@ class Class extends Model
 	 * @var array
 	 */
 	protected $casts = [
+		'quantity' => 'integer',
+		'price' => 'double',
+		'gift' => 'boolean',
+		'options' => 'array',
+		'shipped_on' => 'date',
+		'packed_at' => 'datetime',
 	];
 	
 	/**
@@ -34,18 +40,26 @@ class Class extends Model
 	 */
 	protected $fillable = [
 		'id',
-		'name',
-		'description',
+		'sku',
+		'quantity',
+		'price',
+		'gift',
+		'options',
+		'shipped_on',
+		'packed_at',
+		'status',
+		'order_id',
+		'author_id',
 	];
 
-	public function classLessons(): HasMany
+	public function order(): BelongsTo
 	{
-		return $this->hasMany(ClassLesson::class);
+		return $this->belongsTo(Order::class);
 	}
 	
-	public function students(): HasMany
+	public function author(): BelongsTo
 	{
-		return $this->hasMany(Student::class);
+		return $this->belongsTo(User::class, 'id', 'author_id');
 	}
 	
 

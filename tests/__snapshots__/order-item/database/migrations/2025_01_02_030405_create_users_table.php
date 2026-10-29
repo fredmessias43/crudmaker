@@ -16,14 +16,10 @@ return new class extends Migration
 	 */
 	public function up()
 	{
-		Schema::create('students', function (Blueprint $table) {
+		Schema::create('users', function (Blueprint $table) {
 			$table->uuid('id')->primary();
-			$table->string('status');
-			$table->uuid('class_id');
-			$table->uuid('user_id');
+			$table->string('name');
 	
-			$table->foreign('class_id')->references('id')->on('classes');
-			$table->foreign('user_id')->references('id')->on('users');
 	
 			$table->timestamps();
 			$table->softDeletes();
@@ -38,7 +34,7 @@ return new class extends Migration
 	 */
 	public function down(): void
 	{
-		Schema::dropIfExists('students');
+		Schema::dropIfExists('users');
 	}
 
 };

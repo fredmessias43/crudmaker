@@ -36,7 +36,7 @@ class <%~ it.className %> extends <%~ it.extends %>
 <% for (const field of it.fields) { -%>
 					if ( ! $this->has('<%~ field.key %>'))
 					{
-							$this->merge(['<%~ field.key %>' => $<%~ it.entity.camel %>-><%~ field.key %>]);
+							$this->merge(['<%~ field.key %>' => <%~ field.value %>]);
 					}
 	
 <% } -%>

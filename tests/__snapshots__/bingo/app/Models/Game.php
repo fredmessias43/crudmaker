@@ -25,6 +25,7 @@ class Game extends Model
 	 * @var array
 	 */
 	protected $casts = [
+		'max_players' => 'integer',
 	];
 	
 	/**

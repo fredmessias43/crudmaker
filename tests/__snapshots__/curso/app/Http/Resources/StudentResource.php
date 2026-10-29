@@ -23,7 +23,7 @@ class StudentResource extends JsonResource
 		return [
 			'id' => $this->id,
 			'status' => $this->status,
-			'class_id' => $this->class_id,
+			'classroom_id' => $this->classroom_id,
 			'user_id' => $this->user_id,
 			'created_at' => array(
 				'timestamp' => $createdAt->timestamp,

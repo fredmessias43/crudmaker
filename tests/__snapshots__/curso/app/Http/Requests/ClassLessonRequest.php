@@ -37,9 +37,9 @@ class ClassLessonRequest extends FormRequest
 							$this->merge(['id' => $classLesson->id]);
 					}
 	
-					if ( ! $this->has('class_id'))
+					if ( ! $this->has('classroom_id'))
 					{
-							$this->merge(['class_id' => $classLesson->class_id]);
+							$this->merge(['classroom_id' => $classLesson->classroom_id]);
 					}
 	
 					if ( ! $this->has('name'))
@@ -77,7 +77,7 @@ class ClassLessonRequest extends FormRequest
 	public function rules()
 	{
 			return [
-				'class_id' => array(
+				'classroom_id' => array(
 					'bail',
 					'required',
 					'uuid',

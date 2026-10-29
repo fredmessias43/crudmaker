@@ -1,3 +1,5 @@
+import { pascalCase } from "change-case";
+import { findCycles } from "./dependencyOrder";
 import { INPUT_FIELD_TYPES, manifestSchema, ManifestInput, RelationItemInput } from "./manifestSchema";
 import { normalizeNames } from "./normalizeNames";
 import { UserError } from "./readManifest";
@@ -156,6 +158,83 @@ function validateRelationshipTargets(manifest: ManifestInput, originalEntityKeys
   return problems;
 }
 
+/**
+ * Palavras reservadas do PHP 8 (https://www.php.net/manual/pt_BR/reserved.keywords.php) e nomes de
+ * classe reservados (https://www.php.net/manual/pt_BR/reserved.classes.php e tipos nativos). Em minúsculas:
+ * o PHP não diferencia maiúsculas nessas palavras, então `Class` também é inválido como nome de classe.
+ */
+const PHP_RESERVED_WORDS = new Set([
+  "__halt_compiler", "abstract", "and", "array", "as", "break", "callable", "case", "catch", "class", "clone",
+  "const", "continue", "declare", "default", "die", "do", "echo", "else", "elseif", "empty", "enddeclare",
+  "endfor", "endforeach", "endif", "endswitch", "endwhile", "eval", "exit", "extends", "final", "finally",
+  "fn", "for", "foreach", "function", "global", "goto", "if", "implements", "include", "include_once",
+  "instanceof", "insteadof", "interface", "isset", "list", "match", "namespace", "new", "or", "print",
+  "private", "protected", "public", "readonly", "require", "require_once", "return", "static", "switch",
+  "throw", "trait", "try", "unset", "use", "var", "while", "xor", "yield",
+  // nomes de classe reservados (tipos nativos e especiais)
+  "bool", "false", "float", "int", "iterable", "mixed", "never", "null", "object", "parent", "self", "string",
+  "true", "void",
+]);
+
+/**
+ * Regras por entidade, com os nomes já normalizados: precisa de um campo `id` (a model usa chave string
+ * e a migration só marca `primary()` a coluna chamada `id`) e o nome não pode gerar uma classe com
+ * palavra reservada do PHP (`class` → `class Class`).
+ */
+function validateEntities(manifest: ManifestInput, originalEntityKeys: { [normalized: string]: string }): ManifestProblem[] {
+  const problems: ManifestProblem[] = [];
+
+  for (const [entityName, entity] of Object.entries(manifest.pkg.entities)) {
+    const base = `pkg.entities.${originalEntityKeys[entityName] ?? entityName}`;
+
+    const hasId = Object.entries(entity.fields ?? {}).some(([key, field]) => (typeof field === "string" ? key : field.name ?? key) === "id");
+    if (!hasId) {
+      problems.push({
+        path: entity.fields === undefined ? base : `${base}.fields`,
+        message: `a entidade ${JSON.stringify(entityName)} não tem o campo "id"; declare "id": "uuid" (a model usa chave uuid e a migration só cria a chave primária nesse campo)`,
+      });
+    }
+
+    const className = pascalCase(entityName);
+    if (PHP_RESERVED_WORDS.has(className.toLowerCase())) {
+      problems.push({
+        path: base,
+        message: `o nome gera a classe "${className}", que é palavra reservada do PHP; renomeie a entidade (ex.: "${entityName}Item")`,
+      });
+    }
+  }
+
+  return problems;
+}
+
+/**
+ * Ciclo de FK (A belongsTo B e B belongsTo A): nenhuma ordem de migrations cria as duas tabelas
+ * com as FKs já apontando para uma tabela existente. Auto-referência não conta.
+ * Roda com os nomes já normalizados.
+ */
+function validateForeignKeyCycles(manifest: ManifestInput, originalEntityKeys: { [normalized: string]: string }): ManifestProblem[] {
+  const entities = manifest.pkg.entities;
+  const belongsTo = (name: string) => entities[name].relationships?.belongsTo ?? [];
+  const cycles = findCycles(
+    Object.keys(entities).map((name) => ({ id: name, dependsOn: belongsTo(name).map(relationTarget) })),
+  );
+
+  return cycles.map((cycle) => {
+    // Aponta para o belongsTo que sai da primeira entidade do ciclo, rumo à próxima.
+    const from = cycle[0];
+    const to = cycle[1 % cycle.length];
+    const index = belongsTo(from).findIndex((item) => relationTarget(item) === to);
+    const item = belongsTo(from)[index];
+
+    return {
+      path: `pkg.entities.${originalEntityKeys[from] ?? from}.relationships.belongsTo[${index}]${typeof item === "string" ? "" : ".entity"}`,
+      message:
+        `dependência circular entre FKs (${[...cycle, cycle[0]].join(" → ")}): não há ordem de migrations que crie essas tabelas; ` +
+        `remova um dos belongsTo do ciclo (por exemplo, deixe só o hasMany no lado "um")`,
+    };
+  });
+}
+
 export type ValidateOptions = {
   /** Quando definida, vale mais que `pkg.normalizeNames` do manifest. */
   normalizeNames?: boolean;
@@ -189,7 +268,13 @@ export function validateManifest(obj: unknown, options: ValidateOptions = {}): V
   problems.push(...normalized.problems);
   // Com colisão as entidades se misturam, então a checagem dos alvos só roda sem elas.
   if (normalized.problems.length === 0) {
-    problems.push(...validateRelationshipTargets(normalized.manifest, normalized.originalEntityKeys));
+    const targetProblems = validateRelationshipTargets(normalized.manifest, normalized.originalEntityKeys);
+    problems.push(...targetProblems);
+    problems.push(...validateEntities(normalized.manifest, normalized.originalEntityKeys));
+    // Alvos inexistentes já são erro; o ciclo só faz sentido num grafo completo.
+    if (targetProblems.length === 0) {
+      problems.push(...validateForeignKeyCycles(normalized.manifest, normalized.originalEntityKeys));
+    }
   }
   if (problems.length > 0) throw new ManifestValidationError(problems);
 

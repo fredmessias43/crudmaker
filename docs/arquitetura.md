@@ -38,8 +38,8 @@ O `npx`/`npm link` usam o campo `bin` do `package.json` (`dist/bin.js`), gerado 
 
 `generate` (`src/generate.ts`) não lê nem escreve em disco. Tudo o que seria "ambiente" entra por `options`:
 
-- `now`: data/hora do prefixo das migrations novas (`yyyy_MM_dd_HHmmss`);
-- `existingMigrations`: nomes de arquivo das migrations que já existem no destino. Se algum termina com `_create_<tabela>_table.php`, o nome é reaproveitado em vez de gerar um novo;
+- `now`: base do prefixo das migrations novas (`yyyy_MM_dd_HHmmss`). A migration na posição *n* da ordem de dependência de FK usa `now` + *n* segundos;
+- `existingMigrations`: nomes de arquivo das migrations que já existem no destino. Se algum termina com `_create_<tabela>_table.php`, o nome é reaproveitado em vez de gerar um novo (regerar nunca renomeia);
 - `existingApiRoutes`: conteúdo do `routes/api.php` do destino (ou `null`);
 - `normalizeNames` (opcional): liga/desliga a normalização de nomes; quando definida, vale mais que `pkg.normalizeNames` do manifest.
 
@@ -61,12 +61,12 @@ Recebe o objeto cru do manifest (e a opção `normalizeNames`) e produz `entitie
 
 1. **Schema** (`src/manifestSchema.ts`, zod): estrutura do manifest de entrada (formas curta e longa, aliases `int`/`displayName`, tipos conhecidos, chaves obrigatórias). É a fonte do JSON Schema publicado em `schema/manifest.schema.json` (`npm run schema`, via `z.toJSONSchema` do zod 4 com `io: "input"`, que descreve o que se escreve no manifest e não o resultado das transformações). Chaves desconhecidas são toleradas e descartadas.
 2. **Normalização de nomes** (`src/normalizeNames.ts`), só com a estrutura válida e antes da validação entre entidades. Entidades (chaves de `pkg.entities` e referências nos relacionamentos) viram singular camelCase; campos (chaves, `name` explícito e `field` explícito de relacionamento) viram snake_case. Devolve um aviso por nome alterado e as colisões como problemas de validação. Desligada (`pkg.normalizeNames: false` ou a opção/flag), não altera nada, mas ainda avisa o que está fora da convenção. Não altera a entrada (função pura).
-3. **Validação entre entidades** (`src/validateManifest.ts`): relacionamento para entidade inexistente (com os nomes já normalizados e o caminho original no arquivo) e `enum` sem itens (checado antes, com os nomes originais). `validateManifest` orquestra as etapas 1 a 3 e devolve `{ input, warnings, normalizeNames }`. As issues do zod são convertidas em `{ path, message }` em português, com o caminho real no arquivo; qualquer falha lança `ManifestValidationError` (subclasse de `UserError`) com todos os problemas da etapa. A CLI a imprime com um problema por linha.
+3. **Validação entre entidades** (`src/validateManifest.ts`): relacionamento para entidade inexistente, entidade sem campo `id`, nome de entidade que gera classe com palavra reservada do PHP e ciclo de FK entre `belongsTo` (tudo com os nomes já normalizados e o caminho original no arquivo; o ciclo só é checado se os alvos existem), e `enum` sem itens (checado antes, com os nomes originais). A detecção de ciclos usa `src/dependencyOrder.ts`, o mesmo módulo que ordena as migrations. `validateManifest` orquestra as etapas 1 a 3 e devolve `{ input, warnings, normalizeNames }`. As issues do zod são convertidas em `{ path, message }` em português, com o caminho real no arquivo; qualquer falha lança `ManifestValidationError` (subclasse de `UserError`) com todos os problemas da etapa. A CLI a imprime com um problema por linha.
 4. **Normalização** (`normalizeEntity` em `src/models/Manifest.ts`), só com a entrada já válida:
    - campo na forma curta (`"name": "string"`) vira `{ type, name, required: true, unique: false, enumItems: [] }`;
    - aliases são resolvidos (`int` → `integer`, `displayName` → campo `display_name` do tipo `string`);
    - cada relacionamento vira `{ entity, field, required, relationship }`;
-   - `belongsTo` adiciona o campo de FK (`uuid`, com `relationship: true`) aos `fields`; com a normalização de nomes ligada, a FK da forma curta passa por snake_case (`courseContent` → `course_content_id`) e uma FK já declarada à mão com o mesmo nome é unificada (vale a declaração explícita, completada com `relationship: true`);
+   - `belongsTo` adiciona o campo de FK (`uuid`, com `relationship: true`) aos `fields`; a FK da forma curta é sempre `<entidade em snake_case>_id` (`courseContent` → `course_content_id`), com ou sem normalização de nomes; com a normalização ligada, uma FK já declarada à mão com o mesmo nome é unificada (vale a declaração explícita, completada com `relationship: true`);
    - `owned`/`morphed` adicionam `owner_id` e `owner_class`.
 
 `manifestToString()` serializa o resultado normalizado; `generate` o devolve como o arquivo `manifest-lock.json`. Os tipos do modelo normalizado continuam em `src/types.ts`.
@@ -99,8 +99,8 @@ Módulos do target:
 
 | Arquivo | Papel |
 |---|---|
-| `index.ts` | `generateLaravelApi(input)`: percorre as entidades, aplica cada tipo de arquivo (`entityFileTypes`) e acrescenta as rotas e o `routes/api.php` |
-| `fileType.ts` | tipos `EntityFileType` (template + `build(entity, ctx)` que devolve `{ path, view }`) e `EntityFileContext` |
+| `index.ts` | `generateLaravelApi(input)`: calcula a data de cada migration (ordem topológica pelos `belongsTo`, empate = ordem do manifest, `now` + 1 segundo por posição), percorre as entidades, aplica cada tipo de arquivo (`entityFileTypes`) e acrescenta as rotas e o `routes/api.php` |
+| `fileType.ts` | tipos `EntityFileType` (template + `build(entity, ctx)` que devolve `{ path, view }`) e `EntityFileContext` (inclui `migrationDates`) |
 | `render.ts` | motor Eta e `renderTemplate(nome, dados)`; ponto único de resolução de template |
 | `names.ts` | `BASE_NAMESPACE` (`App`), nomes da entidade em cada casing e `namespaceToFolder` (`App\Http\Requests` → `app/Http/Requests`) |
 | `viewModels/classHeader.ts` | parte comum dos templates de classe (namespace, `use`s deduplicados na ordem de declaração, classe e `extends`) e `classPath` |
@@ -151,7 +151,7 @@ Ainda não existem stubs do projeto (prioridade arquivo a arquivo sobre os templ
 
 `tests/yaml.test.ts` cobre o YAML: cada fixture tem um `manifest.yaml` que precisa ler o mesmo objeto e gerar a mesma saída do JSON, os erros de sintaxe/vazio/multi-documento/extensão, e o `init` em cada formato (o exemplo YAML tem de ser igual ao JSON).
 
-`tests/generate.test.ts` também cobre as rotas (nome do recurso, include, idempotência, detecção por variações de espaço e aspas). Ele chama `generate` para os manifests de `tests/fixtures/` com data fixa e sem migrations existentes. Os snapshots de `bingo`, `curso` e `vende-que-vende-api` são a saída de antes da normalização de nomes e valem com ela **desligada** (`normalizeNames: false`); `bingo-2` (entidades no plural, FKs declaradas à mão) tem snapshot com a normalização ligada, o padrão. O conteúdo de cada arquivo é comparado com um snapshot em `tests/__snapshots__/<fixture>/<path>`, e a lista de caminhos com `_paths.txt`. Os snapshots registram a saída atual, inclusive bugs conhecidos. Foram eles que provaram que a migração para templates (ticket 07) não mudou a saída.
+`tests/generate.test.ts` também cobre a ordem e os timestamps das migrations, a regeração sem renomear, as FKs, o `ignore` do `unique` e os casts, com asserções explícitas (a fixture `order-item`, com entidade camelCase e FK customizada, roda com a normalização ligada e tem snapshot próprio), e as rotas (nome do recurso, include, idempotência, detecção por variações de espaço e aspas). Ele chama `generate` para os manifests de `tests/fixtures/` com data fixa e sem migrations existentes. Os snapshots de `bingo`, `curso` e `vende-que-vende-api` são a saída de antes da normalização de nomes e valem com ela **desligada** (`normalizeNames: false`); `bingo-2` (entidades no plural, FKs declaradas à mão) tem snapshot com a normalização ligada, o padrão. O conteúdo de cada arquivo é comparado com um snapshot em `tests/__snapshots__/<fixture>/<path>`, e a lista de caminhos com `_paths.txt`. Os snapshots registram a saída atual, inclusive bugs conhecidos. Foram eles que provaram que a migração para templates (ticket 07) não mudou a saída.
 
 ### Sintaxe do PHP gerado
 
@@ -159,7 +159,7 @@ Ainda não existem stubs do projeto (prioridade arquivo a arquivo sobre os templ
 
 A checagem olha a saída de `generate`, e não os snapshots, para não depender deles: um snapshot pode ser atualizado com `-u` sem que ninguém perceba que o PHP ficou inválido, e a checagem continua valendo mesmo que a forma de guardar os snapshots mude.
 
-`scripts/phpSyntaxAllowlist.ts` lista as falhas conhecidas (arquivo, motivo e ticket que corrige). Elas aparecem como "conhecido" e não quebram a checagem; uma entrada que deixa de falhar também quebra a checagem, para a lista não apodrecer. `tests/phpSyntax.test.ts` testa a classificação sem Docker e, com `PHP_DOCKER_TESTS=1`, prova com Docker que um PHP inválido reprova (a variável `CRUDMAKER_INJECT_INVALID_PHP=1` faz o script injetar um arquivo inválido).
+`scripts/phpSyntaxAllowlist.ts` lista as falhas conhecidas (arquivo, motivo e ticket que corrige); hoje está vazia. Elas aparecem como "conhecido" e não quebram a checagem; uma entrada que deixa de falhar também quebra a checagem, para a lista não apodrecer. `tests/phpSyntax.test.ts` testa a classificação sem Docker e, com `PHP_DOCKER_TESTS=1`, prova com Docker que um PHP inválido reprova (a variável `CRUDMAKER_INJECT_INVALID_PHP=1` faz o script injetar um arquivo inválido).
 
 Não há CI no GitHub: o hook versionado `.githooks/pre-commit` roda `npx tsc --noEmit`, `npm test` e `npm run lint:php` a cada commit (cerca de 5 s) e bloqueia o commit se algo falhar. Sem Docker (o script sai com 2), a checagem PHP é pulada com aviso. O script `prepare` do `package.json` ativa o hook com `git config core.hooksPath .githooks`.
 

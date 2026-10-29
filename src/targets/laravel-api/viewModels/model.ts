@@ -7,6 +7,16 @@ import { classHeader, classPath } from "./classHeader";
 
 const namespace = `${BASE_NAMESPACE}\\Models`;
 
+/** Cast do Eloquent por tipo de campo. Tipos fora da lista (uuid, string, text, enum) não precisam de cast. */
+const castTypes: { [type: string]: string } = {
+  boolean: "boolean",
+  json: "array",
+  date: "date",
+  datetime: "datetime",
+  double: "double",
+  integer: "integer",
+};
+
 export const modelFile: EntityFileType = {
   template: "model",
   build(entity) {
@@ -22,8 +32,8 @@ export const modelFile: EntityFileType = {
 
     const casts: { name: string; cast: string }[] = [];
     for (const [, field] of fields) {
-      if (field.type === "boolean") casts.push({ name: field.name, cast: field.type });
-      if (field.type === "json") casts.push({ name: field.name, cast: "array" });
+      const cast = castTypes[field.type];
+      if (cast !== undefined) casts.push({ name: field.name, cast });
     }
 
     const relations = Object.values(entity.relationships)

@@ -9,13 +9,13 @@
 - [07 — Migrar os geradores para templates](../fase-2-bugs/07-migrar-para-templates.md)
 - [04 — Schema e validação do manifest](../fase-1-usavel/04-schema-e-validacao.md)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Critérios de aceite
 
-- [ ] Fixture com entidade camelCase (`orderItem`) e FK customizada, com snapshot.
-- [ ] Asserções explícitas: nome da tabela da FK, ordem das migrations, `ignore` por id e casts presentes.
-- [ ] Regerar não renomeia migrations existentes.
-- [ ] Entidade com nome reservado do PHP falha na validação com mensagem clara; a fixture `curso` é ajustada, e as 5 entradas da allowlist do `lint:php` são removidas.
-- [ ] As "Limitações conhecidas" resolvidas saem do `docs/manifest.md`.
-- [ ] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.
+- [x] Fixture com entidade camelCase (`orderItem`) e FK customizada, com snapshot.
+- [x] Asserções explícitas: nome da tabela da FK, ordem das migrations, `ignore` por id e casts presentes.
+- [x] Regerar não renomeia migrations existentes.
+- [x] Entidade com nome reservado do PHP falha na validação com mensagem clara; a fixture `curso` é ajustada, e as 5 entradas da allowlist do `lint:php` são removidas.
+- [x] As "Limitações conhecidas" resolvidas saem do `docs/manifest.md`.
+- [x] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.

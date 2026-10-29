@@ -22,7 +22,7 @@ class ClassLessonResource extends JsonResource
 	
 		return [
 			'id' => $this->id,
-			'class_id' => $this->class_id,
+			'classroom_id' => $this->classroom_id,
 			'name' => $this->name,
 			'description' => $this->description,
 			'link' => $this->link,

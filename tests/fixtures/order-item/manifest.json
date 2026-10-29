@@ -1,0 +1,46 @@
+{
+  "system": { "title": "Pedidos", "code": "pedidos" },
+  "pkg": {
+    "code": "order-item",
+    "entities": {
+      "orderItem": {
+        "fields": {
+          "id": "uuid",
+          "sku": { "type": "string", "unique": true },
+          "quantity": "integer",
+          "price": "double",
+          "gift": "boolean",
+          "options": { "type": "json", "required": false },
+          "shippedOn": { "type": "date", "required": false },
+          "packedAt": { "type": "datetime", "required": false },
+          "status": { "type": "enum", "enumItems": ["pending", "shipped"] }
+        },
+        "relationships": {
+          "belongsTo": [
+            "order",
+            { "entity": "user", "field": "author_id" }
+          ]
+        }
+      },
+      "order": {
+        "fields": {
+          "id": "uuid",
+          "number": { "type": "string", "unique": true }
+        },
+        "relationships": {
+          "hasMany": ["orderItem"],
+          "belongsTo": ["user"]
+        }
+      },
+      "user": {
+        "fields": {
+          "id": "uuid",
+          "name": "string"
+        },
+        "relationships": {
+          "hasMany": ["order"]
+        }
+      }
+    }
+  }
+}

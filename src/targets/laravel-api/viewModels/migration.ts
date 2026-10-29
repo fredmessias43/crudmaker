@@ -1,9 +1,14 @@
 import { snakeCase } from "change-case";
 import { format } from "date-fns";
 import { plural } from "pluralize";
-import { Field } from "../../../types";
+import { Field, RelationshipValue } from "../../../types";
 import { EntityFileType } from "../fileType";
 import { entityNames } from "../names";
+
+/** Tabela referenciada por um `belongsTo`: snake_case plural da entidade (a mesma de `Entity.getTableName`). */
+export function foreignKeyTable(relationship: RelationshipValue): string {
+  return plural(snakeCase(relationship.entity));
+}
 
 /** Declaração de uma coluna no Blueprint, com o `;` final. */
 function column(field: Field): string {
@@ -24,24 +29,25 @@ function column(field: Field): string {
 
 /**
  * Nome do arquivo: reaproveita o de uma migration existente (mesmo sufixo `_create_<tabela>_table.php`)
- * ou cria um novo com o prefixo de data/hora.
+ * ou cria um novo com o prefixo de data/hora (o da posição da migration na ordem de dependência).
+ * Regerar nunca renomeia: migrations existentes mantêm o nome; só as novas usam `date`.
  */
-function fileName(table: string, now: Date, existingMigrations: string[]): string {
+function fileName(table: string, date: Date, existingMigrations: string[]): string {
   const suffix = `_create_${table}_table.php`;
   const existing = existingMigrations.find((file) => file.endsWith(suffix));
 
-  return existing ?? format(now, "yyyy_MM_dd_HHmmss") + suffix;
+  return existing ?? format(date, "yyyy_MM_dd_HHmmss") + suffix;
 }
 
 export const migrationFile: EntityFileType = {
   template: "migration",
-  build(entity, { now, existingMigrations }) {
+  build(entity, { migrationDates, existingMigrations }) {
     const { table } = entityNames(entity);
     const fields = Object.values(entity.fields);
     const belongsTo = entity.relationships?.belongsTo ?? [];
 
     return {
-      path: `database/migrations/${fileName(table, now, existingMigrations)}`,
+      path: `database/migrations/${fileName(table, migrationDates.get(entity)!, existingMigrations)}`,
       view: {
         imports: [
           "Illuminate\\Database\\Migrations\\Migration",
@@ -52,7 +58,7 @@ export const migrationFile: EntityFileType = {
         columns: fields.map(column),
         foreignKeys: belongsTo.map((relationship) => ({
           field: relationship.field,
-          table: plural(snakeCase(relationship.entity)),
+          table: foreignKeyTable(relationship),
         })),
         uniques: fields.filter((field) => field.unique).map((field) => field.name),
       },

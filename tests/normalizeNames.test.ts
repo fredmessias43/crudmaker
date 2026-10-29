@@ -13,8 +13,11 @@ const loadManifest = (name: string) => JSON.parse(fs.readFileSync(path.join(fixt
 const gen = (manifest: any, normalizeNames?: boolean) => generate(manifest, { now, existingMigrations: [], normalizeNames });
 const lockOf = (manifest: any, normalizeNames?: boolean) =>
   JSON.parse(gen(manifest, normalizeNames).files.find((file) => file.path === "manifest-lock.json")!.content);
+/** Tira o timestamp do nome de uma migration, para os testes não dependerem da posição dela na ordem das FKs. */
+const withoutTimestamp = (p: string) => p.replace(/migrations\/\d{4}_\d{2}_\d{2}_\d{6}_/, "migrations/");
+
 const contentOf = (manifest: any, p: string, normalizeNames?: boolean) =>
-  gen(manifest, normalizeNames).files.find((file) => file.path === p)!.content;
+  gen(manifest, normalizeNames).files.find((file) => withoutTimestamp(file.path) === withoutTimestamp(p))!.content;
 
 function manifestWith(entities: any, pkgExtra: object = {}): any {
   return { system: { code: "s" }, pkg: { code: "p", entities, ...pkgExtra } };
@@ -145,7 +148,7 @@ describe("FK derivada com snake_case", () => {
     const migration = contentOf(m, "database/migrations/2025_01_02_030405_create_notes_table.php");
     expect(migration).toContain("$table->uuid('course_content_id');");
     expect(migration).toContain("->foreign('course_content_id')->references('id')->on('course_contents')");
-    expect(gen(m).files.some((f) => f.path === "database/migrations/2025_01_02_030405_create_course_contents_table.php")).toBe(true);
+    expect(gen(m).files.some((f) => withoutTimestamp(f.path) === "database/migrations/create_course_contents_table.php")).toBe(true);
   });
 
   it("a forma curta com entidade já em camelCase também usa snake_case", () => {
@@ -157,12 +160,13 @@ describe("FK derivada com snake_case", () => {
     expect(contentOf(camel, "database/migrations/2025_01_02_030405_create_notes_table.php")).toContain("->on('order_items')");
   });
 
-  it("desligada, a forma curta mantém o comportamento antigo (course_content_id vem do nome sem conversão)", () => {
+  it("desligada, a forma curta também usa snake_case (é correção de bug, não normalização de nome)", () => {
     const camel = manifestWith({
       orderItem: { fields: { id: "uuid" } },
       note: { fields: { id: "uuid" }, relationships: { belongsTo: ["orderItem"] } },
     });
-    expect(Object.keys(lockOf(camel, false).entities.note.fields)).toEqual(["id", "orderItem_id"]);
+    expect(Object.keys(lockOf(camel, false).entities.note.fields)).toEqual(["id", "order_item_id"]);
+    expect(contentOf(camel, "database/migrations/2025_01_02_030405_create_notes_table.php", false)).toContain("->foreign('order_item_id')->references('id')->on('order_items')");
   });
 });
 
@@ -312,7 +316,7 @@ describe("fixtures antigas com a normalização ligada", () => {
     expect(files.find((f) => f.path === "app/Models/Game.php")!.content).toContain("$this->hasMany(Award::class)");
   });
 
-  it("curso: course_content vira courseContent, com FK course_content_id e tabela course_contents; class continua class", () => {
+  it("curso: course_content vira courseContent, com FK course_content_id e tabela course_contents; classroom continua classroom", () => {
     const m = loadManifest("curso");
     const { warnings, files } = gen(m);
 
@@ -321,7 +325,7 @@ describe("fixtures antigas com a normalização ligada", () => {
       "pkg.entities.course_content → courseContent",
       "pkg.entities.user.relationships.hasMany[0]: user_course → userCourse",
       "pkg.entities.user_course → userCourse",
-      "pkg.entities.class.relationships.hasMany[0]: class_lesson → classLesson",
+      "pkg.entities.classroom.relationships.hasMany[0]: class_lesson → classLesson",
       "pkg.entities.class_lesson → classLesson",
       "pkg.entities.class_lesson.relationships.hasMany[0]: class_lesson_comment → classLessonComment",
       "pkg.entities.class_lesson_comment → classLessonComment",
@@ -338,7 +342,7 @@ describe("fixtures antigas com a normalização ligada", () => {
 
     const paths = files.map((f) => f.path);
     expect(paths.some((p) => p.endsWith("_create_course_contents_table.php"))).toBe(true);
-    expect(paths).toContain("app/Models/Class.php");
+    expect(paths).toContain("app/Models/Classroom.php");
 
     // a saída em arquivos é a mesma da normalização desligada: só o lock muda
     const off = gen(m, false).files;

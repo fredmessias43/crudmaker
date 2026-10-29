@@ -35,7 +35,7 @@ class ClassLesson extends Model
 	 */
 	protected $fillable = [
 		'id',
-		'class_id',
+		'classroom_id',
 		'name',
 		'description',
 		'link',
@@ -47,9 +47,9 @@ class ClassLesson extends Model
 		return $this->hasMany(ClassLessonComment::class);
 	}
 	
-	public function class(): BelongsTo
+	public function classroom(): BelongsTo
 	{
-		return $this->belongsTo(Class::class);
+		return $this->belongsTo(Classroom::class);
 	}
 	
 

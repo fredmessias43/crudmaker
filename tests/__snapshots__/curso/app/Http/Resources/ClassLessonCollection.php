@@ -23,7 +23,7 @@ class ClassLessonCollection extends ResourceCollection
 	
 			return [
 				'id' => $class_lesson->id,
-				'class_id' => $class_lesson->class_id,
+				'classroom_id' => $class_lesson->classroom_id,
 				'name' => $class_lesson->name,
 				'description' => $class_lesson->description,
 				'link' => $class_lesson->link,

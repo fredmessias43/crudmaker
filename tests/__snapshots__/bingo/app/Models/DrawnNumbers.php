@@ -25,6 +25,7 @@ class DrawnNumbers extends Model
 	 * @var array
 	 */
 	protected $casts = [
+		'number' => 'integer',
 	];
 	
 	/**

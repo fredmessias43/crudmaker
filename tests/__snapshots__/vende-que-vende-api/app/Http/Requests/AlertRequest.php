@@ -44,7 +44,7 @@ class AlertRequest extends FormRequest
 	
 					if ( ! $this->has('alertDate'))
 					{
-							$this->merge(['alertDate' => $alert->alertDate]);
+							$this->merge(['alertDate' => $alert->alertDate?->format('Y-m-d H:i')]);
 					}
 	
 					if ( ! $this->has('client_id'))

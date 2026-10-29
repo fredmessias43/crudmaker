@@ -7,31 +7,9 @@
  * - `reason`: o que é e qual ticket corrige;
  * - quando o ticket corrigir, REMOVA a entrada: a checagem falha se uma entrada deixar de falhar.
  * Não acrescente entradas para esconder um erro novo; corrija o gerador.
+ *
+ * Hoje a lista está vazia: o ticket 09 corrigiu o último problema conhecido (a entidade `class` da
+ * fixture `curso`, que gerava `class Class`; agora a validação recusa nomes reservados e a fixture usa
+ * `classroom`). O mecanismo continua aqui para falhas futuras.
  */
-export const phpSyntaxAllowlist: { file: string; reason: string }[] = [
-  {
-    file: "curso/app/Models/Class.php",
-    reason:
-      "A entidade `class` da fixture `curso` gera `class Class extends Model`; `class` é palavra reservada do PHP. Corrigir com a validação de palavras reservadas no ticket 09 (corrigir schema, migrations e validação).",
-  },
-  {
-    file: "curso/app/Http/Controllers/Api/ClassController.php",
-    reason:
-      "`Class::all()` e `instanceof Class` pela entidade `class` (palavra reservada do PHP). Mesma causa e mesmo ticket 09 do `Class.php`.",
-  },
-  {
-    file: "curso/app/Http/Requests/ClassRequest.php",
-    reason:
-      "`instanceof Class` pela entidade `class` (palavra reservada do PHP). Mesma causa e mesmo ticket 09 do `Class.php`.",
-  },
-  {
-    file: "curso/app/Models/ClassLesson.php",
-    reason:
-      "Usa `Class::class` por causa da entidade `class` da fixture `curso` (palavra reservada do PHP). Mesma causa e mesmo ticket 09 do `Class.php`.",
-  },
-  {
-    file: "curso/app/Models/Student.php",
-    reason:
-      "Usa `Class::class` por causa da entidade `class` da fixture `curso` (palavra reservada do PHP). Mesma causa e mesmo ticket 09 do `Class.php`.",
-  },
-];
+export const phpSyntaxAllowlist: { file: string; reason: string }[] = [];
