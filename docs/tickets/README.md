@@ -12,7 +12,7 @@ Até o ticket 15 (versão alvo), o código gerado mira o layout do Laravel 11+.
 | 02 | [CLI `crudmaker generate`](fase-1-usavel/02-cli-generate.md) | 01 |
 | 03 | [Manifest em YAML](fase-1-usavel/03-manifest-yaml.md) | 02 |
 | 04 | [Schema e validação do manifest](fase-1-usavel/04-schema-e-validacao.md) | 01 |
-| 05 | [CI com checagem de sintaxe do PHP gerado](fase-1-usavel/05-ci-sintaxe-php.md) | 01 |
+| 05 | [Checagem de sintaxe do PHP gerado](fase-1-usavel/05-ci-sintaxe-php.md) | 01 |
 | 06 | [Gerar as rotas](fase-1-usavel/06-gerar-rotas.md) | 02 |
 
 ## Fase 2 — Templates e correção de bugs

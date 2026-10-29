@@ -15,6 +15,6 @@
 
 - [ ] Testes com executor de comandos falso: imagem por versão de PHP, versão do Laravel, UID/GID, volume, passos por versão, banco do Sail.
 - [ ] Testes da recusa em diretório não vazio e do erro sem Docker.
-- [ ] Teste de ponta a ponta opcional, com Docker de verdade, fora do CI padrão.
+- [ ] Teste de ponta a ponta opcional, com Docker de verdade, fora do `npm test` padrão.
 - [ ] Em execução manual, `sail up` e `sail artisan migrate` funcionam e os endpoints respondem.
 - [ ] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.

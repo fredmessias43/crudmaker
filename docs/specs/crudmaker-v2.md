@@ -177,7 +177,7 @@ O fluxo do ponto de vista do desenvolvedor:
 ### Qualidade e IA
 
 97. Como mantenedor, quero testes de snapshot da saída a partir de manifests de exemplo, para qualquer mudança no PHP gerado aparecer no diff do teste.
-98. Como mantenedor, quero que o CI valide a sintaxe de todo PHP gerado, para nunca publicar uma versão que gera código que não compila.
+98. Como mantenedor, quero um comando local que valide a sintaxe de todo PHP gerado, para nunca publicar uma versão que gera código que não compila.
 99. Como desenvolvedor usando IA, quero um documento curto (formato do manifest + exemplo + comando) para colocar no contexto da IA, para ela alterar o manifest e rodar o gerador em vez de escrever o CRUD em PHP.
 
 ## Implementation Decisions
@@ -253,11 +253,11 @@ O fluxo do ponto de vista do desenvolvedor:
 - **Opções do manifest:** fixtures com o bloco `api` e as propriedades novas de campo, e snapshots cobrindo actions restritas, middleware, filtros/busca/ordenação, `with`, `hidden`, `rules` e `default`. Manifests inválidos (filtro em campo inexistente, `with` em relacionamento inexistente) entram nos testes de validação.
 - **Hooks e stubs:** snapshots da classe base (chamadas dos hooks, transação) e da classe final inicial. Teste de que um stub do projeto substitui o embutido só para o tipo publicado e de que o aviso aparece quando o hash do embutido muda.
 - **Versões:** os snapshots principais rodam para cada versão suportada (Laravel 10, 11 e 12), passando a versão como entrada de `generate`. Assim, a diferença entre versões aparece no próprio snapshot. Há testes da resolução de versão (prioridade entre flag, manifest e composer, além do aviso de divergência) com `composer.json`/`composer.lock` de exemplo.
-- **Scaffold:** testes da CLI com o executor de comandos falso, conferindo a imagem escolhida por versão de PHP, a versão de Laravel passada ao composer, o UID/GID e o volume, os passos pós-instalação por versão, o `sail:install` com o banco certo, a recusa em diretório não vazio e o erro quando o Docker não está disponível. Um teste de ponta a ponta com Docker de verdade fica opcional, fora do CI padrão.
+- **Scaffold:** testes da CLI com o executor de comandos falso, conferindo a imagem escolhida por versão de PHP, a versão de Laravel passada ao composer, o UID/GID e o volume, os passos pós-instalação por versão, o `sail:install` com o banco certo, a recusa em diretório não vazio e o erro quando o Docker não está disponível. Um teste de ponta a ponta com Docker de verdade fica opcional, fora do `npm test` padrão.
 - **Validação:** testes chamando `generate` (ou a etapa de validação exposta pela mesma entrada) com manifests inválidos, conferindo a mensagem e o caminho do erro.
 - **Regeração:** testes passando um lock anterior para `generate` e verificando que nenhuma migration nova sai quando nada mudou e que uma migration `alter` sai quando um campo muda.
 - **CLI:** um ou dois testes de integração num diretório temporário: gera uma vez, implementa um hook na classe final, gera de novo e confere que a edição sobreviveu e que a camada gerada foi atualizada. Também confere que remover uma entidade apaga só a camada gerada dela.
-- **CI:** além dos testes, roda `php -l` em todos os arquivos gerados a partir das fixtures.
+- **Sintaxe:** além dos testes, um comando local roda `php -l` em todos os arquivos gerados a partir das fixtures. Não há CI no GitHub.
 - **Prior art:** o projeto não tem testes hoje; esta spec estabelece o padrão.
 
 ## Out of Scope
@@ -272,7 +272,7 @@ O fluxo do ponto de vista do desenvolvedor:
 - Autenticação, policies e autorização (o `authorize()` gerado continua liberando tudo; a customização fica na camada do usuário).
 - Multi-tenancy (conexão `tenant` comentada hoje na model).
 - Relacionamentos many-to-many com tabela pivô e relacionamentos polimórficos além do que o normalizador já deriva (`owner_id`/`owner_class`).
-- Subir um Laravel real no CI para rodar `migrate` e os testes Pest gerados (o CI valida só a sintaxe).
+- CI no GitHub. Toda verificação é local, inclusive subir um Laravel real para rodar `migrate` e os testes Pest gerados.
 
 ## Further Notes
 

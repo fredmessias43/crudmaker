@@ -115,15 +115,15 @@ O `generate` continua puro: a CLI lê o `routes/api.php` do destino (ou `null` s
 
 `tests/generate.test.ts` também cobre as rotas (nome do recurso, include, idempotência, detecção por variações de espaço e aspas). Ele chama `generate` para os três manifests de `tests/fixtures/` com data fixa e sem migrations existentes. O conteúdo de cada arquivo é comparado com um snapshot em `tests/__snapshots__/<fixture>/<path>`, e a lista de caminhos com `_paths.txt`. Os snapshots registram a saída atual, inclusive bugs conhecidos.
 
-### Sintaxe do PHP gerado e CI
+### Sintaxe do PHP gerado
 
 `npm run lint:php` (`scripts/checkPhpSyntax.ts`) valida que o PHP gerado é sintaticamente válido. Ele chama `generate` para as fixtures de `tests/fixtures/` com data fixa, grava a saída num diretório temporário do sistema (nunca em `generated/` nem no repositório) e monta esse diretório como volume somente leitura num único `docker run --rm` da imagem oficial `php:8.1-cli`, com o UID/GID do usuário, que roda `php -l` em cada `.php`. O script lista os arquivos com erro, sai com código diferente de zero se houver falha inesperada (ou 2 se o Docker não estiver disponível) e apaga o diretório temporário no fim. A versão 8.1 é a mínima prometida pela spec: se parseia nela, parseia nas mais novas.
 
 A checagem olha a saída de `generate`, e não os snapshots, para não depender deles: um snapshot pode ser atualizado com `-u` sem que ninguém perceba que o PHP ficou inválido, e a checagem continua valendo mesmo que a forma de guardar os snapshots mude.
 
-`scripts/phpSyntaxAllowlist.ts` lista as falhas conhecidas (arquivo, motivo e ticket que corrige). Elas aparecem como "conhecido" e não quebram o CI; uma entrada que deixa de falhar também quebra a checagem, para a lista não apodrecer. `tests/phpSyntax.test.ts` testa a classificação sem Docker e, com `PHP_DOCKER_TESTS=1`, prova com Docker que um PHP inválido reprova (a variável `CRUDMAKER_INJECT_INVALID_PHP=1` faz o script injetar um arquivo inválido).
+`scripts/phpSyntaxAllowlist.ts` lista as falhas conhecidas (arquivo, motivo e ticket que corrige). Elas aparecem como "conhecido" e não quebram a checagem; uma entrada que deixa de falhar também quebra a checagem, para a lista não apodrecer. `tests/phpSyntax.test.ts` testa a classificação sem Docker e, com `PHP_DOCKER_TESTS=1`, prova com Docker que um PHP inválido reprova (a variável `CRUDMAKER_INJECT_INVALID_PHP=1` faz o script injetar um arquivo inválido).
 
-O workflow `.github/workflows/ci.yml` roda em push e pull request (Node 24, cache do npm): `npm ci` (o `prepare` já compila), `npx tsc --noEmit`, `npm test`, `npm run build` e `npm run lint:php`.
+Não há CI no GitHub: a checagem roda localmente, junto com `npx tsc --noEmit` e `npm test`.
 
 ## Próximos passos
 

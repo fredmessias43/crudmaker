@@ -27,7 +27,7 @@ describe("classifyFailures", () => {
 });
 
 // Precisa de Docker (e baixa a imagem do PHP na primeira vez), então só roda com PHP_DOCKER_TESTS=1.
-// O CI cobre o caso feliz via `npm run lint:php`.
+// O caso feliz é coberto por `npm run lint:php`.
 describe.skipIf(!process.env.PHP_DOCKER_TESTS || !dockerAvailable())("checagem de sintaxe PHP (Docker)", () => {
   it("aceita PHP válido e reprova PHP inválido, apontando o arquivo", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "crudmaker-php-test-"));
