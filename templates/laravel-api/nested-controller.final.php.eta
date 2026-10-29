@@ -1,0 +1,43 @@
+<?php
+
+namespace <%~ it.namespace %>;
+
+<% for (const use of it.imports) { -%>
+use <%~ use %>;
+<% } -%>
+
+/**
+ * Camada de customização do controller aninhado de <%~ it.parent.pascal %> -> <%~ it.relation %>.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * As actions geradas ficam em <%~ it.base.fqcn %> (<%~ it.base.path %>), que não deve ser editada.
+ * Esta classe estende o controller de <%~ it.entity.pascal %>, então os hooks dele (indexQuery, beforeStore, afterStore)
+ * também valem nas rotas aninhadas.
+ */
+class <%~ it.className %> extends <%~ it.extends %>
+{
+	/*
+	 * Hooks disponíveis. Todos são protected e não fazem nada na base: copie para cá só os que precisar.
+	 * As assinaturas precisam ficar idênticas (o PHP acusa a incompatibilidade na hora).
+	 *
+	 * Imports que os hooks usam:
+	 *   use App\Models\<%~ it.parent.pascal %>;
+	 *   use App\Models\<%~ it.entity.pascal %>;
+	 *   use Illuminate\Database\Eloquent\Builder;
+	 *   use Illuminate\Http\Request;
+	 *
+<% if (it.hasRead && it.kind === 'many') { -%>
+	 *   protected function nestedIndexQuery(Builder $query, Request $request, <%~ it.parent.pascal %> $<%~ it.parent.variable %>): Builder; // antes de paginar
+<% } -%>
+<% if (it.hasRead && it.kind === 'one') { -%>
+	 *   protected function nestedShowQuery(Builder $query, Request $request, <%~ it.parent.pascal %> $<%~ it.parent.variable %>): Builder; // antes de buscar
+<% } -%>
+<% if (it.hasStore) { -%>
+	 *   protected function nestedBeforeStore(array $data, Request $request, <%~ it.parent.pascal %> $<%~ it.parent.variable %>): array; // dados validados -> dados a gravar
+	 *   protected function nestedAfterStore(<%~ it.entity.pascal %> $model, Request $request, <%~ it.parent.pascal %> $<%~ it.parent.variable %>): void; // depois de criar
+<% } -%>
+	 *
+	 * A criação roda a gravação e os hooks na mesma transação (DB::transaction): para barrar,
+	 * lance uma exceção ou chame abort(), e nada é gravado.
+	 */
+}

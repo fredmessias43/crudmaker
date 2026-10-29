@@ -32,6 +32,27 @@ function inProject(dir: string, command: string[]): string {
   return result.stdout;
 }
 
+/**
+ * Sobe `php artisan serve` num container descartável (`--rm`, nome próprio), roda o script `sh` contra
+ * http://127.0.0.1:8000 e devolve a saída. O servidor morre junto com o container; o `docker rm -f`
+ * do `finally` garante que nada sobra se o teste falhar no meio.
+ */
+function withServer(dir: string, script: string): string {
+  const name = `crudmaker-e2e-serve-${process.pid}`;
+  const body = `php artisan serve --host=127.0.0.1 --port=8000 >/tmp/serve.log 2>&1 & sleep 4\n${script}`;
+  try {
+    const result = spawnSync(
+      "docker",
+      ["run", "--rm", "--name", name, "--user", `${process.getuid!()}:${process.getgid!()}`, "-v", `${dir}:/var/www/html`, "-w", "/var/www/html", "laravelsail/php82-composer:latest", "sh", "-c", body],
+      { encoding: "utf8" },
+    );
+    if (result.status !== 0) throw new Error(`servidor de teste falhou:\n${result.stdout}\n${result.stderr}`);
+    return result.stdout;
+  } finally {
+    spawnSync("docker", ["rm", "-f", name], { stdio: "ignore" });
+  }
+}
+
 describe.skipIf(!enabled)("crudmaker new (Docker de verdade)", () => {
   it("cria um Laravel 12 com sqlite, gera a API e as rotas e migrations funcionam", { timeout: 900_000 }, () => {
     tmp = process.env.CRUDMAKER_E2E_KEEP || fs.mkdtempSync(path.join(os.tmpdir(), "crudmaker-e2e-"));
@@ -62,6 +83,29 @@ describe.skipIf(!enabled)("crudmaker new (Docker de verdade)", () => {
 
     const migrate = inProject(dir, ["php", "artisan", "migrate", "--force"]);
     expect(migrate).toContain("create_posts_table");
+
+    // Rotas aninhadas (ticket 20): author hasMany post -> /api/authors/{author}/posts, num servidor real com sqlite.
+    expect(routes).toContain("api/authors/{author}/posts");
+    const http = (method: string, url: string, body?: string) =>
+      `curl -s -X ${method} -H 'Accept: application/json' -H 'Content-Type: application/json' ${body ? `-d '${body}' ` : ""}-w '\\n${method} ${url} -> %{http_code}\\n' http://127.0.0.1:8000${url}`;
+    const output = withServer(dir, [
+      `AUTHOR=$(curl -s -X POST -H 'Accept: application/json' -H 'Content-Type: application/json' -d '{"name":"Ana","email":"ana@example.com"}' http://127.0.0.1:8000/api/authors | sed 's/.*"id":"\\([^"]*\\)".*/\\1/')`,
+      `echo "author=$AUTHOR"`,
+      // o author_id do corpo (de outro autor) é descartado: vale o da URL; o corpo nem precisa dele
+      `curl -s -X POST -H 'Accept: application/json' -H 'Content-Type: application/json' -d '{"title":"Oi","status":"draft","author_id":"00000000-0000-0000-0000-000000000000"}' -w '\\nPOST posts -> %{http_code}\\n' http://127.0.0.1:8000/api/authors/$AUTHOR/posts`,
+      `curl -s -H 'Accept: application/json' -w '\\nGET posts -> %{http_code}\\n' http://127.0.0.1:8000/api/authors/$AUTHOR/posts`,
+      `curl -s -X POST -H 'Accept: application/json' -H 'Content-Type: application/json' -d '{"status":"draft"}' -w '\\nPOST invalido -> %{http_code}\\n' http://127.0.0.1:8000/api/authors/$AUTHOR/posts`,
+      `curl -s -H 'Accept: application/json' -w '\\nGET autor inexistente -> %{http_code}\\n' http://127.0.0.1:8000/api/authors/00000000-0000-0000-0000-000000000000/posts`,
+      http("GET", "/api/posts"),
+    ].join("\n"));
+    const authorId = /author=([0-9a-f-]{36})/.exec(output)?.[1];
+    expect(authorId).toBeDefined();
+    expect(output).toContain("POST posts -> 201");
+    expect(output).toContain(`"author_id":"${authorId}"`);
+    expect(output).toContain("GET posts -> 200");
+    expect(output).toMatch(/"data":\[\{[^]*"title":"Oi"/);
+    expect(output).toContain("POST invalido -> 422");
+    expect(output).toContain("GET autor inexistente -> 404");
   });
 
   it("com a entidade user, mantém as migrations do esqueleto e o login padrão continua possível", { timeout: 900_000 }, () => {

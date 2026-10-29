@@ -7,6 +7,8 @@ namespace App\Generated\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use App\Models\Cards;
+use App\Models\Game;
+use App\Models\Player;
 use Illuminate\Validation\Rule;
 
 
@@ -30,6 +32,22 @@ abstract class BaseCardsRequest extends FormRequest
 	 */
 	protected function prepareForValidation()
 	{
+			// Rota aninhada: a chave estrangeira vem do Game da URL e vale mais que o corpo.
+			$game = $this->route('game');
+
+			if ($game instanceof Game)
+			{
+					$this->merge(['game_id' => $game->getKey()]);
+			}
+
+			// Rota aninhada: a chave estrangeira vem do Player da URL e vale mais que o corpo.
+			$player = $this->route('player');
+
+			if ($player instanceof Player)
+			{
+					$this->merge(['player_id' => $player->getKey()]);
+			}
+
 			$cards = $this->route('cards');
 	
 			if ($cards instanceof Cards)

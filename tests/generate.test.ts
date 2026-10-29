@@ -447,7 +447,7 @@ describe("rotas", () => {
 // Semântica HTTP dos controllers (ticket 08), sem depender de snapshot.
 describe("controllers gerados (semântica HTTP)", () => {
   const { files } = generate(loadManifest("vende-que-vende-api"), { now, existingMigrations: [] });
-  const controllers = files.filter((file) => file.path.startsWith("app/Generated/Http/Controllers/Api/"));
+  const controllers = files.filter((file) => /^app\/Generated\/Http\/Controllers\/Api\/[^/]+\.php$/.test(file.path));
 
   function action(content: string, name: string): string {
     const start = content.indexOf(`public function ${name}(`);

@@ -39,4 +39,12 @@ app/Http/Requests/UserRequest.php
 app/Generated/Factories/BaseUserFactory.php
 database/factories/UserFactory.php
 database/migrations/2025_01_02_030405_create_users_table.php
+app/Generated/Http/Controllers/Api/Relationships/BaseOrderOrderItemController.php
+app/Http/Controllers/Api/Relationships/OrderOrderItemController.php
+app/Generated/Http/Controllers/Api/Relationships/BaseUserOrderByUserController.php
+app/Http/Controllers/Api/Relationships/UserOrderByUserController.php
+app/Generated/Http/Controllers/Api/Relationships/BaseUserOrderController.php
+app/Http/Controllers/Api/Relationships/UserOrderController.php
+app/Generated/Http/Controllers/Api/Relationships/BaseUserOrderItemsByAuthorController.php
+app/Http/Controllers/Api/Relationships/UserOrderItemsByAuthorController.php
 routes/crudmaker.php

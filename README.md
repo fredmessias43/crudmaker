@@ -30,8 +30,6 @@
   - [x] não precisar colocar o campo _id
   - [x] poder ser nullable
   - [x] criar funcoes de relacionamento na model
-  - [ ] criar rotas de relacionamento
-  - [ ] criar controller de relactionamento
   - [-] fix
     - [x] belongsTo propiedades
     - [x] nome do campos diferentes do nome da entidade, erro no nome da funcão model

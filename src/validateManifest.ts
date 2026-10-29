@@ -1,7 +1,7 @@
 import { pascalCase } from "change-case";
 import { enumCaseName } from "./enumCase";
 import { findCycles } from "./dependencyOrder";
-import { entityColumns, IMPLICIT_SORT_COLUMNS, withableRelations } from "./apiOptions";
+import { entityColumns, IMPLICIT_SORT_COLUMNS, nestedCandidates, withableRelations } from "./apiOptions";
 import { ENTITY_ONLY_API_KEYS, INPUT_FIELD_TYPES, manifestSchema, ManifestInput, RelationItemInput } from "./manifestSchema";
 import { normalizeNames } from "./normalizeNames";
 import { UserError } from "./readManifest";
@@ -264,7 +264,7 @@ function validateDefaultsApi(raw: unknown): ManifestProblem[] {
 
   return ENTITY_ONLY_API_KEYS.filter((key) => key in api).map((key) => ({
     path: `pkg.defaults.api.${key}`,
-    message: `"${key}" depende dos campos de cada entidade e não vale como padrão; declare no bloco api da entidade (em pkg.defaults.api só valem actions, middleware e perPage)`,
+    message: `"${key}" depende dos campos de cada entidade e não vale como padrão; declare no bloco api da entidade (em pkg.defaults.api só valem actions, middleware, perPage e nested)`,
   }));
 }
 
@@ -318,6 +318,34 @@ function validateApiNames(manifest: ManifestInput, originalEntityKeys: { [normal
             : `(a entidade não tem relacionamentos belongsTo, hasOne ou hasMany)`),
       });
     });
+
+    if (Array.isArray(api.nested)) {
+      const candidates = nestedCandidates(entityName, manifest.pkg.entities);
+
+      api.nested.forEach((name, index) => {
+        const candidate = candidates.get(name);
+        const path = `${base}.nested[${index}]`;
+
+        if (candidate === undefined) {
+          const available = [...candidates.keys()];
+          problems.push({
+            path,
+            message:
+              `relacionamento ${JSON.stringify(name)} não existe na entidade ${JSON.stringify(entityName)} ` +
+              (available.length > 0
+                ? `(use o nome do método de um hasOne/hasMany na model: ${available.join(", ")})`
+                : `(a entidade não tem relacionamentos hasOne ou hasMany)`),
+          });
+        } else if (!candidate.hasInverse) {
+          problems.push({
+            path,
+            message:
+              `a entidade ${JSON.stringify(candidate.child)} precisa declarar o belongsTo de ${JSON.stringify(entityName)} ` +
+              `com a FK ${JSON.stringify(candidate.foreignKey)} para ter rota aninhada em ${JSON.stringify(name)}`,
+          });
+        }
+      });
+    }
   }
 
   return problems;

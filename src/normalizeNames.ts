@@ -158,6 +158,16 @@ export function normalizeNames(input: ManifestInput, enabled: boolean): NameNorm
       normalizeList("sort", normalizeFieldName);
       normalizeList("with", normalizeRelationName);
 
+      // `nested` também cita relacionamentos pelo nome do método da model (quando é uma lista).
+      const nested = entity.api.nested;
+      if (Array.isArray(nested)) {
+        api.nested = nested.map((name, index) => {
+          const target = normalizeRelationName(name);
+          if (target !== name) warnValue(`${apiPath}.nested[${index}]`, name, target);
+          return enabled ? target : name;
+        });
+      }
+
       if (entity.api.defaultSort !== undefined) {
         // O `-` da frente (decrescente) não faz parte do nome.
         const descending = entity.api.defaultSort.startsWith("-");

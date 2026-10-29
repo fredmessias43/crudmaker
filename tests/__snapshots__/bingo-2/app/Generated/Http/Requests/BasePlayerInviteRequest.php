@@ -8,6 +8,8 @@ namespace App\Generated\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use App\Models\PlayerInvite;
 use App\Generated\Enums\PlayerInviteStatus;
+use App\Models\Game;
+use App\Models\Player;
 use Illuminate\Validation\Rule;
 
 
@@ -31,6 +33,22 @@ abstract class BasePlayerInviteRequest extends FormRequest
 	 */
 	protected function prepareForValidation()
 	{
+			// Rota aninhada: a chave estrangeira vem do Game da URL e vale mais que o corpo.
+			$game = $this->route('game');
+
+			if ($game instanceof Game)
+			{
+					$this->merge(['game_id' => $game->getKey()]);
+			}
+
+			// Rota aninhada: a chave estrangeira vem do Player da URL e vale mais que o corpo.
+			$player = $this->route('player');
+
+			if ($player instanceof Player)
+			{
+					$this->merge(['player_id' => $player->getKey()]);
+			}
+
 			$playerInvite = $this->route('player_invite');
 	
 			if ($playerInvite instanceof PlayerInvite)

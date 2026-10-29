@@ -719,6 +719,22 @@
                     "minLength": 1,
                     "description": "Ordenação quando ?sort não vem ou não é válido. Um campo, com \"-\" na frente para decrescente (ex.: \"-created_at\"). Pode ser id, created_at, updated_at ou um campo da entidade."
                   },
+                  "nested": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "description": "Nomes dos relacionamentos hasMany/hasOne que geram rota aninhada."
+                      }
+                    ],
+                    "description": "Rotas aninhadas dos relacionamentos hasMany/hasOne desta entidade (GET e POST /clients/{client}/alerts; hasOne: /clients/{client}/address). true (padrão) gera para todo hasMany/hasOne cujo filho declara o belongsTo de volta; false desliga; uma lista (nomes de método da model, como em with: \"alerts\", \"postsByAuthor\") gera só para os listados, e um nome sem o belongsTo de volta é erro. Usa as actions do filho (index/show e store) e o middleware do filho."
+                  },
                   "with": {
                     "type": "array",
                     "items": {
@@ -773,9 +789,13 @@
                   "exclusiveMinimum": 0,
                   "maximum": 9007199254740991,
                   "description": "Itens por página no index (inteiro positivo). Padrão: 15."
+                },
+                "nested": {
+                  "type": "boolean",
+                  "description": "false desliga as rotas aninhadas (GET/POST /clients/{client}/alerts) de todas as entidades. Padrão: true."
                 }
               },
-              "description": "Valores padrão do bloco api de todas as entidades. A entidade substitui cada chave que declarar (chave a chave). Só aceita actions, middleware e perPage: filters, search, sort, defaultSort e with dependem dos campos de cada entidade e ficam no bloco api dela."
+              "description": "Valores padrão do bloco api de todas as entidades. A entidade substitui cada chave que declarar (chave a chave). Só aceita actions, middleware, perPage e nested (booleano): filters, search, sort, defaultSort e with dependem dos campos de cada entidade e ficam no bloco api dela."
             }
           },
           "description": "Valores padrão para todas as entidades."

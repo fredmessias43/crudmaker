@@ -244,7 +244,7 @@ Em todos os tipos, `field` é a coluna de FK **no lado filho** (a entidade que t
 
 Na forma curta a FK é sempre `<entidade em snake_case>_id` (`"belongsTo": ["orderItem"]` gera `order_item_id`), com a [normalização de nomes](#normalização-de-nomes) ligada ou desligada; a FK da migration (`->on('order_items')`) aponta para a tabela em snake_case plural.
 
-**Declare os dois lados.** O gerador não cria o relacionamento inverso: se `client` tem `hasMany: ["alert"]`, `alert` precisa de `belongsTo: ["client"]` para a coluna `client_id` existir.
+**Declare os dois lados.** O gerador não cria o relacionamento inverso: se `client` tem `hasMany: ["alert"]`, `alert` precisa de `belongsTo: ["client"]` para a coluna `client_id` existir. É também o `belongsTo` do filho que habilita as [rotas aninhadas](como-usar.md#rotas-aninhadas-hasmany-e-hasone) (`/clients/{client}/alerts`) do `hasMany`/`hasOne`; a opção `nested` do bloco `api` as desliga.
 
 ### Ordem das migrations
 
@@ -307,12 +307,13 @@ Com isso, `GET /api/clients?status=active&search=ana&sort=-name&page=2` lista os
 | `sort` | lista de campos | nenhum | Campos ordenáveis por `?sort=name` (crescente) ou `?sort=-name` (decrescente). Valores fora da lista são ignorados. |
 | `defaultSort` | campo, com `-` na frente para decrescente | nenhum | Ordenação usada quando `?sort` não vem ou não vale (ex.: `-created_at`). |
 | `with` | lista de relacionamentos | nenhum | Eager loading no `index` (`with([...])`) e no `show` (`load([...])`); a resource inclui cada um aninhado. |
+| `nested` | `true`, `false` ou lista de relacionamentos | `true` | Rotas e controllers aninhados dos `hasMany`/`hasOne` **desta entidade** (`GET`/`POST /clients/{client}/alerts`; veja [Rotas aninhadas](como-usar.md#rotas-aninhadas-hasmany-e-hasone)). `false` desliga; uma lista (nome do método da model, como em `with`: `alerts`, `address`, `postsByAuthor`) gera só para os listados. Só gera onde o filho declara o `belongsTo` de volta; um nome da lista sem ele é erro. Usa as `actions` e o `middleware` do **filho**. |
 
 ### Precedência: padrão do pacote × entidade
 
 O bloco da entidade vale **chave a chave** sobre `pkg.defaults.api`: cada chave que a entidade declara substitui a do padrão, e as que ela não declara herdam o padrão. Listas **substituem por inteiro, não somam**: com `middleware: [auth:sanctum]` no padrão, uma entidade com `middleware: [verified]` fica só com `verified`, e `middleware: []` desliga o middleware do padrão para ela. No exemplo, `client` fica com `perPage: 20` e `middleware: [auth:sanctum, verified]`, e uma entidade sem bloco `api` herda `perPage: 15` e `auth:sanctum`.
 
-`pkg.defaults.api` só aceita `actions`, `middleware` e `perPage`. `filters`, `search`, `sort`, `defaultSort` e `with` dependem dos campos de cada entidade, então declará-los no padrão é erro de validação. O `manifest-lock.json` guarda o bloco já resolvido de cada entidade que tem algum valor (padrão ou próprio).
+`pkg.defaults.api` só aceita `actions`, `middleware`, `perPage` e `nested` (só o booleano: `nested: false` desliga as rotas aninhadas do projeto inteiro, e a entidade religa com `nested: true`). `filters`, `search`, `sort`, `defaultSort` e `with` dependem dos campos de cada entidade, então declará-los no padrão é erro de validação. O `manifest-lock.json` guarda o bloco já resolvido de cada entidade que tem algum valor (padrão ou próprio).
 
 ### Consulta do `index`: filtros, busca, ordenação e `with`
 
@@ -337,6 +338,8 @@ Os erros usam o caminho exato (`pkg.entities.client.api.filters[1]`) e saem todo
 |---|---|
 | `campo "x" não existe na entidade "client" (campos: ...)` | nome em `filters`, `search`, `sort` ou `defaultSort` que não é campo da entidade (em `sort`/`defaultSort` a lista inclui `created_at` etc.) |
 | `relacionamento "x" não existe na entidade "client" (use o nome do método na model: ...)` | item de `with` que não é o método de um `belongsTo`/`hasOne`/`hasMany` da entidade |
+| `relacionamento "x" não existe na entidade "client" (use o nome do método de um hasOne/hasMany na model: ...)` | item de `nested` que não é o método de um `hasOne`/`hasMany` da entidade |
+| `a entidade "alert" precisa declarar o belongsTo de "client" com a FK "client_id" para ter rota aninhada em "alerts"` | item de `nested` cujo filho não tem o `belongsTo` de volta |
 | `valor "x" inválido (use um de: index, show, store, update, destroy)` | action desconhecida |
 | `a lista de actions não pode ser vazia ...` | `actions: []` |
 | `deve ser maior que zero` / `deve ser número inteiro, recebido número` | `perPage` zero, negativo ou fracionário |

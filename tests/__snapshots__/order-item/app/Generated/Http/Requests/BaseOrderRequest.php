@@ -7,6 +7,7 @@ namespace App\Generated\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use App\Models\Order;
+use App\Models\User;
 use Illuminate\Validation\Rule;
 
 
@@ -30,6 +31,22 @@ abstract class BaseOrderRequest extends FormRequest
 	 */
 	protected function prepareForValidation()
 	{
+			// Rota aninhada: a chave estrangeira vem do User da URL e vale mais que o corpo.
+			$user = $this->route('user');
+
+			if ($user instanceof User)
+			{
+					$this->merge(['user_id' => $user->getKey()]);
+			}
+
+			// Rota aninhada: a chave estrangeira vem do User da URL e vale mais que o corpo.
+			$user = $this->route('user');
+
+			if ($user instanceof User)
+			{
+					$this->merge(['user_id' => $user->getKey()]);
+			}
+
 			$order = $this->route('order');
 	
 			if ($order instanceof Order)

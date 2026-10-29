@@ -52,4 +52,8 @@ app/Http/Requests/TagRequest.php
 app/Generated/Factories/BaseTagFactory.php
 database/factories/TagFactory.php
 database/migrations/2025_01_02_030408_create_tags_table.php
+app/Generated/Http/Controllers/Api/Relationships/BaseClientAddressController.php
+app/Http/Controllers/Api/Relationships/ClientAddressController.php
+app/Generated/Http/Controllers/Api/Relationships/BaseClientAlertController.php
+app/Http/Controllers/Api/Relationships/ClientAlertController.php
 routes/crudmaker.php

@@ -1,6 +1,7 @@
 import { Entity } from "../../../models/Entity";
 import { entityApi, phpString } from "../entityApi";
 import { BASE_NAMESPACE, entityNames } from "../names";
+import { NestedRoute } from "./nestedController";
 
 /** Caminho do arquivo de rotas gerado, relativo à raiz do projeto Laravel. */
 export const routesPath = "routes/crudmaker.php";
@@ -28,12 +29,41 @@ function routeModifiers(entity: Entity): string {
   return (api.allActions ? "" : `->only(${list(api.actions)})`) + (api.middleware.length > 0 ? `->middleware(${list(api.middleware)})` : "");
 }
 
-/** View model do `routes/crudmaker.php`: um `apiResource` por entidade. */
-export function routesView(entities: Entity[]) {
-  const controllers = entities.map((entity) => `${controllerNamespace}\\${entityNames(entity).pascal}Controller`).sort();
+/**
+ * Rotas aninhadas de uma relação: leitura (`GET`) e criação (`POST`) que o filho mantém, no middleware do filho
+ * (a rota expõe o recurso dele). A leitura é `nestedIndex` (hasMany) ou `nestedShow` (hasOne).
+ */
+function nestedRouteLines(route: NestedRoute) {
+  const middleware = entityApi(route.child).middleware;
+  const modifiers = middleware.length > 0 ? `->middleware([${middleware.map(phpString).join(", ")}])` : "";
+  const prefix = resourceName(route.parent);
+  const uri = `${prefix}/{${route.param}}/${route.segment}`;
+  const readAction = route.kind === "many" ? "index" : "show";
+  const line = (method: string, action: string, name: string) => ({
+    method,
+    uri,
+    controller: route.pair.final.className,
+    action,
+    name: `${prefix}.${route.segment}.${name}`,
+    modifiers,
+  });
+
+  return [
+    ...(route.actions.read ? [line("get", route.kind === "many" ? "nestedIndex" : "nestedShow", readAction)] : []),
+    ...(route.actions.store ? [line("post", "nestedStore", "store")] : []),
+  ];
+}
+
+/** View model do `routes/crudmaker.php`: um `apiResource` por entidade e, depois, as rotas aninhadas. */
+export function routesView(entities: Entity[], nested: NestedRoute[] = []) {
+  const controllers = [
+    ...entities.map((entity) => `${controllerNamespace}\\${entityNames(entity).pascal}Controller`),
+    ...nested.map((route) => route.pair.final.fqcn),
+  ].sort();
 
   return {
     imports: [...controllers, "Illuminate\\Support\\Facades\\Route"],
+    nestedRoutes: nested.flatMap(nestedRouteLines),
     routes: entities.map((entity) => ({
       resource: resourceName(entity),
       controller: `${entityNames(entity).pascal}Controller`,

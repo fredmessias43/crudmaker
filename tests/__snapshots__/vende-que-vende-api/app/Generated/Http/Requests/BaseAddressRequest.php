@@ -7,6 +7,7 @@ namespace App\Generated\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use App\Models\Address;
+use App\Models\Client;
 use Illuminate\Validation\Rule;
 
 
@@ -30,6 +31,14 @@ abstract class BaseAddressRequest extends FormRequest
 	 */
 	protected function prepareForValidation()
 	{
+			// Rota aninhada: a chave estrangeira vem do Client da URL e vale mais que o corpo.
+			$client = $this->route('client');
+
+			if ($client instanceof Client)
+			{
+					$this->merge(['client_id' => $client->getKey()]);
+			}
+
 			$address = $this->route('address');
 	
 			if ($address instanceof Address)

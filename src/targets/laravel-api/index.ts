@@ -14,6 +14,7 @@ import { factoryBaseFile, factoryFinalFile } from "./viewModels/factory";
 import { existingMigration, migrationFile } from "./viewModels/migration";
 import { alterView, alterWarnings, diffEntity, lockChanges } from "./viewModels/migrationAlter";
 import { modelBaseFile, modelFinalFile } from "./viewModels/model";
+import { nestedControllerBase, nestedControllerFinal, nestedControllerPaths, nestedRoutes } from "./viewModels/nestedController";
 import { crudmakerSeeder, CRUDMAKER_SEEDER, entitySeeder } from "./viewModels/seeder";
 import { requestBaseFile, requestFinalFile } from "./viewModels/request";
 import { resourceBaseFile, resourceFinalFile } from "./viewModels/resource";
@@ -92,6 +93,7 @@ function obsoleteFiles(previous: Entity[], currentPaths: Set<string>, input: Lar
     previousTables: new Set<string>(),
     foreignTables: new Set<string>(),
     skeletonUsers: false,
+    nestedRoutes: nestedRoutes(previous),
   };
   const obsolete: ObsoleteFile[] = [];
 
@@ -114,6 +116,13 @@ function obsoleteFiles(previous: Entity[], currentPaths: Set<string>, input: Lar
     // Enums de campos enum: camada gerada. Campo que deixou de ser enum também deixa o arquivo obsoleto.
     for (const { path } of enumFiles(entity)) {
       if (!currentPaths.has(path)) obsolete.push({ path, kind: "generated" });
+    }
+  }
+
+  // Controllers aninhados (base e final) das relações do lock anterior que não geram mais os mesmos caminhos.
+  for (const route of context.nestedRoutes) {
+    for (const { path, kind } of nestedControllerPaths(route)) {
+      if (!currentPaths.has(path)) obsolete.push({ path, kind });
     }
   }
 
@@ -189,6 +198,7 @@ export function generateLaravelApi(input: LaravelApiInput): LaravelApiOutput {
   const previous = input.previousEntities ?? [];
   const previousByTable = new Map(previous.map((entity) => [entity.getTableName(), entity]));
   const base = migrationBase(input);
+  const nested = nestedRoutes(input.entities);
   // Só as migrations do crudmaker contam para reaproveitar o nome e preservar a de criação; as de fora (esqueleto) ficam intocadas.
   const owned = ownedMigrations(input);
   const foreign = input.foreignMigrations ?? [];
@@ -207,6 +217,7 @@ export function generateLaravelApi(input: LaravelApiInput): LaravelApiOutput {
     previousTables: new Set(previousByTable.keys()),
     foreignTables,
     skeletonUsers,
+    nestedRoutes: nested,
   };
   const capabilities = capabilitiesFor(input.target);
   // Além das variáveis do view model, todo template recebe as capacidades e a versão alvo.
@@ -232,6 +243,20 @@ export function generateLaravelApi(input: LaravelApiInput): LaravelApiOutput {
     for (const { path, view } of enumFiles(entity)) {
       files.push({ path, content: render("enum", view), policy: "overwrite" });
     }
+  }
+
+  // Controllers das rotas aninhadas (hasMany/hasOne): um par base × final por relacionamento.
+  for (const route of nested) {
+    const baseFile = nestedControllerBase(route);
+    files.push({ path: baseFile.path, content: render("nested-controller.base", baseFile.view), policy: "overwrite" });
+
+    const finalFile = nestedControllerFinal(route);
+    files.push({
+      path: finalFile.path,
+      content: render("nested-controller.final", finalFile.view),
+      policy: "create-once",
+      generatedBase: finalFile.generatedBase,
+    });
   }
 
   // Migrations de alteração: só para tabelas que o lock anterior já tinha e cuja migration de criação existe no destino.
@@ -317,7 +342,7 @@ export function generateLaravelApi(input: LaravelApiInput): LaravelApiOutput {
     }
   }
 
-  files.push({ path: routesPath, content: render("routes", routesView(input.entities)), policy: "overwrite" });
+  files.push({ path: routesPath, content: render("routes", routesView(input.entities, nested)), policy: "overwrite" });
 
   // O include é calculado a partir do conteúdo recebido; quem grava continua sendo `planWrites`,
   // que classifica o arquivo como sobrescrito (include novo) ou sem mudança (já incluído).

@@ -92,13 +92,19 @@ const perPageSchema = z.number()
   .positive("deve ser maior que zero")
   .describe("Itens por página no index (inteiro positivo). Padrão: 15.");
 
+/** Liga/desliga as rotas aninhadas; na entidade também aceita a lista dos relacionamentos que geram rota. */
+const nestedDefaultsSchema = z.boolean().describe(
+  `false desliga as rotas aninhadas (GET/POST /clients/{client}/alerts) de todas as entidades. Padrão: true.`,
+);
+
 /** Valores que valem para todas as entidades; só as opções que não dependem dos campos de cada uma. */
 const defaultsApiSchema = z.object({
   actions: actionsSchema,
   middleware: middlewareSchema,
   perPage: perPageSchema,
+  nested: nestedDefaultsSchema,
 }).partial().describe(
-  "Valores padrão do bloco api de todas as entidades. A entidade substitui cada chave que declarar (chave a chave). Só aceita actions, middleware e perPage: filters, search, sort, defaultSort e with dependem dos campos de cada entidade e ficam no bloco api dela.",
+  "Valores padrão do bloco api de todas as entidades. A entidade substitui cada chave que declarar (chave a chave). Só aceita actions, middleware, perPage e nested (booleano): filters, search, sort, defaultSort e with dependem dos campos de cada entidade e ficam no bloco api dela.",
 );
 
 /** Chaves do bloco `api` que dependem dos campos/relacionamentos da entidade (não valem em `pkg.defaults.api`). */
@@ -119,6 +125,11 @@ const apiSchema = z.object({
   ),
   defaultSort: z.string().min(1).describe(
     `Ordenação quando ?sort não vem ou não é válido. Um campo, com "-" na frente para decrescente (ex.: "-created_at"). Pode ser id, created_at, updated_at ou um campo da entidade.`,
+  ),
+  nested: z.union([z.boolean(), nameListSchema("Nomes dos relacionamentos hasMany/hasOne que geram rota aninhada.")]).describe(
+    `Rotas aninhadas dos relacionamentos hasMany/hasOne desta entidade (GET e POST /clients/{client}/alerts; hasOne: /clients/{client}/address). ` +
+    `true (padrão) gera para todo hasMany/hasOne cujo filho declara o belongsTo de volta; false desliga; uma lista (nomes de método da model, como em with: "alerts", "postsByAuthor") gera só para os listados, e um nome sem o belongsTo de volta é erro. ` +
+    `Usa as actions do filho (index/show e store) e o middleware do filho.`,
   ),
   with: nameListSchema(
     `Relacionamentos (pelo nome do método da model, ex.: "address", "alerts", "postsByAuthor") carregados no index e no show; a resource inclui cada um aninhado, com whenLoaded, usando a resource da entidade relacionada e o nome do método como chave. Só belongsTo, hasOne e hasMany.`,

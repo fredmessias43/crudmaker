@@ -7,6 +7,7 @@ namespace App\Generated\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use App\Models\ClassLessonComment;
+use App\Models\ClassLesson;
 use Illuminate\Validation\Rule;
 
 
@@ -30,6 +31,14 @@ abstract class BaseClassLessonCommentRequest extends FormRequest
 	 */
 	protected function prepareForValidation()
 	{
+			// Rota aninhada: a chave estrangeira vem do ClassLesson da URL e vale mais que o corpo.
+			$classLesson = $this->route('class_lesson');
+
+			if ($classLesson instanceof ClassLesson)
+			{
+					$this->merge(['class_lesson_id' => $classLesson->getKey()]);
+			}
+
 			$classLessonComment = $this->route('class_lesson_comment');
 	
 			if ($classLessonComment instanceof ClassLessonComment)

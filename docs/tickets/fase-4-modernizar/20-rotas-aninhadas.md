@@ -9,11 +9,11 @@
 - [06 — Gerar as rotas](../fase-1-usavel/06-gerar-rotas.md)
 - [10 — Camada gerada × customizada com hooks](../fase-3-arquitetura/10-camada-gerada-e-hooks.md)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Critérios de aceite
 
-- [ ] Snapshot das rotas e dos controllers aninhados.
-- [ ] A criação aninhada preenche a FK do pai automaticamente.
-- [ ] Os TODOs de relacionamento do README saem.
-- [ ] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.
+- [x] Snapshot das rotas e dos controllers aninhados.
+- [x] A criação aninhada preenche a FK do pai automaticamente.
+- [x] Os TODOs de relacionamento do README saem.
+- [x] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.

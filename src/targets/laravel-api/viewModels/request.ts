@@ -73,11 +73,14 @@ function currentValue(field: Field, variable: string): string {
  * Base da request. Quem a usa é a request *final* (`ClientRequest`), que o controller tipa no parâmetro:
  * é assim que o `extraRules()` e o `authorize()` do usuário valem. A `instanceof` do
  * `prepareForValidation` usa a model final, a mesma que o route model binding entrega.
+ *
+ * Nas rotas aninhadas (`clients/{client}/alerts`) a request do filho recebe a FK do pai da URL
+ * (`fromRoute`): ela é mesclada antes da validação, então não precisa vir no corpo e o valor do corpo é descartado.
  */
 export const requestBaseFile: EntityFileType = {
   template: "request.base",
   layer: "generated",
-  build(entity, { skeletonUsers }) {
+  build(entity, { skeletonUsers, nestedRoutes }) {
     const { pascal, camel, snake, table } = entityNames(entity);
     const pair = classPair(namespace, `${pascal}Request`);
     const modelClass = `${BASE_NAMESPACE}\\Models\\${pascal}`;
@@ -91,6 +94,10 @@ export const requestBaseFile: EntityFileType = {
     const usesRule = fields.some(
       ([, field]) => field.name !== "id" && (field.type === "enum" || field.unique || belongsTo.some((relationship) => relationship.field === field.name)),
     );
+    // Rotas aninhadas em que esta entidade é o filho: a FK vem do pai da URL (`clients/{client}/alerts`).
+    const fromRoute = nestedRoutes
+      .filter((route) => route.child === entity && route.actions.store)
+      .map((route) => ({ param: route.param, variable: route.paramVariable, model: entityNames(route.parent).pascal, foreignKey: route.foreignKey }));
     const enumImports = fields.filter(([, field]) => field.name !== "id" && field.type === "enum").map(([, field]) => enumClass(entity, field).fqcn);
 
     return {
@@ -101,6 +108,7 @@ export const requestBaseFile: EntityFileType = {
             "Illuminate\\Foundation\\Http\\FormRequest",
             modelClass,
             ...enumImports,
+            ...fromRoute.map((parent) => `${BASE_NAMESPACE}\\Models\\${parent.model}`),
             ...(usesRule ? ["Illuminate\\Validation\\Rule"] : []),
           ],
           extends: "FormRequest",
@@ -108,6 +116,7 @@ export const requestBaseFile: EntityFileType = {
         }),
         fields: fields.map(([key, field]) => ({ key, value: currentValue({ ...field, name: key }, `$${camel}`) })),
         rules,
+        fromRoute,
       },
     };
   },

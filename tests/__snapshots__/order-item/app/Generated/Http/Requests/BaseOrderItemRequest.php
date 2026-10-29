@@ -8,6 +8,8 @@ namespace App\Generated\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use App\Models\OrderItem;
 use App\Generated\Enums\OrderItemStatus;
+use App\Models\Order;
+use App\Models\User;
 use Illuminate\Validation\Rule;
 
 
@@ -31,6 +33,22 @@ abstract class BaseOrderItemRequest extends FormRequest
 	 */
 	protected function prepareForValidation()
 	{
+			// Rota aninhada: a chave estrangeira vem do Order da URL e vale mais que o corpo.
+			$order = $this->route('order');
+
+			if ($order instanceof Order)
+			{
+					$this->merge(['order_id' => $order->getKey()]);
+			}
+
+			// Rota aninhada: a chave estrangeira vem do User da URL e vale mais que o corpo.
+			$user = $this->route('user');
+
+			if ($user instanceof User)
+			{
+					$this->merge(['author_id' => $user->getKey()]);
+			}
+
 			$orderItem = $this->route('order_item');
 	
 			if ($orderItem instanceof OrderItem)

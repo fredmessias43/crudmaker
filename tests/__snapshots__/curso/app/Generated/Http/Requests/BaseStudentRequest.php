@@ -7,6 +7,7 @@ namespace App\Generated\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use App\Models\Student;
+use App\Models\Classroom;
 use Illuminate\Validation\Rule;
 
 
@@ -30,6 +31,14 @@ abstract class BaseStudentRequest extends FormRequest
 	 */
 	protected function prepareForValidation()
 	{
+			// Rota aninhada: a chave estrangeira vem do Classroom da URL e vale mais que o corpo.
+			$classroom = $this->route('classroom');
+
+			if ($classroom instanceof Classroom)
+			{
+					$this->merge(['classroom_id' => $classroom->getKey()]);
+			}
+
 			$student = $this->route('student');
 	
 			if ($student instanceof Student)

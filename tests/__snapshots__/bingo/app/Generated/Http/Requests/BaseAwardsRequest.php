@@ -7,6 +7,7 @@ namespace App\Generated\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use App\Models\Awards;
+use App\Models\Game;
 use Illuminate\Validation\Rule;
 
 
@@ -30,6 +31,14 @@ abstract class BaseAwardsRequest extends FormRequest
 	 */
 	protected function prepareForValidation()
 	{
+			// Rota aninhada: a chave estrangeira vem do Game da URL e vale mais que o corpo.
+			$game = $this->route('game');
+
+			if ($game instanceof Game)
+			{
+					$this->merge(['game_id' => $game->getKey()]);
+			}
+
 			$awards = $this->route('awards');
 	
 			if ($awards instanceof Awards)

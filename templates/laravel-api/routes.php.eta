@@ -10,3 +10,10 @@ use <%~ use %>;
 <% for (const route of it.routes) { -%>
 Route::apiResource('<%~ route.resource %>', <%~ route.controller %>::class)<%~ route.modifiers %>;
 <% } -%>
+<% if (it.nestedRoutes.length > 0) { -%>
+
+// Rotas aninhadas (hasMany/hasOne). Mostrar, atualizar e remover usam as rotas raiz acima.
+<% for (const route of it.nestedRoutes) { -%>
+Route::<%~ route.method %>('<%~ route.uri %>', [<%~ route.controller %>::class, '<%~ route.action %>'])->name('<%~ route.name %>')<%~ route.modifiers %>;
+<% } -%>
+<% } -%>

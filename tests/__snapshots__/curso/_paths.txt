@@ -116,4 +116,14 @@ app/Http/Requests/StudentRequest.php
 app/Generated/Factories/BaseStudentFactory.php
 database/factories/StudentFactory.php
 database/migrations/2025_01_02_030413_create_students_table.php
+app/Generated/Http/Controllers/Api/Relationships/BaseCourseCourseContentController.php
+app/Http/Controllers/Api/Relationships/CourseCourseContentController.php
+app/Generated/Http/Controllers/Api/Relationships/BaseUserUserCourseController.php
+app/Http/Controllers/Api/Relationships/UserUserCourseController.php
+app/Generated/Http/Controllers/Api/Relationships/BaseClassroomClassLessonController.php
+app/Http/Controllers/Api/Relationships/ClassroomClassLessonController.php
+app/Generated/Http/Controllers/Api/Relationships/BaseClassroomStudentController.php
+app/Http/Controllers/Api/Relationships/ClassroomStudentController.php
+app/Generated/Http/Controllers/Api/Relationships/BaseClassLessonClassLessonCommentController.php
+app/Http/Controllers/Api/Relationships/ClassLessonClassLessonCommentController.php
 routes/crudmaker.php

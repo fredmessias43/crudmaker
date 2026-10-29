@@ -79,4 +79,16 @@ app/Http/Requests/DrawnNumbersRequest.php
 app/Generated/Factories/BaseDrawnNumbersFactory.php
 database/factories/DrawnNumbersFactory.php
 database/migrations/2025_01_02_030410_create_drawn_numbers_table.php
+app/Generated/Http/Controllers/Api/Relationships/BaseGameAwardsController.php
+app/Http/Controllers/Api/Relationships/GameAwardsController.php
+app/Generated/Http/Controllers/Api/Relationships/BaseGamePlayerInviteController.php
+app/Http/Controllers/Api/Relationships/GamePlayerInviteController.php
+app/Generated/Http/Controllers/Api/Relationships/BaseGameCardsController.php
+app/Http/Controllers/Api/Relationships/GameCardsController.php
+app/Generated/Http/Controllers/Api/Relationships/BaseGameDrawnNumbersController.php
+app/Http/Controllers/Api/Relationships/GameDrawnNumbersController.php
+app/Generated/Http/Controllers/Api/Relationships/BasePlayerPlayerInviteController.php
+app/Http/Controllers/Api/Relationships/PlayerPlayerInviteController.php
+app/Generated/Http/Controllers/Api/Relationships/BasePlayerCardsController.php
+app/Http/Controllers/Api/Relationships/PlayerCardsController.php
 routes/crudmaker.php

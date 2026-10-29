@@ -205,6 +205,7 @@ Para cada entidade (`Client`, no exemplo) são escritos dois arquivos por classe
 | Resource | `app/Generated/Http/Resources/BaseClientResource.php` | `app/Http/Resources/ClientResource.php` |
 | Collection | `app/Generated/Http/Resources/BaseClientCollection.php` | `app/Http/Resources/ClientCollection.php` |
 | Factory | `app/Generated/Factories/BaseClientFactory.php` | `database/factories/ClientFactory.php` |
+| Controller aninhado (um por `hasMany`/`hasOne`) | `app/Generated/Http/Controllers/Api/Relationships/BaseClientAlertController.php` | `app/Http/Controllers/Api/Relationships/ClientAlertController.php` |
 
 Cada campo `enum` ainda gera um PHP enum em `app/Generated/Enums/<Entidade><Campo>.php` (`ClientStatus.php`): arquivo único `overwrite`, sem classe final, usado no cast da model e na regra da request (veja [Enums](manifest.md#enums)).
 
@@ -218,7 +219,7 @@ Além disso, são gravados na raiz do destino:
 | Arquivo | O que é |
 |---|---|
 | `manifest-lock.json` | o manifest já normalizado, para conferir o que o gerador entendeu |
-| `routes/crudmaker.php` | uma `Route::apiResource` por entidade (veja abaixo) |
+| `routes/crudmaker.php` | uma `Route::apiResource` por entidade e as [rotas aninhadas](#rotas-aninhadas-hasmany-e-hasone) (veja abaixo) |
 | `routes/api.php` | só ganha o include de `routes/crudmaker.php`, uma única vez; o resto fica intacto |
 | `database/seeders/*` | só com `--seeders` (veja [Factories e seeders](#factories-e-seeders)) |
 
@@ -243,6 +244,34 @@ Route::apiResource('tags', TagController::class)->only(['index', 'show'])->middl
 ```
 
 Um grupo no `routes/api.php` em volta do `require` continua funcionando e soma com o middleware das rotas. Veja [Opções da API](manifest.md#opções-da-api-api).
+
+#### Rotas aninhadas (`hasMany` e `hasOne`)
+
+Depois das `apiResource`, o arquivo ganha rotas aninhadas para cada `hasMany`/`hasOne` cujo filho declara o `belongsTo` de volta (a FK é conhecida, inclusive FK customizada). Com `client` `hasMany` `alert` (e `hasOne` `address`):
+
+```php
+Route::get('clients/{client}/alerts', [ClientAlertController::class, 'nestedIndex'])->name('clients.alerts.index');
+Route::post('clients/{client}/alerts', [ClientAlertController::class, 'nestedStore'])->name('clients.alerts.store');
+Route::get('clients/{client}/address', [ClientAddressController::class, 'nestedShow'])->name('clients.address.show');
+Route::post('clients/{client}/address', [ClientAddressController::class, 'nestedStore'])->name('clients.address.store');
+```
+
+| Relacionamento | Rotas | Resposta |
+|---|---|---|
+| `hasMany` | `GET /api/clients/{client}/alerts` | lista paginada dos alertas do cliente, com os **mesmos** filtros, busca, ordenação, `with` e `perPage` do `index` de `alert` |
+| `hasMany` | `POST /api/clients/{client}/alerts` | cria o alerta com `client_id` do cliente da URL: 201 como o `store` de `alert` |
+| `hasOne` | `GET /api/clients/{client}/address` | mostra o endereço do cliente (404 se não houver) |
+| `hasOne` | `POST /api/clients/{client}/address` | cria o endereço do cliente; **409** se o cliente já tem um (veja abaixo) |
+
+- **Só `index`/`store` (hasMany) e `show`/`store` (hasOne) são aninhados.** Mostrar, atualizar e remover um registro continuam nas rotas raiz (`GET|PUT|DELETE /api/alerts/{alert}`): o id do filho já o identifica.
+- **A FK vem sempre da URL.** A request do filho (`AlertRequest`) mescla o `client_id` do cliente da rota antes de validar, então o corpo não precisa dele e um `client_id` mandado no corpo é ignorado (o valor da URL vence; os hooks também não conseguem trocá-lo). O cliente inexistente responde 404 pelo route model binding. Nas rotas raiz nada muda: `POST /api/alerts` continua exigindo `client_id`.
+- **O parâmetro do pai** se chama como a entidade em snake_case (`{client}`, `{class_lesson}`), o que casa com o route model binding. Na auto-referência (entidade que tem `hasMany` de si mesma) o parâmetro é `{parent_<entidade>}`, para a request não confundir o pai da URL com o registro da própria rota.
+- **URL do filho.** `hasMany`: plural em kebab-case (`/alerts`, `/order-items`); `hasOne`: singular (`/address`). Com **FK customizada** a URL e o nome do controller seguem o nome do método da model (`user hasMany orderItem` com `field: author_id` → `/users/{user}/order-items-by-author`, `UserOrderItemsByAuthorController`), o que evita colisão com outro relacionamento do mesmo par. As rotas são nomeadas `<pai plural>.<segmento>.<action>` (`clients.alerts.index`, `clients.address.show`, `users.order-items-by-author.store`).
+- **Actions e middleware são os do filho.** O `GET` só existe se o filho mantém `index` (`hasMany`) ou `show` (`hasOne`), e o `POST` só se mantém `store` (`api.actions` do filho); sem nenhuma das duas o relacionamento não gera nada. O `api.middleware` do **filho** vai nas rotas aninhadas (elas expõem o recurso dele); o middleware e as actions do pai não entram.
+- **`hasOne` e o `POST`.** O `POST` existe, mas recusa com 409 `{ "status": 409, "message": "... already exists ..." }` se o pai já tem um registro (`$client->address()->exists()`). A checagem não é atômica; para garantir de fato no banco, declare a FK com `unique: true` no filho.
+- **Quando não gera.** Se o filho não declara o `belongsTo` de volta com a mesma FK, o relacionamento é ignorado em silêncio (a coluna não existe); `curso.class_lesson_comment hasMany class_lesson_comment` sem o `belongsTo` correspondente é um exemplo. Uma auto-referência que funciona declara os dois lados com a mesma FK: `belongsTo: [{ entity: comment, field: parent_id, required: false }]` e `hasMany: [{ entity: comment, field: parent_id }]`.
+- **Desligar.** No bloco `api` do pai: `nested: false` (nenhuma rota aninhada dele), `nested: [alerts]` (só os relacionamentos listados, pelo nome do método da model: `alerts`, `address`, `postsByAuthor`) ou, em `pkg.defaults.api`, `nested: false` para o projeto inteiro (a entidade pode religar com `nested: true`). Uma lista com nome que não é `hasOne`/`hasMany` da entidade, ou sem o `belongsTo` de volta, é erro de validação. Veja [Opções da API](manifest.md#opções-da-api-api).
+- **Entidade `user` do esqueleto.** Funciona como qualquer pai: `/users/{user}/posts` usa o id bigint do usuário (FK `unsignedBigInteger`, regra `integer`).
 
 **Requisito:** o projeto precisa do `routes/api.php`. No Laravel 11 e 12 ele é criado por `php artisan install:api`, que também o registra em `bootstrap/app.php`; no Laravel 10 ele já vem no esqueleto e é carregado pelo `RouteServiceProvider`. Se o arquivo não existir, o `generate` não o cria (no 11+ criar o arquivo sozinho não o faria ser carregado), grava `routes/crudmaker.php` e imprime um aviso conforme a versão: no 11+, para rodar `install:api`; no 10, para conferir o `--out` ou restaurar o arquivo. Depois gere de novo. O `--dry-run` mostra o `routes/api.php` como sobrescrito quando o include vai ser acrescentado.
 
@@ -324,6 +353,42 @@ class ClientController extends BaseClientController
 	}
 }
 ```
+
+### Controllers aninhados e seus hooks
+
+Cada relacionamento aninhado gera um par base × final em `Relationships/`, com o nome `<Pai><Filho>Controller`: `App\Generated\Http\Controllers\Api\Relationships\BaseClientAlertController` (sobrescrita) e `App\Http\Controllers\Api\Relationships\ClientAlertController` (`create-once`, a que as rotas usam). As actions se chamam `nestedIndex`, `nestedShow` e `nestedStore` (para não colidir com as herdadas).
+
+A base **estende o controller final do filho** (`AlertController`), então os hooks dele (`indexQuery`, `beforeStore`, `afterStore`) valem também na rota aninhada: um escopo por usuário no `indexQuery` do filho não pode ser contornado pela URL do pai. Além deles, o controller aninhado tem hooks próprios, com o pai (a model final, no parâmetro) somado à assinatura:
+
+| Hook | Quando roda | Entrada → saída |
+|---|---|---|
+| `nestedIndexQuery(Builder $query, Request $request, Client $client): Builder` | no `nestedIndex` (`hasMany`), depois do `indexQuery` do filho, antes de paginar | query (já filtrada pelo pai) → query |
+| `nestedShowQuery(Builder $query, Request $request, Client $client): Builder` | no `nestedShow` (`hasOne`), antes de buscar | query → query |
+| `nestedBeforeStore(array $data, Request $request, Client $client): array` | no `nestedStore`, depois do `beforeStore` do filho | dados validados → dados a gravar |
+| `nestedAfterStore(Alert $model, Request $request, Client $client): void` | depois do `afterStore` do filho | registro gravado |
+
+Ordem do `nestedStore` (na mesma `DB::transaction`): `beforeStore` do filho, `nestedBeforeStore`, gravação da FK do pai (por último, não dá para trocá-la), `create`, `afterStore` do filho, `nestedAfterStore`. Exemplo:
+
+```php
+class ClientAlertController extends BaseClientAlertController
+{
+	// Só os alertas não resolvidos do cliente.
+	protected function nestedIndexQuery(Builder $query, Request $request, Client $client): Builder
+	{
+		return $query->where('resolved', false);
+	}
+
+	// Cliente bloqueado não recebe alertas novos.
+	protected function nestedBeforeStore(array $data, Request $request, Client $client): array
+	{
+		abort_if($client->status === 'blocked', 403, 'Cliente bloqueado.');
+
+		return $data;
+	}
+}
+```
+
+A base é substituível por stub (`nested-controller.base`, veja [Stubs](#stubs-mudar-o-padrão-de-um-tipo-de-arquivo)); a final não.
 
 ### Request, resource, collection e model
 
@@ -438,7 +503,7 @@ crudmaker stubs:publish controller --out <projeto>    # só o do controller
 
 Copia os templates embutidos para `stubs/crudmaker/laravel-api/` do projeto (`--out` é a raiz do projeto, padrão: diretório atual) e lista o que copiou. Publique **só os que vai mudar**: o que não estiver na pasta continua vindo do embutido e recebe as melhorias das novas versões do crudmaker.
 
-- **Nomes**: `model`, `resource`, `collection`, `controller`, `request` e `factory` são a **base** (`controller` = `controller.base`; o sufixo `.base` também é aceito), mais `migration` e `routes`. Não há `*.final`.
+- **Nomes**: `model`, `resource`, `collection`, `controller`, `request`, `factory` e `nested-controller` são a **base** (`controller` = `controller.base`; o sufixo `.base` também é aceito), mais `migration` e `routes`. Não há `*.final`.
 - **Não sobrescreve**: se o stub já existe, o comando avisa e pula (suas edições ficam). `--force` sobrescreve, mas só stubs (nada fora da pasta de stubs é tocado) e perde suas edições neles.
 - **Editar**: mude o arquivo em `stubs/crudmaker/laravel-api/<nome>.php.eta` e rode `crudmaker generate` (o `--dry-run` mostra o efeito). Versione a pasta `stubs/` junto com o projeto.
 - **Atualizar**: ao publicar, o hash do template embutido vai para `stubs/crudmaker/stubs-lock.json`. Se uma versão nova do crudmaker mudar o embutido, o `generate` mostra na seção `Avisos`: `stub controller.base: foi publicado a partir de uma versão anterior do template embutido...`. Para comparar, publique o embutido atual numa pasta temporária e use o `diff`:
@@ -466,7 +531,8 @@ Os templates usam [Eta](https://eta.js.org): `<%~ it.x %>` imprime sem escape, e
 | `collection.base` | `resourceClass` |
 | `controller.base` | `has` (quais actions existem), `hooks` (hooks mantidos), `index` (`with`, filtros, busca, ordenação, `perPage`), `withShow` |
 | `migration` | `table`, `columns`, `foreignKeys`, `uniques`, `imports` |
-| `routes` | `imports`, `routes` (um item por entidade: `resource`, `controller`, `modifiers`) |
+| `nested-controller.base` | `kind` (`many`/`one`), `hasRead`, `hasStore`, `parent` (nomes do pai e `variable`, o parâmetro como variável PHP), `relation` (método da model), `foreignKey` (já como literal PHP), `childController`, `index` e `withShow` (os do filho) |
+| `routes` | `imports`, `routes` (um item por entidade: `resource`, `controller`, `modifiers`), `nestedRoutes` (um item por rota aninhada: `method`, `uri`, `controller`, `action`, `name`, `modifiers`) |
 
 Capacidades (`it.capabilities.<flag>`, booleanas): `castsMethod` (model com `casts()` em vez de `$casts`), `apiRoutesViaBootstrap`, `nativeColumnChange`, `backedEnums`, `readonlyClasses` e `typedClassConstants`. Exemplo num stub: `<% if (it.capabilities.castsMethod) { -%> ... <% } else { -%> ... <% } -%>`. Se você publicou o stub `model.base` antes do ticket 15, ele continua gerando `$casts` (válido em todas as versões); o aviso de hash indica que o embutido mudou.
 
@@ -571,6 +637,8 @@ Migre as cinco classes da entidade (model, controller, request, resource, collec
 | `show` | `GET /api/clients/{client}` | 200 |
 | `update` | `PUT /api/clients/{client}` | 200, registro atualizado |
 | `destroy` | `DELETE /api/clients/{client}` | 204, sem corpo (`response()->noContent()`) |
+
+As rotas aninhadas respondem como as do filho: `nestedIndex` como o `index`, `nestedStore` como o `store` (201) e `nestedShow` como o `show` (404 se o pai não tem o registro). O `POST` do `hasOne` responde 409 se já existe um.
 
 Formato das respostas com corpo:
 

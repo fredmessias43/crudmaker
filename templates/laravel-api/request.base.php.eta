@@ -30,6 +30,16 @@ abstract class <%~ it.className %> extends <%~ it.extends %>
 	 */
 	protected function prepareForValidation()
 	{
+<% for (const parent of it.fromRoute) { -%>
+			// Rota aninhada: a chave estrangeira vem do <%~ parent.model %> da URL e vale mais que o corpo.
+			$<%~ parent.variable %> = $this->route('<%~ parent.param %>');
+
+			if ($<%~ parent.variable %> instanceof <%~ parent.model %>)
+			{
+					$this->merge(['<%~ parent.foreignKey %>' => $<%~ parent.variable %>->getKey()]);
+			}
+
+<% } -%>
 			$<%~ it.entity.camel %> = $this->route('<%~ it.entity.snake %>');
 	
 			if ($<%~ it.entity.camel %> instanceof <%~ it.entity.pascal %>)

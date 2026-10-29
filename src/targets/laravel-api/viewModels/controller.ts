@@ -18,7 +18,7 @@ const phpList = (items: string[]) => items.map(phpString).join(", ");
  * Passos do `index` declarados no manifest, na ordem em que rodam (e antes do hook `indexQuery`):
  * eager loading, filtros, busca e ordenação. Cada filtro já traz a condição e o valor em PHP.
  */
-function indexView(api: EntityApi) {
+export function indexView(api: EntityApi) {
   const filters = api.filters.map(({ column, field }) => {
     const param = phpString(column);
     const query = `$request->query(${param})`;

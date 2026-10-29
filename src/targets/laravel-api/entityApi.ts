@@ -39,6 +39,8 @@ export type EntityApi = {
   /** Coluna e sentido; `undefined` sem `defaultSort`. */
   defaultSort?: { column: string; direction: "asc" | "desc" };
   with: WithRelation[];
+  /** Rotas aninhadas dos hasMany/hasOne: `true` (todos), `false` (nenhum) ou os nomes de método dos relacionamentos que geram rota. */
+  nested: boolean | string[];
 };
 
 /** Resolve o `entity.api` (já mesclado com `pkg.defaults.api` e validado) nas opções que os view models usam. */
@@ -67,6 +69,7 @@ export function entityApi(entity: Entity): EntityApi {
     search: api.search ?? [],
     sort: api.sort ?? [],
     defaultSort,
+    nested: api.nested ?? true,
     // Um nome sem relacionamento só aparece num lock antigo ou editado à mão (o manifest é validado): ignora.
     with: (api.with ?? []).flatMap((name) => {
       const relationship = relations.get(name);

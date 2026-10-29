@@ -51,4 +51,10 @@ app/Http/Requests/AddressRequest.php
 app/Generated/Factories/BaseAddressFactory.php
 database/factories/AddressFactory.php
 database/migrations/2025_01_02_030408_create_addresses_table.php
+app/Generated/Http/Controllers/Api/Relationships/BaseClientNoteController.php
+app/Http/Controllers/Api/Relationships/ClientNoteController.php
+app/Generated/Http/Controllers/Api/Relationships/BaseClientAddressController.php
+app/Http/Controllers/Api/Relationships/ClientAddressController.php
+app/Generated/Http/Controllers/Api/Relationships/BaseClientAlertController.php
+app/Http/Controllers/Api/Relationships/ClientAlertController.php
 routes/crudmaker.php

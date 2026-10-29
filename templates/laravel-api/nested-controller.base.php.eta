@@ -1,0 +1,193 @@
+<?php
+
+// ARQUIVO GERADO PELO CRUDMAKER. NÃO EDITE: ele é sobrescrito a cada `crudmaker generate`.
+// Seu código fica em <%~ it.final.fqcn %> (<%~ it.final.path %>), que estende esta classe e nunca é sobrescrita.
+
+namespace <%~ it.namespace %>;
+
+<% for (const use of it.imports) { -%>
+use <%~ use %>;
+<% } -%>
+
+
+/**
+ * Rota aninhada de <%~ it.parent.pascal %> -> <%~ it.relation %> (<%~ it.kind === 'many' ? 'hasMany' : 'hasOne' %>).
+ *
+ * Estende o controller de <%~ it.entity.pascal %>: os hooks dele (indexQuery, beforeStore, afterStore) também valem aqui.
+ */
+abstract class <%~ it.className %> extends <%~ it.extends %>
+{
+
+<% if (it.hasRead && it.kind === 'many') { -%>
+	/**
+	 * Display a paginated listing of the <%~ it.entity.pascal %> records of a <%~ it.parent.pascal %>.
+	 *
+	 * Mesmos filtros, busca, ordenação, `with` e itens por página do index de <%~ it.entity.pascal %>.
+	 *
+	 * @return \Illuminate\Http\JsonResponse
+	 */
+	public function nestedIndex(Request $request, <%~ it.parent.pascal %> $<%~ it.parent.variable %>): JsonResponse
+	{
+		$query = <%~ it.entity.pascal %>::query()->where(<%~ it.foreignKey %>, $<%~ it.parent.variable %>->getKey());
+<% if (it.index.declarative) { -%>
+<% if (it.index.with !== '') { -%>
+
+		$query->with([<%~ it.index.with %>]);
+<% } -%>
+<% for (const filter of it.index.filters) { -%>
+
+		$query->when(
+			<%~ filter.condition %>,
+			fn ($query) => $query->where(<%~ filter.column %>, <%~ filter.value %>),
+		);
+<% } -%>
+<% if (it.index.search !== '') { -%>
+
+		$query->when($request->filled('search') && is_string($request->query('search')), function ($query) use ($request) {
+			$term = '%' . $request->query('search') . '%';
+
+			$query->where(function ($query) use ($term) {
+				foreach ([<%~ it.index.search %>] as $column) {
+					$query->orWhere($column, 'like', $term);
+				}
+			});
+		});
+<% } -%>
+<% if (it.index.sort !== '') { -%>
+
+		$sort = $request->query('sort');
+		$sortColumn = is_string($sort) ? ltrim($sort, '-') : null;
+
+		if (in_array($sortColumn, [<%~ it.index.sort %>], true)) {
+			$query->orderBy($sortColumn, str_starts_with($sort, '-') ? 'desc' : 'asc');
+<% if (it.index.defaultSort) { -%>
+		} else {
+			$query->orderBy(<%~ it.index.defaultSort.column %>, <%~ it.index.defaultSort.direction %>);
+<% } -%>
+		}
+<% } else if (it.index.defaultSort) { -%>
+
+		$query->orderBy(<%~ it.index.defaultSort.column %>, <%~ it.index.defaultSort.direction %>);
+<% } -%>
+<% } -%>
+
+		// Hooks do usuário: primeiro o de <%~ it.entity.pascal %> (herdado), depois o que conhece o pai.
+		$query = $this->indexQuery($query, $request);
+		$query = $this->nestedIndexQuery($query, $request, $<%~ it.parent.variable %>);
+
+		return (new <%~ it.entity.pascal %>Collection($query->paginate(<%~ it.index.perPage %>)))->response();
+	}
+
+
+<% } -%>
+<% if (it.hasRead && it.kind === 'one') { -%>
+	/**
+	 * Display the <%~ it.entity.pascal %> of a <%~ it.parent.pascal %> (404 se ele ainda não tem).
+	 *
+	 * @return \Illuminate\Http\JsonResponse
+	 */
+	public function nestedShow(Request $request, <%~ it.parent.pascal %> $<%~ it.parent.variable %>): JsonResponse
+	{
+		$query = <%~ it.entity.pascal %>::query()->where(<%~ it.foreignKey %>, $<%~ it.parent.variable %>->getKey());
+<% if (it.withShow !== '') { -%>
+
+		$query->with([<%~ it.withShow %>]);
+<% } -%>
+
+		$query = $this->nestedShowQuery($query, $request, $<%~ it.parent.variable %>);
+
+		return response()->json([
+			'status' => 200,
+			'data' => new <%~ it.entity.pascal %>Resource($query->firstOrFail()),
+		], 200);
+	}
+
+
+<% } -%>
+<% if (it.hasStore) { -%>
+	/**
+	 * Store a newly created <%~ it.entity.pascal %> for a <%~ it.parent.pascal %>.
+	 *
+	 * A chave estrangeira (<%~ it.foreignKey %>) vem sempre do pai da URL, nunca do corpo. A gravação e os hooks
+	 * rodam na mesma transação.
+	 *
+	 * @param  \App\Http\Requests\<%~ it.entity.pascal %>Request $request
+	 *
+	 * @return \Illuminate\Http\JsonResponse
+	 */
+	public function nestedStore(<%~ it.entity.pascal %>Request $request, <%~ it.parent.pascal %> $<%~ it.parent.variable %>): JsonResponse
+	{
+<% if (it.kind === 'one') { -%>
+		if ($<%~ it.parent.variable %>-><%~ it.relation %>()->exists()) {
+			return response()->json([
+				'status' => 409,
+				'message' => trans('<%~ it.entity.pascal %> already exists for this <%~ it.parent.pascal %>.'),
+			], 409);
+		}
+
+<% } -%>
+		$<%~ it.entity.camel %> = DB::transaction(function () use ($request, $<%~ it.parent.variable %>) {
+			$data = $this->beforeStore($request->validated(), $request);
+			$data = $this->nestedBeforeStore($data, $request, $<%~ it.parent.variable %>);
+			$data[<%~ it.foreignKey %>] = $<%~ it.parent.variable %>->getKey();
+
+			$model = <%~ it.entity.pascal %>::create($data);
+			$this->afterStore($model, $request);
+			$this->nestedAfterStore($model, $request, $<%~ it.parent.variable %>);
+
+			return $model;
+		});
+
+		return response()->json([
+			'status' => 201,
+			'message' => trans('<%~ it.entity.pascal %> created successfully.'),
+			'data' => new <%~ it.entity.pascal %>Resource($<%~ it.entity.camel %>),
+		], 201);
+	}
+
+
+<% } -%>
+	/*
+	 * Hooks do aninhado. Todos protected e sem efeito por aqui; sobrescreva só os que precisar na classe final.
+	 * Recebem o pai da URL (<%~ it.parent.pascal %>) além do que o hook de <%~ it.entity.pascal %> recebe.
+	 */
+
+<% if (it.hasRead && it.kind === 'many') { -%>
+	/**
+	 * Ajusta a query do `nestedIndex` antes de paginar (já filtrada pelo pai, pelos filtros do manifest e pelo indexQuery).
+	 */
+	protected function nestedIndexQuery(Builder $query, Request $request, <%~ it.parent.pascal %> $<%~ it.parent.variable %>): Builder
+	{
+		return $query;
+	}
+
+<% } -%>
+<% if (it.hasRead && it.kind === 'one') { -%>
+	/**
+	 * Ajusta a query do `nestedShow` (já filtrada pelo pai).
+	 */
+	protected function nestedShowQuery(Builder $query, Request $request, <%~ it.parent.pascal %> $<%~ it.parent.variable %>): Builder
+	{
+		return $query;
+	}
+
+<% } -%>
+<% if (it.hasStore) { -%>
+	/**
+	 * Antes de criar: recebe os dados validados (depois do beforeStore de <%~ it.entity.pascal %>) e devolve os dados a gravar.
+	 * A FK do pai é gravada por último, então não dá para trocá-la por aqui.
+	 */
+	protected function nestedBeforeStore(array $data, Request $request, <%~ it.parent.pascal %> $<%~ it.parent.variable %>): array
+	{
+		return $data;
+	}
+
+	/**
+	 * Depois de criar (ainda dentro da transação), depois do afterStore de <%~ it.entity.pascal %>.
+	 */
+	protected function nestedAfterStore(<%~ it.entity.pascal %> $model, Request $request, <%~ it.parent.pascal %> $<%~ it.parent.variable %>): void
+	{
+	}
+
+<% } -%>
+}

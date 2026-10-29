@@ -1,6 +1,7 @@
 import { snakeCase, uniq } from "lodash";
 import { ApiInput, ManifestInput, OWNER_KEYS, RELATION_KEYS } from "./manifestSchema";
-import { relationName, WITH_RELATIONSHIP_TYPES } from "./relationNames";
+import { camelCase } from "change-case";
+import { childHasInverse, nestedForeignKey, relationName, WITH_RELATIONSHIP_TYPES } from "./relationNames";
 import { ApiOptions } from "./types";
 
 type EntityInput = ManifestInput["pkg"]["entities"][string];
@@ -40,6 +41,39 @@ export function withableRelations(entity: EntityInput): Map<string, string> {
       if (!(WITH_RELATIONSHIP_TYPES as readonly string[]).includes(type)) continue;
 
       result.set(relationName({ entity: target, field: field ?? `${snakeCase(target)}_id`, relationship: type }), type);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * `hasOne`/`hasMany` da entidade `parentName` (nomes já normalizados) que podem ter rota aninhada, pelo nome do
+ * método da model: a entidade filha, a FK e se o filho declara o `belongsTo` de volta com essa FK.
+ */
+export function nestedCandidates(
+  parentName: string,
+  entities: { [name: string]: EntityInput },
+): Map<string, { type: string; child: string; foreignKey: string; hasInverse: boolean }> {
+  const result = new Map<string, { type: string; child: string; foreignKey: string; hasInverse: boolean }>();
+  const parent = entities[parentName];
+
+  for (const relation of ["hasOne", "hasMany"] as const) {
+    for (const item of parent?.relationships?.[relation] ?? []) {
+      const ref = typeof item === "string" ? { entity: item } : item;
+      const type = typeof item === "string" ? relation : item.relationship ?? relation;
+      if (type !== "hasOne" && type !== "hasMany") continue;
+
+      const foreignKey = nestedForeignKey(parentName, ref);
+      const childEntity = Object.entries(entities).find(([name]) => camelCase(name) === camelCase(ref.entity))?.[1];
+      const name = relationName({ entity: ref.entity, field: ref.field ?? `${snakeCase(ref.entity)}_id`, relationship: type });
+
+      result.set(name, {
+        type,
+        child: ref.entity,
+        foreignKey,
+        hasInverse: childEntity !== undefined && childHasInverse(parentName, foreignKey, (childEntity.relationships?.belongsTo ?? []) as (string | { entity: string; field?: string })[]),
+      });
     }
   }
 

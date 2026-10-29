@@ -7,6 +7,7 @@ namespace App\Generated\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use App\Models\CourseContent;
+use App\Models\Course;
 use Illuminate\Validation\Rule;
 
 
@@ -30,6 +31,14 @@ abstract class BaseCourseContentRequest extends FormRequest
 	 */
 	protected function prepareForValidation()
 	{
+			// Rota aninhada: a chave estrangeira vem do Course da URL e vale mais que o corpo.
+			$course = $this->route('course');
+
+			if ($course instanceof Course)
+			{
+					$this->merge(['course_id' => $course->getKey()]);
+			}
+
 			$courseContent = $this->route('course_content');
 	
 			if ($courseContent instanceof CourseContent)

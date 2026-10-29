@@ -1,5 +1,6 @@
 import { Entity } from "../../models/Entity";
 import { FilePolicy } from "../types";
+import { NestedRoute } from "./viewModels/nestedController";
 
 /** Dados de ambiente que os tipos de arquivo por entidade podem precisar. */
 export type EntityFileContext = {
@@ -18,6 +19,8 @@ export type EntityFileContext = {
   foreignTables: Set<string>;
   /** A tabela `users` veio do esqueleto do Laravel: id bigint (não uuid), model Authenticatable e FKs para ela em bigint. */
   skeletonUsers: boolean;
+  /** Rotas aninhadas do projeto: a request do filho recebe a FK do pai que vem da URL. */
+  nestedRoutes: NestedRoute[];
 };
 
 /**

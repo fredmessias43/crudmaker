@@ -56,6 +56,8 @@ export type ApiOptions = {
   defaultSort?: string,
   /** Nomes de método de relacionamento da model. */
   with?: string[],
+  /** Rotas aninhadas de hasMany/hasOne: `false` desliga, uma lista restringe aos relacionamentos citados (nome do método da model). Padrão: todos. */
+  nested?: boolean | string[],
 }
 
 /** Formato atual do `manifest-lock.json` (veja `docs/arquitetura.md`). Locks sem `lockVersion` são o formato 1. */
