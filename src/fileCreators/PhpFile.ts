@@ -1,7 +1,5 @@
 import { camelCase, pascalCase } from "change-case";
 import { Entity } from "../models/Entity";
-import fs from "fs";
-import path from "path";
 import { uniq } from "lodash";
 
 export abstract class PhpFile {
@@ -109,22 +107,13 @@ export abstract class PhpFile {
     return this.fileMounted;
   }
 
-  public writeFile(): string {
-    const basePath = path.join(__dirname, "../../generated/", this.pkgCode, this.namespace.replace("App", "app") ).replaceAll("\\", "/");
+  /**
+   * Caminho do arquivo relativo à raiz do projeto Laravel
+   * (`App\Http\Requests` → `app/Http/Requests/<arquivo>`).
+   */
+  public getRelativePath(): string {
+    const folder = this.namespace.replace("App", "app").replaceAll("\\", "/");
 
-    console.log("File Created: " + `${basePath}/${this.className}.php`);
-    if (!fs.existsSync(basePath)) {
-      fs.mkdirSync(basePath, { recursive: true });
-    }
-
-    const fileName = `${basePath}/${this.getFileName()}`;
-    fs.writeFileSync(fileName, this.fileMounted);
-
-    return fileName;
-  }
-
-  public mountAndWriteFile(): void {
-    this.mountFile();
-    this.writeFile();
+    return `${folder}/${this.getFileName()}`;
   }
 }

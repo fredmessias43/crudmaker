@@ -1,7 +1,5 @@
-import path from "path";
 import { camelCase } from "change-case";
 import { Field, ManifestEntities, ManifestEntity, RelationshipKeys, RelationshipValue, Relationships } from "../types";
-import fs from "fs";
 import { snakeCase, uniqBy } from "lodash";
 
 export class Manifest {
@@ -206,16 +204,5 @@ export class Manifest {
       null,
       2
     )
-  }
-
-  public lockManifest() {
-    const basePath = path.join(__dirname, "../../generated/" + this.pkgCode).replaceAll("\\", "/");
-
-    if (!fs.existsSync(basePath)) {
-      fs.mkdirSync(basePath, { recursive: true });
-    }
-
-    const fileName = `${basePath}/manifest-lock.json`;
-    fs.writeFileSync(fileName, this.manifestToString());
   }
 }

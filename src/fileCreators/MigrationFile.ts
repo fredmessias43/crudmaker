@@ -1,16 +1,24 @@
 import { format } from "date-fns";
 import { Entity } from "../models/Entity";
 import { PhpFile } from "./PhpFile";
-import fs from "fs";
-import path from "path";
 import { plural } from "pluralize";
 
 export class MigrationFile extends PhpFile {
   protected upFunction: string[];
   protected downFunction: string[];
 
-  constructor(entity: Entity, pkgCode: string, systemCode: string) {
+  protected now: Date;
+  protected existingMigrations: string[];
+
+  /**
+   * @param now data/hora usada no prefixo do nome de uma migration nova
+   * @param existingMigrations nomes de arquivo das migrations já existentes no destino
+   */
+  constructor(entity: Entity, pkgCode: string, systemCode: string, now: Date, existingMigrations: string[]) {
     super(entity, pkgCode, systemCode);
+
+    this.now = now;
+    this.existingMigrations = existingMigrations;
 
     this.namespace = "database\\migrations";
     this.imports = [
@@ -32,19 +40,15 @@ export class MigrationFile extends PhpFile {
 
   protected getFileName() : string
   {
-    const basePath = path.join(__dirname, "../../generated/", this.pkgCode, this.namespace.replace("App", "app")).replaceAll("\\", "/");
     const fileName = "_create_" + this.entity.getTableName() + "_table" + ".php";
 
-    const files = fs.readdirSync(basePath);
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      
+    for (const file of this.existingMigrations) {
       if (file.endsWith(fileName)) {
         return file;
       }
     }
 
-    const date = format(new Date(), "yyyy_MM_dd_HHmmss");
+    const date = format(this.now, "yyyy_MM_dd_HHmmss");
 
     return date +  fileName;
   }

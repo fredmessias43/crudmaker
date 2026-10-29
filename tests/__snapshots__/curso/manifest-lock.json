@@ -1,0 +1,476 @@
+{
+  "code": "curso",
+  "version": "0.1.0",
+  "entities": {
+    "course": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "name": {
+          "type": "string",
+          "name": "name",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "description": {
+          "type": "text",
+          "name": "description",
+          "required": false,
+          "unique": false,
+          "enumItems": []
+        }
+      },
+      "relationships": {
+        "hasMany": [
+          {
+            "entity": "course_content",
+            "field": "course_content_id",
+            "required": true,
+            "relationship": "hasMany"
+          }
+        ]
+      }
+    },
+    "course_content": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "course_id": {
+          "type": "uuid",
+          "name": "course_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        },
+        "name": {
+          "type": "string",
+          "name": "name",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "description": {
+          "type": "text",
+          "name": "description",
+          "required": false,
+          "unique": false,
+          "enumItems": []
+        },
+        "link": {
+          "type": "string",
+          "name": "link",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "pdf": {
+          "type": "string",
+          "name": "pdf",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        }
+      },
+      "relationships": {
+        "belongsTo": [
+          {
+            "entity": "course",
+            "field": "course_id",
+            "required": true,
+            "relationship": "belongsTo"
+          }
+        ]
+      }
+    },
+    "user": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "name": {
+          "type": "string",
+          "name": "name",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "email": {
+          "type": "string",
+          "name": "email",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "password": {
+          "type": "string",
+          "name": "password",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        }
+      },
+      "relationships": {
+        "hasMany": [
+          {
+            "entity": "user_course",
+            "field": "user_course_id",
+            "required": true,
+            "relationship": "hasMany"
+          }
+        ]
+      }
+    },
+    "user_course": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "status": {
+          "type": "string",
+          "name": "status",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "user_id": {
+          "type": "uuid",
+          "name": "user_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        },
+        "course_id": {
+          "type": "uuid",
+          "name": "course_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        }
+      },
+      "relationships": {
+        "belongsTo": [
+          {
+            "entity": "user",
+            "field": "user_id",
+            "required": true,
+            "relationship": "belongsTo"
+          },
+          {
+            "entity": "course",
+            "field": "course_id",
+            "required": true,
+            "relationship": "belongsTo"
+          }
+        ]
+      }
+    },
+    "class": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "name": {
+          "type": "string",
+          "name": "name",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "description": {
+          "type": "text",
+          "name": "description",
+          "required": false,
+          "unique": false,
+          "enumItems": []
+        }
+      },
+      "relationships": {
+        "hasOne": [
+          {
+            "entity": "teacher",
+            "field": "teacher_id",
+            "required": true,
+            "relationship": "hasOne"
+          }
+        ],
+        "hasMany": [
+          {
+            "entity": "class_lesson",
+            "field": "class_lesson_id",
+            "required": true,
+            "relationship": "hasMany"
+          },
+          {
+            "entity": "student",
+            "field": "student_id",
+            "required": true,
+            "relationship": "hasMany"
+          }
+        ]
+      }
+    },
+    "class_lesson": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "class_id": {
+          "type": "uuid",
+          "name": "class_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        },
+        "name": {
+          "type": "string",
+          "name": "name",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "description": {
+          "type": "text",
+          "name": "description",
+          "required": false,
+          "unique": false,
+          "enumItems": []
+        },
+        "link": {
+          "type": "string",
+          "name": "link",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "pdf": {
+          "type": "string",
+          "name": "pdf",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        }
+      },
+      "relationships": {
+        "hasMany": [
+          {
+            "entity": "class_lesson_comment",
+            "field": "class_lesson_comment_id",
+            "required": true,
+            "relationship": "hasMany"
+          }
+        ],
+        "belongsTo": [
+          {
+            "entity": "class",
+            "field": "class_id",
+            "required": true,
+            "relationship": "belongsTo"
+          }
+        ]
+      }
+    },
+    "class_lesson_comment": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "class_lesson_id": {
+          "type": "uuid",
+          "name": "class_lesson_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        },
+        "name": {
+          "type": "string",
+          "name": "name",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "description": {
+          "type": "text",
+          "name": "description",
+          "required": false,
+          "unique": false,
+          "enumItems": []
+        },
+        "link": {
+          "type": "string",
+          "name": "link",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "pdf": {
+          "type": "string",
+          "name": "pdf",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "user_id": {
+          "type": "uuid",
+          "name": "user_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        }
+      },
+      "relationships": {
+        "hasMany": [
+          {
+            "entity": "class_lesson_comment",
+            "field": "class_lesson_comment_id",
+            "required": true,
+            "relationship": "hasMany"
+          }
+        ],
+        "belongsTo": [
+          {
+            "entity": "class_lesson",
+            "field": "class_lesson_id",
+            "required": true,
+            "relationship": "belongsTo"
+          },
+          {
+            "entity": "user",
+            "field": "user_id",
+            "required": true,
+            "relationship": "belongsTo"
+          }
+        ]
+      }
+    },
+    "class_lesson_attendee": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "class_lesson_id": {
+          "type": "uuid",
+          "name": "class_lesson_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        },
+        "user_id": {
+          "type": "uuid",
+          "name": "user_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        }
+      },
+      "relationships": {
+        "belongsTo": [
+          {
+            "entity": "class_lesson",
+            "field": "class_lesson_id",
+            "required": true,
+            "relationship": "belongsTo"
+          },
+          {
+            "entity": "user",
+            "field": "user_id",
+            "required": true,
+            "relationship": "belongsTo"
+          }
+        ]
+      }
+    },
+    "student": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "status": {
+          "type": "string",
+          "name": "status",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "class_id": {
+          "type": "uuid",
+          "name": "class_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        },
+        "user_id": {
+          "type": "uuid",
+          "name": "user_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        }
+      },
+      "relationships": {
+        "belongsTo": [
+          {
+            "entity": "class",
+            "field": "class_id",
+            "required": true,
+            "relationship": "belongsTo"
+          },
+          {
+            "entity": "user",
+            "field": "user_id",
+            "required": true,
+            "relationship": "belongsTo"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,69 +1,20 @@
-import {
-  ModelFile,
-  ResourceFile,
-  CollectionFile,
-  ControllerFile,
-  RequestFile,
-  MigrationFile,
-  ObserverFile,
-} from "./fileCreators";
-import { Entity } from "./models/Entity";
-import { Manifest } from "./models/Manifest";
-import { ManifestEntity } from "./types";
 import fs from "fs";
+import path from "path";
+import { generate } from "./generate";
+import { writeFiles } from "./writeFiles";
 
 const manifestObj = JSON.parse(
   fs.readFileSync("./generated/curso/manifest.json", { encoding: "utf8" }),
 );
 
-const manifestClass = new Manifest(manifestObj);
+const outputDir = path.join(__dirname, "../generated/", manifestObj.pkg.code);
 
-manifestClass.lockManifest();
+const migrationsDir = path.join(outputDir, "database/migrations");
+const existingMigrations = fs.existsSync(migrationsDir) ? fs.readdirSync(migrationsDir) : [];
 
-for (const key in manifestClass.entities) {
-  const manifestEntity = manifestClass.entities[key];
+const files = generate(manifestObj, {
+  now: new Date(),
+  existingMigrations,
+});
 
-  const entity = new Entity(key, manifestEntity);
-
-  const modelFileClass = new ModelFile(
-    entity,
-    manifestClass.pkgCode,
-    manifestClass.systemCode,
-  );
-  const resourceFileClass = new ResourceFile(
-    entity,
-    manifestClass.pkgCode,
-    manifestClass.systemCode,
-  );
-  const collectionFileClass = new CollectionFile(
-    entity,
-    manifestClass.pkgCode,
-    manifestClass.systemCode,
-  );
-  const controllerFileClass = new ControllerFile(
-    entity,
-    manifestClass.pkgCode,
-    manifestClass.systemCode,
-  );
-  const requestFileClass = new RequestFile(
-    entity,
-    manifestClass.pkgCode,
-    manifestClass.systemCode,
-  );
-  const migrationFileClass = new MigrationFile(
-    entity,
-    manifestClass.pkgCode,
-    manifestClass.systemCode,
-  );
-  // const observerFileClass = new ObserverFile(entity, manifestClass.pkgCode, manifestClass.systemCode);
-
-  //
-
-  modelFileClass.mountAndWriteFile();
-  resourceFileClass.mountAndWriteFile();
-  collectionFileClass.mountAndWriteFile();
-  controllerFileClass.mountAndWriteFile();
-  requestFileClass.mountAndWriteFile();
-  migrationFileClass.mountAndWriteFile();
-  // observerFileClass.mountAndWriteFile();
-}
+writeFiles(files, outputDir);

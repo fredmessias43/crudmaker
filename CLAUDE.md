@@ -1,19 +1,22 @@
 # crudmaker
 
-Gerador de API Laravel a partir de um manifest JSON: lê entidades, campos e relacionamentos e escreve Model, Migration, Controller, Request, Resource e Collection. Escrito em TypeScript, roda com `ts-node`.
+Gerador de API Laravel a partir de um manifest JSON: lê entidades, campos e relacionamentos e escreve Model, Migration, Controller, Request, Resource e Collection. Escrito em TypeScript, roda com `tsx`.
 
 ## Comandos
 
 - `npm install`
 - `npm run dev`: gera os arquivos. O caminho do manifest está fixo em `src/main.ts`.
-- `npx tsc --noEmit`: checagem de tipos. Hoje acusa 2 erros, ambos no `InertiaControllerFile`, que não é usado. Ainda não há testes nem lint.
+- `npm test`: roda a suíte (vitest) com os testes de snapshot de `generate`. Os snapshots ficam em `tests/__snapshots__/` e as fixtures em `tests/fixtures/`. Se uma mudança de saída for intencional, revise o diff e atualize com `npx vitest run -u`.
+- `npx tsc --noEmit`: checagem de tipos. Passa sem erros. Ainda não há lint.
 
 ## Onde está cada coisa
 
-- `src/main.ts`: orquestra a geração (manifest → lock → geradores por entidade).
+- `src/main.ts`: ponto de entrada provisório (até existir a CLI): lê o manifest, chama `generate` e passa o resultado para `writeFiles`.
+- `src/generate.ts`: `generate(manifest, { now, existingMigrations })`, função pura (sem disco) que devolve a lista de arquivos `{ path, content, policy }`, com `path` relativo à raiz do projeto Laravel.
+- `src/writeFiles.ts`: camada de escrita; grava a lista de arquivos num diretório base.
 - `src/models/Manifest.ts`: validação e normalização do manifest.
 - `src/models/Entity.ts`: nome da entidade em vários casings e nome da tabela.
-- `src/fileCreators/PhpFile.ts`: classe base dos geradores (casca do arquivo PHP e escrita no disco).
+- `src/fileCreators/PhpFile.ts`: classe base dos geradores (casca do arquivo PHP e caminho relativo; não escreve no disco).
 - `src/fileCreators/*File.ts`: um gerador por tipo de arquivo PHP.
 - `generated/<pkg.code>/`: saída. Está no `.gitignore` e costuma conter projetos Laravel reais (com código escrito à mão).
 

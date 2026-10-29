@@ -1,0 +1,205 @@
+{
+  "code": "vende-que-vende-api",
+  "version": "0.1.0",
+  "entities": {
+    "client": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "name": {
+          "type": "string",
+          "name": "name",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "email": {
+          "type": "string",
+          "name": "email",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "phone": {
+          "type": "string",
+          "name": "phone",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "document": {
+          "type": "string",
+          "name": "document",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        }
+      },
+      "relationships": {
+        "hasOne": [
+          {
+            "entity": "note",
+            "field": "note_id",
+            "required": true,
+            "relationship": "hasOne"
+          },
+          {
+            "entity": "address",
+            "field": "address_id",
+            "required": true,
+            "relationship": "hasOne"
+          }
+        ],
+        "hasMany": [
+          {
+            "entity": "alert",
+            "field": "alert_id",
+            "required": true,
+            "relationship": "hasMany"
+          }
+        ]
+      }
+    },
+    "note": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "content": {
+          "type": "text",
+          "name": "content",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "client_id": {
+          "type": "uuid",
+          "name": "client_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        }
+      },
+      "relationships": {
+        "belongsTo": [
+          {
+            "entity": "client",
+            "field": "client_id",
+            "required": true,
+            "relationship": "belongsTo"
+          }
+        ]
+      }
+    },
+    "alert": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "message": {
+          "type": "string",
+          "name": "message",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "alertDate": {
+          "type": "datetime",
+          "name": "alertDate",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "client_id": {
+          "type": "uuid",
+          "name": "client_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        }
+      },
+      "relationships": {
+        "belongsTo": [
+          {
+            "entity": "client",
+            "field": "client_id",
+            "required": true,
+            "relationship": "belongsTo"
+          }
+        ]
+      }
+    },
+    "address": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "street": {
+          "type": "string",
+          "name": "street",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "city": {
+          "type": "string",
+          "name": "city",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "state": {
+          "type": "string",
+          "name": "state",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "zip": {
+          "type": "string",
+          "name": "zip",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "client_id": {
+          "type": "uuid",
+          "name": "client_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        }
+      },
+      "relationships": {
+        "belongsTo": [
+          {
+            "entity": "client",
+            "field": "client_id",
+            "required": true,
+            "relationship": "belongsTo"
+          }
+        ]
+      }
+    }
+  }
+}
