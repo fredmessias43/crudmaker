@@ -7,31 +7,25 @@ use App\Models\Student;
 use App\Http\Requests\StudentRequest;
 use App\Http\Resources\StudentCollection;
 use App\Http\Resources\StudentResource;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 
 
 class StudentController extends Controller
 {
 
 	/**
-	 * Display a listing of the resource.
+	 * Display a paginated listing of the resource.
 	 *
-	 * @return \Illuminate\Http\Response
+	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 *
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function index()
+	public function index(): JsonResponse
 	{
-		try
-		{
-			$student = Student::all();
-	
-			return response()->json([
-				'status' => 200,
-				'data' => new StudentCollection($student),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Student can not be listed.' . $th->getMessage(), 500);
-		}
+		$student = Student::paginate(15);
+
+		return (new StudentCollection($student))->response();
 	}
 
 
@@ -40,24 +34,17 @@ class StudentController extends Controller
 	 *
 	 * @param  \App\Http\Requests\StudentRequest $request
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function store(StudentRequest $request)
+	public function store(StudentRequest $request): JsonResponse
 	{
-		try
-		{
-			$student = Student::create($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('Student created successfully.'),
-				'data' => new StudentResource($student),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('Student can not be created.' . $th->getMessage(), 500);
-		}
+		$student = Student::create($request->validated());
+
+		return response()->json([
+			'status' => 201,
+			'message' => trans('Student created successfully.'),
+			'data' => new StudentResource($student),
+		], 201);
 	}
 
 
@@ -66,21 +53,14 @@ class StudentController extends Controller
 	 *
 	 * @param  \App\Models\Student $student
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function show(Student $student)
+	public function show(Student $student): JsonResponse
 	{
-		try
-		{
-			return response()->json([
-				'status' => 200,
-				'data' => new StudentResource($student),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Student can not be shown.' . $th->getMessage(), 500);
-		}
+		return response()->json([
+			'status' => 200,
+			'data' => new StudentResource($student),
+		], 200);
 	}
 
 
@@ -88,25 +68,19 @@ class StudentController extends Controller
 	 * Update the specified resource in storage.
 	 *
 	 * @param  \App\Http\Requests\StudentRequest $request
+	 * @param  \App\Models\Student $student
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function update(StudentRequest $request, Student $student)
+	public function update(StudentRequest $request, Student $student): JsonResponse
 	{
-		try
-		{
-			$student->update($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('Student updated successfully.'),
-				'data' => new StudentResource($student),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('Student can not be updated.' . $th->getMessage(), 500);
-		}
+		$student->update($request->validated());
+
+		return response()->json([
+			'status' => 200,
+			'message' => trans('Student updated successfully.'),
+			'data' => new StudentResource($student),
+		], 200);
 	}
 
 
@@ -117,22 +91,11 @@ class StudentController extends Controller
 	 *
 	 * @return \Illuminate\Http\Response
 	 */
-	public function destroy(Student $student)
+	public function destroy(Student $student): Response
 	{
-		try
-		{
-			$student->delete();
-	
-			return response()->json([
-				'status' => 204,
-				'message' => trans('Student deleted successfully.'),
-				'data' => new StudentResource($student),
-			], 204);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Student can not be deleted.' . $th->getMessage(), 500);
-		}
+		$student->delete();
+
+		return response()->noContent();
 	}
 
 };

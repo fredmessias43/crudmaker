@@ -7,31 +7,25 @@ use App\Models\PlayerInvite;
 use App\Http\Requests\PlayerInviteRequest;
 use App\Http\Resources\PlayerInviteCollection;
 use App\Http\Resources\PlayerInviteResource;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 
 
 class PlayerInviteController extends Controller
 {
 
 	/**
-	 * Display a listing of the resource.
+	 * Display a paginated listing of the resource.
 	 *
-	 * @return \Illuminate\Http\Response
+	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 *
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function index()
+	public function index(): JsonResponse
 	{
-		try
-		{
-			$playerInvite = PlayerInvite::all();
-	
-			return response()->json([
-				'status' => 200,
-				'data' => new PlayerInviteCollection($playerInvite),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('PlayerInvite can not be listed.' . $th->getMessage(), 500);
-		}
+		$playerInvite = PlayerInvite::paginate(15);
+
+		return (new PlayerInviteCollection($playerInvite))->response();
 	}
 
 
@@ -40,24 +34,17 @@ class PlayerInviteController extends Controller
 	 *
 	 * @param  \App\Http\Requests\PlayerInviteRequest $request
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function store(PlayerInviteRequest $request)
+	public function store(PlayerInviteRequest $request): JsonResponse
 	{
-		try
-		{
-			$playerInvite = PlayerInvite::create($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('PlayerInvite created successfully.'),
-				'data' => new PlayerInviteResource($playerInvite),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('PlayerInvite can not be created.' . $th->getMessage(), 500);
-		}
+		$playerInvite = PlayerInvite::create($request->validated());
+
+		return response()->json([
+			'status' => 201,
+			'message' => trans('PlayerInvite created successfully.'),
+			'data' => new PlayerInviteResource($playerInvite),
+		], 201);
 	}
 
 
@@ -66,21 +53,14 @@ class PlayerInviteController extends Controller
 	 *
 	 * @param  \App\Models\PlayerInvite $playerInvite
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function show(PlayerInvite $playerInvite)
+	public function show(PlayerInvite $playerInvite): JsonResponse
 	{
-		try
-		{
-			return response()->json([
-				'status' => 200,
-				'data' => new PlayerInviteResource($playerInvite),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('PlayerInvite can not be shown.' . $th->getMessage(), 500);
-		}
+		return response()->json([
+			'status' => 200,
+			'data' => new PlayerInviteResource($playerInvite),
+		], 200);
 	}
 
 
@@ -88,25 +68,19 @@ class PlayerInviteController extends Controller
 	 * Update the specified resource in storage.
 	 *
 	 * @param  \App\Http\Requests\PlayerInviteRequest $request
+	 * @param  \App\Models\PlayerInvite $playerInvite
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function update(PlayerInviteRequest $request, PlayerInvite $playerInvite)
+	public function update(PlayerInviteRequest $request, PlayerInvite $playerInvite): JsonResponse
 	{
-		try
-		{
-			$playerInvite->update($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('PlayerInvite updated successfully.'),
-				'data' => new PlayerInviteResource($playerInvite),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('PlayerInvite can not be updated.' . $th->getMessage(), 500);
-		}
+		$playerInvite->update($request->validated());
+
+		return response()->json([
+			'status' => 200,
+			'message' => trans('PlayerInvite updated successfully.'),
+			'data' => new PlayerInviteResource($playerInvite),
+		], 200);
 	}
 
 
@@ -117,22 +91,11 @@ class PlayerInviteController extends Controller
 	 *
 	 * @return \Illuminate\Http\Response
 	 */
-	public function destroy(PlayerInvite $playerInvite)
+	public function destroy(PlayerInvite $playerInvite): Response
 	{
-		try
-		{
-			$playerInvite->delete();
-	
-			return response()->json([
-				'status' => 204,
-				'message' => trans('PlayerInvite deleted successfully.'),
-				'data' => new PlayerInviteResource($playerInvite),
-			], 204);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('PlayerInvite can not be deleted.' . $th->getMessage(), 500);
-		}
+		$playerInvite->delete();
+
+		return response()->noContent();
 	}
 
 };

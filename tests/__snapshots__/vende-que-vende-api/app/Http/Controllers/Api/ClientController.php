@@ -7,31 +7,25 @@ use App\Models\Client;
 use App\Http\Requests\ClientRequest;
 use App\Http\Resources\ClientCollection;
 use App\Http\Resources\ClientResource;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 
 
 class ClientController extends Controller
 {
 
 	/**
-	 * Display a listing of the resource.
+	 * Display a paginated listing of the resource.
 	 *
-	 * @return \Illuminate\Http\Response
+	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 *
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function index()
+	public function index(): JsonResponse
 	{
-		try
-		{
-			$client = Client::all();
-	
-			return response()->json([
-				'status' => 200,
-				'data' => new ClientCollection($client),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Client can not be listed.' . $th->getMessage(), 500);
-		}
+		$client = Client::paginate(15);
+
+		return (new ClientCollection($client))->response();
 	}
 
 
@@ -40,24 +34,17 @@ class ClientController extends Controller
 	 *
 	 * @param  \App\Http\Requests\ClientRequest $request
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function store(ClientRequest $request)
+	public function store(ClientRequest $request): JsonResponse
 	{
-		try
-		{
-			$client = Client::create($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('Client created successfully.'),
-				'data' => new ClientResource($client),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('Client can not be created.' . $th->getMessage(), 500);
-		}
+		$client = Client::create($request->validated());
+
+		return response()->json([
+			'status' => 201,
+			'message' => trans('Client created successfully.'),
+			'data' => new ClientResource($client),
+		], 201);
 	}
 
 
@@ -66,21 +53,14 @@ class ClientController extends Controller
 	 *
 	 * @param  \App\Models\Client $client
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function show(Client $client)
+	public function show(Client $client): JsonResponse
 	{
-		try
-		{
-			return response()->json([
-				'status' => 200,
-				'data' => new ClientResource($client),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Client can not be shown.' . $th->getMessage(), 500);
-		}
+		return response()->json([
+			'status' => 200,
+			'data' => new ClientResource($client),
+		], 200);
 	}
 
 
@@ -88,25 +68,19 @@ class ClientController extends Controller
 	 * Update the specified resource in storage.
 	 *
 	 * @param  \App\Http\Requests\ClientRequest $request
+	 * @param  \App\Models\Client $client
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function update(ClientRequest $request, Client $client)
+	public function update(ClientRequest $request, Client $client): JsonResponse
 	{
-		try
-		{
-			$client->update($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('Client updated successfully.'),
-				'data' => new ClientResource($client),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('Client can not be updated.' . $th->getMessage(), 500);
-		}
+		$client->update($request->validated());
+
+		return response()->json([
+			'status' => 200,
+			'message' => trans('Client updated successfully.'),
+			'data' => new ClientResource($client),
+		], 200);
 	}
 
 
@@ -117,22 +91,11 @@ class ClientController extends Controller
 	 *
 	 * @return \Illuminate\Http\Response
 	 */
-	public function destroy(Client $client)
+	public function destroy(Client $client): Response
 	{
-		try
-		{
-			$client->delete();
-	
-			return response()->json([
-				'status' => 204,
-				'message' => trans('Client deleted successfully.'),
-				'data' => new ClientResource($client),
-			], 204);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Client can not be deleted.' . $th->getMessage(), 500);
-		}
+		$client->delete();
+
+		return response()->noContent();
 	}
 
 };

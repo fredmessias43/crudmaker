@@ -8,11 +8,11 @@
 
 - [07 — Migrar os geradores para templates](../fase-2-bugs/07-migrar-para-templates.md)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Critérios de aceite
 
-- [ ] O snapshot do controller muda só nesses pontos, de forma intencional.
-- [ ] Asserções explícitas sobre os status, a paginação e a ausência de try/catch genérico.
-- [ ] A seção "Comportamento da API gerada" do `docs/como-usar.md` está atualizada.
-- [ ] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.
+- [x] O snapshot do controller muda só nesses pontos, de forma intencional.
+- [x] Asserções explícitas sobre os status, a paginação e a ausência de try/catch genérico.
+- [x] A seção "Comportamento da API gerada" do `docs/como-usar.md` está atualizada.
+- [x] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.

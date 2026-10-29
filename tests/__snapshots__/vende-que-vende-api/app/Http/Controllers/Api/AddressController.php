@@ -7,31 +7,25 @@ use App\Models\Address;
 use App\Http\Requests\AddressRequest;
 use App\Http\Resources\AddressCollection;
 use App\Http\Resources\AddressResource;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 
 
 class AddressController extends Controller
 {
 
 	/**
-	 * Display a listing of the resource.
+	 * Display a paginated listing of the resource.
 	 *
-	 * @return \Illuminate\Http\Response
+	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 *
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function index()
+	public function index(): JsonResponse
 	{
-		try
-		{
-			$address = Address::all();
-	
-			return response()->json([
-				'status' => 200,
-				'data' => new AddressCollection($address),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Address can not be listed.' . $th->getMessage(), 500);
-		}
+		$address = Address::paginate(15);
+
+		return (new AddressCollection($address))->response();
 	}
 
 
@@ -40,24 +34,17 @@ class AddressController extends Controller
 	 *
 	 * @param  \App\Http\Requests\AddressRequest $request
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function store(AddressRequest $request)
+	public function store(AddressRequest $request): JsonResponse
 	{
-		try
-		{
-			$address = Address::create($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('Address created successfully.'),
-				'data' => new AddressResource($address),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('Address can not be created.' . $th->getMessage(), 500);
-		}
+		$address = Address::create($request->validated());
+
+		return response()->json([
+			'status' => 201,
+			'message' => trans('Address created successfully.'),
+			'data' => new AddressResource($address),
+		], 201);
 	}
 
 
@@ -66,21 +53,14 @@ class AddressController extends Controller
 	 *
 	 * @param  \App\Models\Address $address
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function show(Address $address)
+	public function show(Address $address): JsonResponse
 	{
-		try
-		{
-			return response()->json([
-				'status' => 200,
-				'data' => new AddressResource($address),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Address can not be shown.' . $th->getMessage(), 500);
-		}
+		return response()->json([
+			'status' => 200,
+			'data' => new AddressResource($address),
+		], 200);
 	}
 
 
@@ -88,25 +68,19 @@ class AddressController extends Controller
 	 * Update the specified resource in storage.
 	 *
 	 * @param  \App\Http\Requests\AddressRequest $request
+	 * @param  \App\Models\Address $address
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function update(AddressRequest $request, Address $address)
+	public function update(AddressRequest $request, Address $address): JsonResponse
 	{
-		try
-		{
-			$address->update($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('Address updated successfully.'),
-				'data' => new AddressResource($address),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('Address can not be updated.' . $th->getMessage(), 500);
-		}
+		$address->update($request->validated());
+
+		return response()->json([
+			'status' => 200,
+			'message' => trans('Address updated successfully.'),
+			'data' => new AddressResource($address),
+		], 200);
 	}
 
 
@@ -117,22 +91,11 @@ class AddressController extends Controller
 	 *
 	 * @return \Illuminate\Http\Response
 	 */
-	public function destroy(Address $address)
+	public function destroy(Address $address): Response
 	{
-		try
-		{
-			$address->delete();
-	
-			return response()->json([
-				'status' => 204,
-				'message' => trans('Address deleted successfully.'),
-				'data' => new AddressResource($address),
-			], 204);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Address can not be deleted.' . $th->getMessage(), 500);
-		}
+		$address->delete();
+
+		return response()->noContent();
 	}
 
 };

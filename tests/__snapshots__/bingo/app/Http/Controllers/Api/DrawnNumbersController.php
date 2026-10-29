@@ -7,31 +7,25 @@ use App\Models\DrawnNumbers;
 use App\Http\Requests\DrawnNumbersRequest;
 use App\Http\Resources\DrawnNumbersCollection;
 use App\Http\Resources\DrawnNumbersResource;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 
 
 class DrawnNumbersController extends Controller
 {
 
 	/**
-	 * Display a listing of the resource.
+	 * Display a paginated listing of the resource.
 	 *
-	 * @return \Illuminate\Http\Response
+	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 *
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function index()
+	public function index(): JsonResponse
 	{
-		try
-		{
-			$drawnNumbers = DrawnNumbers::all();
-	
-			return response()->json([
-				'status' => 200,
-				'data' => new DrawnNumbersCollection($drawnNumbers),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('DrawnNumbers can not be listed.' . $th->getMessage(), 500);
-		}
+		$drawnNumbers = DrawnNumbers::paginate(15);
+
+		return (new DrawnNumbersCollection($drawnNumbers))->response();
 	}
 
 
@@ -40,24 +34,17 @@ class DrawnNumbersController extends Controller
 	 *
 	 * @param  \App\Http\Requests\DrawnNumbersRequest $request
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function store(DrawnNumbersRequest $request)
+	public function store(DrawnNumbersRequest $request): JsonResponse
 	{
-		try
-		{
-			$drawnNumbers = DrawnNumbers::create($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('DrawnNumbers created successfully.'),
-				'data' => new DrawnNumbersResource($drawnNumbers),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('DrawnNumbers can not be created.' . $th->getMessage(), 500);
-		}
+		$drawnNumbers = DrawnNumbers::create($request->validated());
+
+		return response()->json([
+			'status' => 201,
+			'message' => trans('DrawnNumbers created successfully.'),
+			'data' => new DrawnNumbersResource($drawnNumbers),
+		], 201);
 	}
 
 
@@ -66,21 +53,14 @@ class DrawnNumbersController extends Controller
 	 *
 	 * @param  \App\Models\DrawnNumbers $drawnNumbers
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function show(DrawnNumbers $drawnNumbers)
+	public function show(DrawnNumbers $drawnNumbers): JsonResponse
 	{
-		try
-		{
-			return response()->json([
-				'status' => 200,
-				'data' => new DrawnNumbersResource($drawnNumbers),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('DrawnNumbers can not be shown.' . $th->getMessage(), 500);
-		}
+		return response()->json([
+			'status' => 200,
+			'data' => new DrawnNumbersResource($drawnNumbers),
+		], 200);
 	}
 
 
@@ -88,25 +68,19 @@ class DrawnNumbersController extends Controller
 	 * Update the specified resource in storage.
 	 *
 	 * @param  \App\Http\Requests\DrawnNumbersRequest $request
+	 * @param  \App\Models\DrawnNumbers $drawnNumbers
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function update(DrawnNumbersRequest $request, DrawnNumbers $drawnNumbers)
+	public function update(DrawnNumbersRequest $request, DrawnNumbers $drawnNumbers): JsonResponse
 	{
-		try
-		{
-			$drawnNumbers->update($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('DrawnNumbers updated successfully.'),
-				'data' => new DrawnNumbersResource($drawnNumbers),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('DrawnNumbers can not be updated.' . $th->getMessage(), 500);
-		}
+		$drawnNumbers->update($request->validated());
+
+		return response()->json([
+			'status' => 200,
+			'message' => trans('DrawnNumbers updated successfully.'),
+			'data' => new DrawnNumbersResource($drawnNumbers),
+		], 200);
 	}
 
 
@@ -117,22 +91,11 @@ class DrawnNumbersController extends Controller
 	 *
 	 * @return \Illuminate\Http\Response
 	 */
-	public function destroy(DrawnNumbers $drawnNumbers)
+	public function destroy(DrawnNumbers $drawnNumbers): Response
 	{
-		try
-		{
-			$drawnNumbers->delete();
-	
-			return response()->json([
-				'status' => 204,
-				'message' => trans('DrawnNumbers deleted successfully.'),
-				'data' => new DrawnNumbersResource($drawnNumbers),
-			], 204);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('DrawnNumbers can not be deleted.' . $th->getMessage(), 500);
-		}
+		$drawnNumbers->delete();
+
+		return response()->noContent();
 	}
 
 };

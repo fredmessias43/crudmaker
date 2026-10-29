@@ -201,3 +201,51 @@ describe("rotas", () => {
     expect(api.content).toBe("<?php\n\n// Rotas geradas pelo crudmaker (routes/crudmaker.php).\nrequire __DIR__ . '/crudmaker.php';\n");
   });
 });
+
+// Semântica HTTP dos controllers (ticket 08), sem depender de snapshot.
+describe("controllers gerados (semântica HTTP)", () => {
+  const { files } = generate(loadManifest("vende-que-vende-api"), { now, existingMigrations: [] });
+  const controllers = files.filter((file) => file.path.startsWith("app/Http/Controllers/Api/"));
+
+  function action(content: string, name: string): string {
+    const start = content.indexOf(`public function ${name}(`);
+    const next = content.indexOf("public function ", start + 1);
+    return content.slice(start, next === -1 ? undefined : next);
+  }
+
+  it("gera um controller por entidade", () => {
+    expect(controllers.length).toBeGreaterThan(0);
+  });
+
+  it("responde com o status certo em cada action", () => {
+    for (const { content } of controllers) {
+      expect(action(content, "index")).toContain("::paginate(15)");
+      expect(action(content, "store")).toContain("], 201);");
+      expect(action(content, "show")).toContain("], 200);");
+      expect(action(content, "update")).toContain("], 200);");
+      expect(action(content, "update")).not.toContain("201");
+      expect(action(content, "destroy")).toContain("response()->noContent()");
+      expect(action(content, "destroy")).not.toContain("response()->json");
+    }
+  });
+
+  it("declara tipos de retorno nas actions", () => {
+    for (const { content } of controllers) {
+      expect(content).toContain("use Illuminate\\Http\\JsonResponse;");
+      expect(content).toContain("use Illuminate\\Http\\Response;");
+      for (const name of ["index", "store", "show", "update"]) {
+        expect(action(content, name)).toMatch(/\): JsonResponse\n/);
+      }
+      expect(action(content, "destroy")).toMatch(/\): Response\n/);
+    }
+  });
+
+  it("não tem try/catch genérico nem relança como 500", () => {
+    for (const { content } of controllers) {
+      expect(content).not.toContain("catch(\\Throwable");
+      expect(content).not.toContain("catch (\\Throwable");
+      expect(content).not.toContain("throw new \\Exception");
+      expect(content).not.toContain("try");
+    }
+  });
+});

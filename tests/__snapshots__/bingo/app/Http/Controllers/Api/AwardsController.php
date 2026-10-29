@@ -7,31 +7,25 @@ use App\Models\Awards;
 use App\Http\Requests\AwardsRequest;
 use App\Http\Resources\AwardsCollection;
 use App\Http\Resources\AwardsResource;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 
 
 class AwardsController extends Controller
 {
 
 	/**
-	 * Display a listing of the resource.
+	 * Display a paginated listing of the resource.
 	 *
-	 * @return \Illuminate\Http\Response
+	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 *
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function index()
+	public function index(): JsonResponse
 	{
-		try
-		{
-			$awards = Awards::all();
-	
-			return response()->json([
-				'status' => 200,
-				'data' => new AwardsCollection($awards),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Awards can not be listed.' . $th->getMessage(), 500);
-		}
+		$awards = Awards::paginate(15);
+
+		return (new AwardsCollection($awards))->response();
 	}
 
 
@@ -40,24 +34,17 @@ class AwardsController extends Controller
 	 *
 	 * @param  \App\Http\Requests\AwardsRequest $request
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function store(AwardsRequest $request)
+	public function store(AwardsRequest $request): JsonResponse
 	{
-		try
-		{
-			$awards = Awards::create($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('Awards created successfully.'),
-				'data' => new AwardsResource($awards),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('Awards can not be created.' . $th->getMessage(), 500);
-		}
+		$awards = Awards::create($request->validated());
+
+		return response()->json([
+			'status' => 201,
+			'message' => trans('Awards created successfully.'),
+			'data' => new AwardsResource($awards),
+		], 201);
 	}
 
 
@@ -66,21 +53,14 @@ class AwardsController extends Controller
 	 *
 	 * @param  \App\Models\Awards $awards
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function show(Awards $awards)
+	public function show(Awards $awards): JsonResponse
 	{
-		try
-		{
-			return response()->json([
-				'status' => 200,
-				'data' => new AwardsResource($awards),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Awards can not be shown.' . $th->getMessage(), 500);
-		}
+		return response()->json([
+			'status' => 200,
+			'data' => new AwardsResource($awards),
+		], 200);
 	}
 
 
@@ -88,25 +68,19 @@ class AwardsController extends Controller
 	 * Update the specified resource in storage.
 	 *
 	 * @param  \App\Http\Requests\AwardsRequest $request
+	 * @param  \App\Models\Awards $awards
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function update(AwardsRequest $request, Awards $awards)
+	public function update(AwardsRequest $request, Awards $awards): JsonResponse
 	{
-		try
-		{
-			$awards->update($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('Awards updated successfully.'),
-				'data' => new AwardsResource($awards),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('Awards can not be updated.' . $th->getMessage(), 500);
-		}
+		$awards->update($request->validated());
+
+		return response()->json([
+			'status' => 200,
+			'message' => trans('Awards updated successfully.'),
+			'data' => new AwardsResource($awards),
+		], 200);
 	}
 
 
@@ -117,22 +91,11 @@ class AwardsController extends Controller
 	 *
 	 * @return \Illuminate\Http\Response
 	 */
-	public function destroy(Awards $awards)
+	public function destroy(Awards $awards): Response
 	{
-		try
-		{
-			$awards->delete();
-	
-			return response()->json([
-				'status' => 204,
-				'message' => trans('Awards deleted successfully.'),
-				'data' => new AwardsResource($awards),
-			], 204);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Awards can not be deleted.' . $th->getMessage(), 500);
-		}
+		$awards->delete();
+
+		return response()->noContent();
 	}
 
 };

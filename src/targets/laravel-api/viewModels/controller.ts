@@ -20,6 +20,8 @@ export const controllerFile: EntityFileType = {
           `${BASE_NAMESPACE}\\Http\\Requests\\${pascal}Request`,
           `${BASE_NAMESPACE}\\Http\\Resources\\${pascal}Collection`,
           `${BASE_NAMESPACE}\\Http\\Resources\\${pascal}Resource`,
+          "Illuminate\\Http\\JsonResponse",
+          "Illuminate\\Http\\Response",
         ],
         className,
         extends: "Controller",

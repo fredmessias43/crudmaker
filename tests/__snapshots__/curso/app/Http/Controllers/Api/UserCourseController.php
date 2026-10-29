@@ -7,31 +7,25 @@ use App\Models\UserCourse;
 use App\Http\Requests\UserCourseRequest;
 use App\Http\Resources\UserCourseCollection;
 use App\Http\Resources\UserCourseResource;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 
 
 class UserCourseController extends Controller
 {
 
 	/**
-	 * Display a listing of the resource.
+	 * Display a paginated listing of the resource.
 	 *
-	 * @return \Illuminate\Http\Response
+	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 *
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function index()
+	public function index(): JsonResponse
 	{
-		try
-		{
-			$userCourse = UserCourse::all();
-	
-			return response()->json([
-				'status' => 200,
-				'data' => new UserCourseCollection($userCourse),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('UserCourse can not be listed.' . $th->getMessage(), 500);
-		}
+		$userCourse = UserCourse::paginate(15);
+
+		return (new UserCourseCollection($userCourse))->response();
 	}
 
 
@@ -40,24 +34,17 @@ class UserCourseController extends Controller
 	 *
 	 * @param  \App\Http\Requests\UserCourseRequest $request
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function store(UserCourseRequest $request)
+	public function store(UserCourseRequest $request): JsonResponse
 	{
-		try
-		{
-			$userCourse = UserCourse::create($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('UserCourse created successfully.'),
-				'data' => new UserCourseResource($userCourse),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('UserCourse can not be created.' . $th->getMessage(), 500);
-		}
+		$userCourse = UserCourse::create($request->validated());
+
+		return response()->json([
+			'status' => 201,
+			'message' => trans('UserCourse created successfully.'),
+			'data' => new UserCourseResource($userCourse),
+		], 201);
 	}
 
 
@@ -66,21 +53,14 @@ class UserCourseController extends Controller
 	 *
 	 * @param  \App\Models\UserCourse $userCourse
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function show(UserCourse $userCourse)
+	public function show(UserCourse $userCourse): JsonResponse
 	{
-		try
-		{
-			return response()->json([
-				'status' => 200,
-				'data' => new UserCourseResource($userCourse),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('UserCourse can not be shown.' . $th->getMessage(), 500);
-		}
+		return response()->json([
+			'status' => 200,
+			'data' => new UserCourseResource($userCourse),
+		], 200);
 	}
 
 
@@ -88,25 +68,19 @@ class UserCourseController extends Controller
 	 * Update the specified resource in storage.
 	 *
 	 * @param  \App\Http\Requests\UserCourseRequest $request
+	 * @param  \App\Models\UserCourse $userCourse
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function update(UserCourseRequest $request, UserCourse $userCourse)
+	public function update(UserCourseRequest $request, UserCourse $userCourse): JsonResponse
 	{
-		try
-		{
-			$userCourse->update($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('UserCourse updated successfully.'),
-				'data' => new UserCourseResource($userCourse),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('UserCourse can not be updated.' . $th->getMessage(), 500);
-		}
+		$userCourse->update($request->validated());
+
+		return response()->json([
+			'status' => 200,
+			'message' => trans('UserCourse updated successfully.'),
+			'data' => new UserCourseResource($userCourse),
+		], 200);
 	}
 
 
@@ -117,22 +91,11 @@ class UserCourseController extends Controller
 	 *
 	 * @return \Illuminate\Http\Response
 	 */
-	public function destroy(UserCourse $userCourse)
+	public function destroy(UserCourse $userCourse): Response
 	{
-		try
-		{
-			$userCourse->delete();
-	
-			return response()->json([
-				'status' => 204,
-				'message' => trans('UserCourse deleted successfully.'),
-				'data' => new UserCourseResource($userCourse),
-			], 204);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('UserCourse can not be deleted.' . $th->getMessage(), 500);
-		}
+		$userCourse->delete();
+
+		return response()->noContent();
 	}
 
 };

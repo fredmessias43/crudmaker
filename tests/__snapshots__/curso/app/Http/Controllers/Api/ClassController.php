@@ -7,31 +7,25 @@ use App\Models\Class;
 use App\Http\Requests\ClassRequest;
 use App\Http\Resources\ClassCollection;
 use App\Http\Resources\ClassResource;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 
 
 class ClassController extends Controller
 {
 
 	/**
-	 * Display a listing of the resource.
+	 * Display a paginated listing of the resource.
 	 *
-	 * @return \Illuminate\Http\Response
+	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 *
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function index()
+	public function index(): JsonResponse
 	{
-		try
-		{
-			$class = Class::all();
-	
-			return response()->json([
-				'status' => 200,
-				'data' => new ClassCollection($class),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Class can not be listed.' . $th->getMessage(), 500);
-		}
+		$class = Class::paginate(15);
+
+		return (new ClassCollection($class))->response();
 	}
 
 
@@ -40,24 +34,17 @@ class ClassController extends Controller
 	 *
 	 * @param  \App\Http\Requests\ClassRequest $request
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function store(ClassRequest $request)
+	public function store(ClassRequest $request): JsonResponse
 	{
-		try
-		{
-			$class = Class::create($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('Class created successfully.'),
-				'data' => new ClassResource($class),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('Class can not be created.' . $th->getMessage(), 500);
-		}
+		$class = Class::create($request->validated());
+
+		return response()->json([
+			'status' => 201,
+			'message' => trans('Class created successfully.'),
+			'data' => new ClassResource($class),
+		], 201);
 	}
 
 
@@ -66,21 +53,14 @@ class ClassController extends Controller
 	 *
 	 * @param  \App\Models\Class $class
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function show(Class $class)
+	public function show(Class $class): JsonResponse
 	{
-		try
-		{
-			return response()->json([
-				'status' => 200,
-				'data' => new ClassResource($class),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Class can not be shown.' . $th->getMessage(), 500);
-		}
+		return response()->json([
+			'status' => 200,
+			'data' => new ClassResource($class),
+		], 200);
 	}
 
 
@@ -88,25 +68,19 @@ class ClassController extends Controller
 	 * Update the specified resource in storage.
 	 *
 	 * @param  \App\Http\Requests\ClassRequest $request
+	 * @param  \App\Models\Class $class
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function update(ClassRequest $request, Class $class)
+	public function update(ClassRequest $request, Class $class): JsonResponse
 	{
-		try
-		{
-			$class->update($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('Class updated successfully.'),
-				'data' => new ClassResource($class),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('Class can not be updated.' . $th->getMessage(), 500);
-		}
+		$class->update($request->validated());
+
+		return response()->json([
+			'status' => 200,
+			'message' => trans('Class updated successfully.'),
+			'data' => new ClassResource($class),
+		], 200);
 	}
 
 
@@ -117,22 +91,11 @@ class ClassController extends Controller
 	 *
 	 * @return \Illuminate\Http\Response
 	 */
-	public function destroy(Class $class)
+	public function destroy(Class $class): Response
 	{
-		try
-		{
-			$class->delete();
-	
-			return response()->json([
-				'status' => 204,
-				'message' => trans('Class deleted successfully.'),
-				'data' => new ClassResource($class),
-			], 204);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Class can not be deleted.' . $th->getMessage(), 500);
-		}
+		$class->delete();
+
+		return response()->noContent();
 	}
 
 };

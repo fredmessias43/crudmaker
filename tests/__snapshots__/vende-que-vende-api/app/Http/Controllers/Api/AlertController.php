@@ -7,31 +7,25 @@ use App\Models\Alert;
 use App\Http\Requests\AlertRequest;
 use App\Http\Resources\AlertCollection;
 use App\Http\Resources\AlertResource;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 
 
 class AlertController extends Controller
 {
 
 	/**
-	 * Display a listing of the resource.
+	 * Display a paginated listing of the resource.
 	 *
-	 * @return \Illuminate\Http\Response
+	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 *
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function index()
+	public function index(): JsonResponse
 	{
-		try
-		{
-			$alert = Alert::all();
-	
-			return response()->json([
-				'status' => 200,
-				'data' => new AlertCollection($alert),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Alert can not be listed.' . $th->getMessage(), 500);
-		}
+		$alert = Alert::paginate(15);
+
+		return (new AlertCollection($alert))->response();
 	}
 
 
@@ -40,24 +34,17 @@ class AlertController extends Controller
 	 *
 	 * @param  \App\Http\Requests\AlertRequest $request
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function store(AlertRequest $request)
+	public function store(AlertRequest $request): JsonResponse
 	{
-		try
-		{
-			$alert = Alert::create($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('Alert created successfully.'),
-				'data' => new AlertResource($alert),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('Alert can not be created.' . $th->getMessage(), 500);
-		}
+		$alert = Alert::create($request->validated());
+
+		return response()->json([
+			'status' => 201,
+			'message' => trans('Alert created successfully.'),
+			'data' => new AlertResource($alert),
+		], 201);
 	}
 
 
@@ -66,21 +53,14 @@ class AlertController extends Controller
 	 *
 	 * @param  \App\Models\Alert $alert
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function show(Alert $alert)
+	public function show(Alert $alert): JsonResponse
 	{
-		try
-		{
-			return response()->json([
-				'status' => 200,
-				'data' => new AlertResource($alert),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Alert can not be shown.' . $th->getMessage(), 500);
-		}
+		return response()->json([
+			'status' => 200,
+			'data' => new AlertResource($alert),
+		], 200);
 	}
 
 
@@ -88,25 +68,19 @@ class AlertController extends Controller
 	 * Update the specified resource in storage.
 	 *
 	 * @param  \App\Http\Requests\AlertRequest $request
+	 * @param  \App\Models\Alert $alert
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function update(AlertRequest $request, Alert $alert)
+	public function update(AlertRequest $request, Alert $alert): JsonResponse
 	{
-		try
-		{
-			$alert->update($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('Alert updated successfully.'),
-				'data' => new AlertResource($alert),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('Alert can not be updated.' . $th->getMessage(), 500);
-		}
+		$alert->update($request->validated());
+
+		return response()->json([
+			'status' => 200,
+			'message' => trans('Alert updated successfully.'),
+			'data' => new AlertResource($alert),
+		], 200);
 	}
 
 
@@ -117,22 +91,11 @@ class AlertController extends Controller
 	 *
 	 * @return \Illuminate\Http\Response
 	 */
-	public function destroy(Alert $alert)
+	public function destroy(Alert $alert): Response
 	{
-		try
-		{
-			$alert->delete();
-	
-			return response()->json([
-				'status' => 204,
-				'message' => trans('Alert deleted successfully.'),
-				'data' => new AlertResource($alert),
-			], 204);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Alert can not be deleted.' . $th->getMessage(), 500);
-		}
+		$alert->delete();
+
+		return response()->noContent();
 	}
 
 };

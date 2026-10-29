@@ -7,31 +7,25 @@ use App\Models\User;
 use App\Http\Requests\UserRequest;
 use App\Http\Resources\UserCollection;
 use App\Http\Resources\UserResource;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 
 
 class UserController extends Controller
 {
 
 	/**
-	 * Display a listing of the resource.
+	 * Display a paginated listing of the resource.
 	 *
-	 * @return \Illuminate\Http\Response
+	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 *
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function index()
+	public function index(): JsonResponse
 	{
-		try
-		{
-			$user = User::all();
-	
-			return response()->json([
-				'status' => 200,
-				'data' => new UserCollection($user),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('User can not be listed.' . $th->getMessage(), 500);
-		}
+		$user = User::paginate(15);
+
+		return (new UserCollection($user))->response();
 	}
 
 
@@ -40,24 +34,17 @@ class UserController extends Controller
 	 *
 	 * @param  \App\Http\Requests\UserRequest $request
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function store(UserRequest $request)
+	public function store(UserRequest $request): JsonResponse
 	{
-		try
-		{
-			$user = User::create($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('User created successfully.'),
-				'data' => new UserResource($user),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('User can not be created.' . $th->getMessage(), 500);
-		}
+		$user = User::create($request->validated());
+
+		return response()->json([
+			'status' => 201,
+			'message' => trans('User created successfully.'),
+			'data' => new UserResource($user),
+		], 201);
 	}
 
 
@@ -66,21 +53,14 @@ class UserController extends Controller
 	 *
 	 * @param  \App\Models\User $user
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function show(User $user)
+	public function show(User $user): JsonResponse
 	{
-		try
-		{
-			return response()->json([
-				'status' => 200,
-				'data' => new UserResource($user),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('User can not be shown.' . $th->getMessage(), 500);
-		}
+		return response()->json([
+			'status' => 200,
+			'data' => new UserResource($user),
+		], 200);
 	}
 
 
@@ -88,25 +68,19 @@ class UserController extends Controller
 	 * Update the specified resource in storage.
 	 *
 	 * @param  \App\Http\Requests\UserRequest $request
+	 * @param  \App\Models\User $user
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function update(UserRequest $request, User $user)
+	public function update(UserRequest $request, User $user): JsonResponse
 	{
-		try
-		{
-			$user->update($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('User updated successfully.'),
-				'data' => new UserResource($user),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('User can not be updated.' . $th->getMessage(), 500);
-		}
+		$user->update($request->validated());
+
+		return response()->json([
+			'status' => 200,
+			'message' => trans('User updated successfully.'),
+			'data' => new UserResource($user),
+		], 200);
 	}
 
 
@@ -117,22 +91,11 @@ class UserController extends Controller
 	 *
 	 * @return \Illuminate\Http\Response
 	 */
-	public function destroy(User $user)
+	public function destroy(User $user): Response
 	{
-		try
-		{
-			$user->delete();
-	
-			return response()->json([
-				'status' => 204,
-				'message' => trans('User deleted successfully.'),
-				'data' => new UserResource($user),
-			], 204);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('User can not be deleted.' . $th->getMessage(), 500);
-		}
+		$user->delete();
+
+		return response()->noContent();
 	}
 
 };

@@ -7,31 +7,25 @@ use App\Models\Card;
 use App\Http\Requests\CardRequest;
 use App\Http\Resources\CardCollection;
 use App\Http\Resources\CardResource;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 
 
 class CardController extends Controller
 {
 
 	/**
-	 * Display a listing of the resource.
+	 * Display a paginated listing of the resource.
 	 *
-	 * @return \Illuminate\Http\Response
+	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 *
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function index()
+	public function index(): JsonResponse
 	{
-		try
-		{
-			$card = Card::all();
-	
-			return response()->json([
-				'status' => 200,
-				'data' => new CardCollection($card),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Card can not be listed.' . $th->getMessage(), 500);
-		}
+		$card = Card::paginate(15);
+
+		return (new CardCollection($card))->response();
 	}
 
 
@@ -40,24 +34,17 @@ class CardController extends Controller
 	 *
 	 * @param  \App\Http\Requests\CardRequest $request
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function store(CardRequest $request)
+	public function store(CardRequest $request): JsonResponse
 	{
-		try
-		{
-			$card = Card::create($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('Card created successfully.'),
-				'data' => new CardResource($card),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('Card can not be created.' . $th->getMessage(), 500);
-		}
+		$card = Card::create($request->validated());
+
+		return response()->json([
+			'status' => 201,
+			'message' => trans('Card created successfully.'),
+			'data' => new CardResource($card),
+		], 201);
 	}
 
 
@@ -66,21 +53,14 @@ class CardController extends Controller
 	 *
 	 * @param  \App\Models\Card $card
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function show(Card $card)
+	public function show(Card $card): JsonResponse
 	{
-		try
-		{
-			return response()->json([
-				'status' => 200,
-				'data' => new CardResource($card),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Card can not be shown.' . $th->getMessage(), 500);
-		}
+		return response()->json([
+			'status' => 200,
+			'data' => new CardResource($card),
+		], 200);
 	}
 
 
@@ -88,25 +68,19 @@ class CardController extends Controller
 	 * Update the specified resource in storage.
 	 *
 	 * @param  \App\Http\Requests\CardRequest $request
+	 * @param  \App\Models\Card $card
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function update(CardRequest $request, Card $card)
+	public function update(CardRequest $request, Card $card): JsonResponse
 	{
-		try
-		{
-			$card->update($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('Card updated successfully.'),
-				'data' => new CardResource($card),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('Card can not be updated.' . $th->getMessage(), 500);
-		}
+		$card->update($request->validated());
+
+		return response()->json([
+			'status' => 200,
+			'message' => trans('Card updated successfully.'),
+			'data' => new CardResource($card),
+		], 200);
 	}
 
 
@@ -117,22 +91,11 @@ class CardController extends Controller
 	 *
 	 * @return \Illuminate\Http\Response
 	 */
-	public function destroy(Card $card)
+	public function destroy(Card $card): Response
 	{
-		try
-		{
-			$card->delete();
-	
-			return response()->json([
-				'status' => 204,
-				'message' => trans('Card deleted successfully.'),
-				'data' => new CardResource($card),
-			], 204);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Card can not be deleted.' . $th->getMessage(), 500);
-		}
+		$card->delete();
+
+		return response()->noContent();
 	}
 
 };

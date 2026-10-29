@@ -7,31 +7,25 @@ use App\Models\Cards;
 use App\Http\Requests\CardsRequest;
 use App\Http\Resources\CardsCollection;
 use App\Http\Resources\CardsResource;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 
 
 class CardsController extends Controller
 {
 
 	/**
-	 * Display a listing of the resource.
+	 * Display a paginated listing of the resource.
 	 *
-	 * @return \Illuminate\Http\Response
+	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 *
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function index()
+	public function index(): JsonResponse
 	{
-		try
-		{
-			$cards = Cards::all();
-	
-			return response()->json([
-				'status' => 200,
-				'data' => new CardsCollection($cards),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Cards can not be listed.' . $th->getMessage(), 500);
-		}
+		$cards = Cards::paginate(15);
+
+		return (new CardsCollection($cards))->response();
 	}
 
 
@@ -40,24 +34,17 @@ class CardsController extends Controller
 	 *
 	 * @param  \App\Http\Requests\CardsRequest $request
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function store(CardsRequest $request)
+	public function store(CardsRequest $request): JsonResponse
 	{
-		try
-		{
-			$cards = Cards::create($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('Cards created successfully.'),
-				'data' => new CardsResource($cards),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('Cards can not be created.' . $th->getMessage(), 500);
-		}
+		$cards = Cards::create($request->validated());
+
+		return response()->json([
+			'status' => 201,
+			'message' => trans('Cards created successfully.'),
+			'data' => new CardsResource($cards),
+		], 201);
 	}
 
 
@@ -66,21 +53,14 @@ class CardsController extends Controller
 	 *
 	 * @param  \App\Models\Cards $cards
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function show(Cards $cards)
+	public function show(Cards $cards): JsonResponse
 	{
-		try
-		{
-			return response()->json([
-				'status' => 200,
-				'data' => new CardsResource($cards),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Cards can not be shown.' . $th->getMessage(), 500);
-		}
+		return response()->json([
+			'status' => 200,
+			'data' => new CardsResource($cards),
+		], 200);
 	}
 
 
@@ -88,25 +68,19 @@ class CardsController extends Controller
 	 * Update the specified resource in storage.
 	 *
 	 * @param  \App\Http\Requests\CardsRequest $request
+	 * @param  \App\Models\Cards $cards
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function update(CardsRequest $request, Cards $cards)
+	public function update(CardsRequest $request, Cards $cards): JsonResponse
 	{
-		try
-		{
-			$cards->update($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('Cards updated successfully.'),
-				'data' => new CardsResource($cards),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('Cards can not be updated.' . $th->getMessage(), 500);
-		}
+		$cards->update($request->validated());
+
+		return response()->json([
+			'status' => 200,
+			'message' => trans('Cards updated successfully.'),
+			'data' => new CardsResource($cards),
+		], 200);
 	}
 
 
@@ -117,22 +91,11 @@ class CardsController extends Controller
 	 *
 	 * @return \Illuminate\Http\Response
 	 */
-	public function destroy(Cards $cards)
+	public function destroy(Cards $cards): Response
 	{
-		try
-		{
-			$cards->delete();
-	
-			return response()->json([
-				'status' => 204,
-				'message' => trans('Cards deleted successfully.'),
-				'data' => new CardsResource($cards),
-			], 204);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Cards can not be deleted.' . $th->getMessage(), 500);
-		}
+		$cards->delete();
+
+		return response()->noContent();
 	}
 
 };

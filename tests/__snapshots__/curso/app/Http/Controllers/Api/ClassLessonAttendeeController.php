@@ -7,31 +7,25 @@ use App\Models\ClassLessonAttendee;
 use App\Http\Requests\ClassLessonAttendeeRequest;
 use App\Http\Resources\ClassLessonAttendeeCollection;
 use App\Http\Resources\ClassLessonAttendeeResource;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 
 
 class ClassLessonAttendeeController extends Controller
 {
 
 	/**
-	 * Display a listing of the resource.
+	 * Display a paginated listing of the resource.
 	 *
-	 * @return \Illuminate\Http\Response
+	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 *
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function index()
+	public function index(): JsonResponse
 	{
-		try
-		{
-			$classLessonAttendee = ClassLessonAttendee::all();
-	
-			return response()->json([
-				'status' => 200,
-				'data' => new ClassLessonAttendeeCollection($classLessonAttendee),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('ClassLessonAttendee can not be listed.' . $th->getMessage(), 500);
-		}
+		$classLessonAttendee = ClassLessonAttendee::paginate(15);
+
+		return (new ClassLessonAttendeeCollection($classLessonAttendee))->response();
 	}
 
 
@@ -40,24 +34,17 @@ class ClassLessonAttendeeController extends Controller
 	 *
 	 * @param  \App\Http\Requests\ClassLessonAttendeeRequest $request
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function store(ClassLessonAttendeeRequest $request)
+	public function store(ClassLessonAttendeeRequest $request): JsonResponse
 	{
-		try
-		{
-			$classLessonAttendee = ClassLessonAttendee::create($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('ClassLessonAttendee created successfully.'),
-				'data' => new ClassLessonAttendeeResource($classLessonAttendee),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('ClassLessonAttendee can not be created.' . $th->getMessage(), 500);
-		}
+		$classLessonAttendee = ClassLessonAttendee::create($request->validated());
+
+		return response()->json([
+			'status' => 201,
+			'message' => trans('ClassLessonAttendee created successfully.'),
+			'data' => new ClassLessonAttendeeResource($classLessonAttendee),
+		], 201);
 	}
 
 
@@ -66,21 +53,14 @@ class ClassLessonAttendeeController extends Controller
 	 *
 	 * @param  \App\Models\ClassLessonAttendee $classLessonAttendee
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function show(ClassLessonAttendee $classLessonAttendee)
+	public function show(ClassLessonAttendee $classLessonAttendee): JsonResponse
 	{
-		try
-		{
-			return response()->json([
-				'status' => 200,
-				'data' => new ClassLessonAttendeeResource($classLessonAttendee),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('ClassLessonAttendee can not be shown.' . $th->getMessage(), 500);
-		}
+		return response()->json([
+			'status' => 200,
+			'data' => new ClassLessonAttendeeResource($classLessonAttendee),
+		], 200);
 	}
 
 
@@ -88,25 +68,19 @@ class ClassLessonAttendeeController extends Controller
 	 * Update the specified resource in storage.
 	 *
 	 * @param  \App\Http\Requests\ClassLessonAttendeeRequest $request
+	 * @param  \App\Models\ClassLessonAttendee $classLessonAttendee
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function update(ClassLessonAttendeeRequest $request, ClassLessonAttendee $classLessonAttendee)
+	public function update(ClassLessonAttendeeRequest $request, ClassLessonAttendee $classLessonAttendee): JsonResponse
 	{
-		try
-		{
-			$classLessonAttendee->update($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('ClassLessonAttendee updated successfully.'),
-				'data' => new ClassLessonAttendeeResource($classLessonAttendee),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('ClassLessonAttendee can not be updated.' . $th->getMessage(), 500);
-		}
+		$classLessonAttendee->update($request->validated());
+
+		return response()->json([
+			'status' => 200,
+			'message' => trans('ClassLessonAttendee updated successfully.'),
+			'data' => new ClassLessonAttendeeResource($classLessonAttendee),
+		], 200);
 	}
 
 
@@ -117,22 +91,11 @@ class ClassLessonAttendeeController extends Controller
 	 *
 	 * @return \Illuminate\Http\Response
 	 */
-	public function destroy(ClassLessonAttendee $classLessonAttendee)
+	public function destroy(ClassLessonAttendee $classLessonAttendee): Response
 	{
-		try
-		{
-			$classLessonAttendee->delete();
-	
-			return response()->json([
-				'status' => 204,
-				'message' => trans('ClassLessonAttendee deleted successfully.'),
-				'data' => new ClassLessonAttendeeResource($classLessonAttendee),
-			], 204);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('ClassLessonAttendee can not be deleted.' . $th->getMessage(), 500);
-		}
+		$classLessonAttendee->delete();
+
+		return response()->noContent();
 	}
 
 };

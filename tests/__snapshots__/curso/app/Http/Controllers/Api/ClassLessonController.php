@@ -7,31 +7,25 @@ use App\Models\ClassLesson;
 use App\Http\Requests\ClassLessonRequest;
 use App\Http\Resources\ClassLessonCollection;
 use App\Http\Resources\ClassLessonResource;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 
 
 class ClassLessonController extends Controller
 {
 
 	/**
-	 * Display a listing of the resource.
+	 * Display a paginated listing of the resource.
 	 *
-	 * @return \Illuminate\Http\Response
+	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 *
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function index()
+	public function index(): JsonResponse
 	{
-		try
-		{
-			$classLesson = ClassLesson::all();
-	
-			return response()->json([
-				'status' => 200,
-				'data' => new ClassLessonCollection($classLesson),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('ClassLesson can not be listed.' . $th->getMessage(), 500);
-		}
+		$classLesson = ClassLesson::paginate(15);
+
+		return (new ClassLessonCollection($classLesson))->response();
 	}
 
 
@@ -40,24 +34,17 @@ class ClassLessonController extends Controller
 	 *
 	 * @param  \App\Http\Requests\ClassLessonRequest $request
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function store(ClassLessonRequest $request)
+	public function store(ClassLessonRequest $request): JsonResponse
 	{
-		try
-		{
-			$classLesson = ClassLesson::create($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('ClassLesson created successfully.'),
-				'data' => new ClassLessonResource($classLesson),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('ClassLesson can not be created.' . $th->getMessage(), 500);
-		}
+		$classLesson = ClassLesson::create($request->validated());
+
+		return response()->json([
+			'status' => 201,
+			'message' => trans('ClassLesson created successfully.'),
+			'data' => new ClassLessonResource($classLesson),
+		], 201);
 	}
 
 
@@ -66,21 +53,14 @@ class ClassLessonController extends Controller
 	 *
 	 * @param  \App\Models\ClassLesson $classLesson
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function show(ClassLesson $classLesson)
+	public function show(ClassLesson $classLesson): JsonResponse
 	{
-		try
-		{
-			return response()->json([
-				'status' => 200,
-				'data' => new ClassLessonResource($classLesson),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('ClassLesson can not be shown.' . $th->getMessage(), 500);
-		}
+		return response()->json([
+			'status' => 200,
+			'data' => new ClassLessonResource($classLesson),
+		], 200);
 	}
 
 
@@ -88,25 +68,19 @@ class ClassLessonController extends Controller
 	 * Update the specified resource in storage.
 	 *
 	 * @param  \App\Http\Requests\ClassLessonRequest $request
+	 * @param  \App\Models\ClassLesson $classLesson
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function update(ClassLessonRequest $request, ClassLesson $classLesson)
+	public function update(ClassLessonRequest $request, ClassLesson $classLesson): JsonResponse
 	{
-		try
-		{
-			$classLesson->update($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('ClassLesson updated successfully.'),
-				'data' => new ClassLessonResource($classLesson),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('ClassLesson can not be updated.' . $th->getMessage(), 500);
-		}
+		$classLesson->update($request->validated());
+
+		return response()->json([
+			'status' => 200,
+			'message' => trans('ClassLesson updated successfully.'),
+			'data' => new ClassLessonResource($classLesson),
+		], 200);
 	}
 
 
@@ -117,22 +91,11 @@ class ClassLessonController extends Controller
 	 *
 	 * @return \Illuminate\Http\Response
 	 */
-	public function destroy(ClassLesson $classLesson)
+	public function destroy(ClassLesson $classLesson): Response
 	{
-		try
-		{
-			$classLesson->delete();
-	
-			return response()->json([
-				'status' => 204,
-				'message' => trans('ClassLesson deleted successfully.'),
-				'data' => new ClassLessonResource($classLesson),
-			], 204);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('ClassLesson can not be deleted.' . $th->getMessage(), 500);
-		}
+		$classLesson->delete();
+
+		return response()->noContent();
 	}
 
 };

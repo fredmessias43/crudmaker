@@ -7,31 +7,25 @@ use App\Models\ClassLessonComment;
 use App\Http\Requests\ClassLessonCommentRequest;
 use App\Http\Resources\ClassLessonCommentCollection;
 use App\Http\Resources\ClassLessonCommentResource;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 
 
 class ClassLessonCommentController extends Controller
 {
 
 	/**
-	 * Display a listing of the resource.
+	 * Display a paginated listing of the resource.
 	 *
-	 * @return \Illuminate\Http\Response
+	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 *
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function index()
+	public function index(): JsonResponse
 	{
-		try
-		{
-			$classLessonComment = ClassLessonComment::all();
-	
-			return response()->json([
-				'status' => 200,
-				'data' => new ClassLessonCommentCollection($classLessonComment),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('ClassLessonComment can not be listed.' . $th->getMessage(), 500);
-		}
+		$classLessonComment = ClassLessonComment::paginate(15);
+
+		return (new ClassLessonCommentCollection($classLessonComment))->response();
 	}
 
 
@@ -40,24 +34,17 @@ class ClassLessonCommentController extends Controller
 	 *
 	 * @param  \App\Http\Requests\ClassLessonCommentRequest $request
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function store(ClassLessonCommentRequest $request)
+	public function store(ClassLessonCommentRequest $request): JsonResponse
 	{
-		try
-		{
-			$classLessonComment = ClassLessonComment::create($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('ClassLessonComment created successfully.'),
-				'data' => new ClassLessonCommentResource($classLessonComment),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('ClassLessonComment can not be created.' . $th->getMessage(), 500);
-		}
+		$classLessonComment = ClassLessonComment::create($request->validated());
+
+		return response()->json([
+			'status' => 201,
+			'message' => trans('ClassLessonComment created successfully.'),
+			'data' => new ClassLessonCommentResource($classLessonComment),
+		], 201);
 	}
 
 
@@ -66,21 +53,14 @@ class ClassLessonCommentController extends Controller
 	 *
 	 * @param  \App\Models\ClassLessonComment $classLessonComment
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function show(ClassLessonComment $classLessonComment)
+	public function show(ClassLessonComment $classLessonComment): JsonResponse
 	{
-		try
-		{
-			return response()->json([
-				'status' => 200,
-				'data' => new ClassLessonCommentResource($classLessonComment),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('ClassLessonComment can not be shown.' . $th->getMessage(), 500);
-		}
+		return response()->json([
+			'status' => 200,
+			'data' => new ClassLessonCommentResource($classLessonComment),
+		], 200);
 	}
 
 
@@ -88,25 +68,19 @@ class ClassLessonCommentController extends Controller
 	 * Update the specified resource in storage.
 	 *
 	 * @param  \App\Http\Requests\ClassLessonCommentRequest $request
+	 * @param  \App\Models\ClassLessonComment $classLessonComment
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function update(ClassLessonCommentRequest $request, ClassLessonComment $classLessonComment)
+	public function update(ClassLessonCommentRequest $request, ClassLessonComment $classLessonComment): JsonResponse
 	{
-		try
-		{
-			$classLessonComment->update($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('ClassLessonComment updated successfully.'),
-				'data' => new ClassLessonCommentResource($classLessonComment),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('ClassLessonComment can not be updated.' . $th->getMessage(), 500);
-		}
+		$classLessonComment->update($request->validated());
+
+		return response()->json([
+			'status' => 200,
+			'message' => trans('ClassLessonComment updated successfully.'),
+			'data' => new ClassLessonCommentResource($classLessonComment),
+		], 200);
 	}
 
 
@@ -117,22 +91,11 @@ class ClassLessonCommentController extends Controller
 	 *
 	 * @return \Illuminate\Http\Response
 	 */
-	public function destroy(ClassLessonComment $classLessonComment)
+	public function destroy(ClassLessonComment $classLessonComment): Response
 	{
-		try
-		{
-			$classLessonComment->delete();
-	
-			return response()->json([
-				'status' => 204,
-				'message' => trans('ClassLessonComment deleted successfully.'),
-				'data' => new ClassLessonCommentResource($classLessonComment),
-			], 204);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('ClassLessonComment can not be deleted.' . $th->getMessage(), 500);
-		}
+		$classLessonComment->delete();
+
+		return response()->noContent();
 	}
 
 };

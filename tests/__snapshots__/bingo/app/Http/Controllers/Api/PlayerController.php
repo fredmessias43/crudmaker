@@ -7,31 +7,25 @@ use App\Models\Player;
 use App\Http\Requests\PlayerRequest;
 use App\Http\Resources\PlayerCollection;
 use App\Http\Resources\PlayerResource;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 
 
 class PlayerController extends Controller
 {
 
 	/**
-	 * Display a listing of the resource.
+	 * Display a paginated listing of the resource.
 	 *
-	 * @return \Illuminate\Http\Response
+	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 *
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function index()
+	public function index(): JsonResponse
 	{
-		try
-		{
-			$player = Player::all();
-	
-			return response()->json([
-				'status' => 200,
-				'data' => new PlayerCollection($player),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Player can not be listed.' . $th->getMessage(), 500);
-		}
+		$player = Player::paginate(15);
+
+		return (new PlayerCollection($player))->response();
 	}
 
 
@@ -40,24 +34,17 @@ class PlayerController extends Controller
 	 *
 	 * @param  \App\Http\Requests\PlayerRequest $request
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function store(PlayerRequest $request)
+	public function store(PlayerRequest $request): JsonResponse
 	{
-		try
-		{
-			$player = Player::create($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('Player created successfully.'),
-				'data' => new PlayerResource($player),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('Player can not be created.' . $th->getMessage(), 500);
-		}
+		$player = Player::create($request->validated());
+
+		return response()->json([
+			'status' => 201,
+			'message' => trans('Player created successfully.'),
+			'data' => new PlayerResource($player),
+		], 201);
 	}
 
 
@@ -66,21 +53,14 @@ class PlayerController extends Controller
 	 *
 	 * @param  \App\Models\Player $player
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function show(Player $player)
+	public function show(Player $player): JsonResponse
 	{
-		try
-		{
-			return response()->json([
-				'status' => 200,
-				'data' => new PlayerResource($player),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Player can not be shown.' . $th->getMessage(), 500);
-		}
+		return response()->json([
+			'status' => 200,
+			'data' => new PlayerResource($player),
+		], 200);
 	}
 
 
@@ -88,25 +68,19 @@ class PlayerController extends Controller
 	 * Update the specified resource in storage.
 	 *
 	 * @param  \App\Http\Requests\PlayerRequest $request
+	 * @param  \App\Models\Player $player
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function update(PlayerRequest $request, Player $player)
+	public function update(PlayerRequest $request, Player $player): JsonResponse
 	{
-		try
-		{
-			$player->update($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('Player updated successfully.'),
-				'data' => new PlayerResource($player),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('Player can not be updated.' . $th->getMessage(), 500);
-		}
+		$player->update($request->validated());
+
+		return response()->json([
+			'status' => 200,
+			'message' => trans('Player updated successfully.'),
+			'data' => new PlayerResource($player),
+		], 200);
 	}
 
 
@@ -117,22 +91,11 @@ class PlayerController extends Controller
 	 *
 	 * @return \Illuminate\Http\Response
 	 */
-	public function destroy(Player $player)
+	public function destroy(Player $player): Response
 	{
-		try
-		{
-			$player->delete();
-	
-			return response()->json([
-				'status' => 204,
-				'message' => trans('Player deleted successfully.'),
-				'data' => new PlayerResource($player),
-			], 204);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Player can not be deleted.' . $th->getMessage(), 500);
-		}
+		$player->delete();
+
+		return response()->noContent();
 	}
 
 };

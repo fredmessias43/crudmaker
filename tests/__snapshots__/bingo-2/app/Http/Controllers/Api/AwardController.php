@@ -7,31 +7,25 @@ use App\Models\Award;
 use App\Http\Requests\AwardRequest;
 use App\Http\Resources\AwardCollection;
 use App\Http\Resources\AwardResource;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 
 
 class AwardController extends Controller
 {
 
 	/**
-	 * Display a listing of the resource.
+	 * Display a paginated listing of the resource.
 	 *
-	 * @return \Illuminate\Http\Response
+	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 *
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function index()
+	public function index(): JsonResponse
 	{
-		try
-		{
-			$award = Award::all();
-	
-			return response()->json([
-				'status' => 200,
-				'data' => new AwardCollection($award),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Award can not be listed.' . $th->getMessage(), 500);
-		}
+		$award = Award::paginate(15);
+
+		return (new AwardCollection($award))->response();
 	}
 
 
@@ -40,24 +34,17 @@ class AwardController extends Controller
 	 *
 	 * @param  \App\Http\Requests\AwardRequest $request
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function store(AwardRequest $request)
+	public function store(AwardRequest $request): JsonResponse
 	{
-		try
-		{
-			$award = Award::create($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('Award created successfully.'),
-				'data' => new AwardResource($award),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('Award can not be created.' . $th->getMessage(), 500);
-		}
+		$award = Award::create($request->validated());
+
+		return response()->json([
+			'status' => 201,
+			'message' => trans('Award created successfully.'),
+			'data' => new AwardResource($award),
+		], 201);
 	}
 
 
@@ -66,21 +53,14 @@ class AwardController extends Controller
 	 *
 	 * @param  \App\Models\Award $award
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function show(Award $award)
+	public function show(Award $award): JsonResponse
 	{
-		try
-		{
-			return response()->json([
-				'status' => 200,
-				'data' => new AwardResource($award),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Award can not be shown.' . $th->getMessage(), 500);
-		}
+		return response()->json([
+			'status' => 200,
+			'data' => new AwardResource($award),
+		], 200);
 	}
 
 
@@ -88,25 +68,19 @@ class AwardController extends Controller
 	 * Update the specified resource in storage.
 	 *
 	 * @param  \App\Http\Requests\AwardRequest $request
+	 * @param  \App\Models\Award $award
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function update(AwardRequest $request, Award $award)
+	public function update(AwardRequest $request, Award $award): JsonResponse
 	{
-		try
-		{
-			$award->update($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('Award updated successfully.'),
-				'data' => new AwardResource($award),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('Award can not be updated.' . $th->getMessage(), 500);
-		}
+		$award->update($request->validated());
+
+		return response()->json([
+			'status' => 200,
+			'message' => trans('Award updated successfully.'),
+			'data' => new AwardResource($award),
+		], 200);
 	}
 
 
@@ -117,22 +91,11 @@ class AwardController extends Controller
 	 *
 	 * @return \Illuminate\Http\Response
 	 */
-	public function destroy(Award $award)
+	public function destroy(Award $award): Response
 	{
-		try
-		{
-			$award->delete();
-	
-			return response()->json([
-				'status' => 204,
-				'message' => trans('Award deleted successfully.'),
-				'data' => new AwardResource($award),
-			], 204);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Award can not be deleted.' . $th->getMessage(), 500);
-		}
+		$award->delete();
+
+		return response()->noContent();
 	}
 
 };

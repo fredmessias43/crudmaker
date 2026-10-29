@@ -7,31 +7,25 @@ use App\Models\Course;
 use App\Http\Requests\CourseRequest;
 use App\Http\Resources\CourseCollection;
 use App\Http\Resources\CourseResource;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 
 
 class CourseController extends Controller
 {
 
 	/**
-	 * Display a listing of the resource.
+	 * Display a paginated listing of the resource.
 	 *
-	 * @return \Illuminate\Http\Response
+	 * Responde com o formato de paginação do Laravel: `data`, `links` e `meta`.
+	 *
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function index()
+	public function index(): JsonResponse
 	{
-		try
-		{
-			$course = Course::all();
-	
-			return response()->json([
-				'status' => 200,
-				'data' => new CourseCollection($course),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Course can not be listed.' . $th->getMessage(), 500);
-		}
+		$course = Course::paginate(15);
+
+		return (new CourseCollection($course))->response();
 	}
 
 
@@ -40,24 +34,17 @@ class CourseController extends Controller
 	 *
 	 * @param  \App\Http\Requests\CourseRequest $request
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function store(CourseRequest $request)
+	public function store(CourseRequest $request): JsonResponse
 	{
-		try
-		{
-			$course = Course::create($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('Course created successfully.'),
-				'data' => new CourseResource($course),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('Course can not be created.' . $th->getMessage(), 500);
-		}
+		$course = Course::create($request->validated());
+
+		return response()->json([
+			'status' => 201,
+			'message' => trans('Course created successfully.'),
+			'data' => new CourseResource($course),
+		], 201);
 	}
 
 
@@ -66,21 +53,14 @@ class CourseController extends Controller
 	 *
 	 * @param  \App\Models\Course $course
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function show(Course $course)
+	public function show(Course $course): JsonResponse
 	{
-		try
-		{
-			return response()->json([
-				'status' => 200,
-				'data' => new CourseResource($course),
-			], 200);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Course can not be shown.' . $th->getMessage(), 500);
-		}
+		return response()->json([
+			'status' => 200,
+			'data' => new CourseResource($course),
+		], 200);
 	}
 
 
@@ -88,25 +68,19 @@ class CourseController extends Controller
 	 * Update the specified resource in storage.
 	 *
 	 * @param  \App\Http\Requests\CourseRequest $request
+	 * @param  \App\Models\Course $course
 	 *
-	 * @return \Illuminate\Http\Response
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function update(CourseRequest $request, Course $course)
+	public function update(CourseRequest $request, Course $course): JsonResponse
 	{
-		try
-		{
-			$course->update($request->validated());
-	
-			return response()->json([
-				'status' => 201,
-				'message' => trans('Course updated successfully.'),
-				'data' => new CourseResource($course),
-			], 201);
-		}
-		catch (\Throwable $th)
-		{
-			throw new \Exception('Course can not be updated.' . $th->getMessage(), 500);
-		}
+		$course->update($request->validated());
+
+		return response()->json([
+			'status' => 200,
+			'message' => trans('Course updated successfully.'),
+			'data' => new CourseResource($course),
+		], 200);
 	}
 
 
@@ -117,22 +91,11 @@ class CourseController extends Controller
 	 *
 	 * @return \Illuminate\Http\Response
 	 */
-	public function destroy(Course $course)
+	public function destroy(Course $course): Response
 	{
-		try
-		{
-			$course->delete();
-	
-			return response()->json([
-				'status' => 204,
-				'message' => trans('Course deleted successfully.'),
-				'data' => new CourseResource($course),
-			], 204);
-		}
-		catch(\Throwable $th)
-		{
-			throw new \Exception('Course can not be deleted.' . $th->getMessage(), 500);
-		}
+		$course->delete();
+
+		return response()->noContent();
 	}
 
 };

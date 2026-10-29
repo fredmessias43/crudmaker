@@ -106,19 +106,24 @@ O gerador ainda não faz estes passos:
 
 | Action | Rota | Resposta |
 |---|---|---|
-| `index` | `GET /api/clients` | 200, todos os registros (sem paginação) |
+| `index` | `GET /api/clients` | 200, paginado (`paginate(15)`) |
 | `store` | `POST /api/clients` | 201, registro criado |
 | `show` | `GET /api/clients/{client}` | 200 |
-| `update` | `PUT /api/clients/{client}` | 201 (deveria ser 200) |
-| `destroy` | `DELETE /api/clients/{client}` | 204 (o corpo é descartado) |
+| `update` | `PUT /api/clients/{client}` | 200, registro atualizado |
+| `destroy` | `DELETE /api/clients/{client}` | 204, sem corpo (`response()->noContent()`) |
 
-Respostas têm o formato `{ "status": ..., "message": ..., "data": ... }`. Qualquer exceção dentro de uma action é relançada como erro 500. Os registros usam soft delete, e a resource devolve `created_at`/`updated_at` como `{ timestamp, description }`.
+Formato das respostas com corpo:
+
+- `store`, `show` e `update`: `{ "status": 201|200, "message": ..., "data": { ... } }`. O `message` só existe nas escritas (`store` e `update`).
+- `index`: formato nativo de paginação do Laravel, `{ "data": [ ... ], "links": { ... }, "meta": { ... } }`. Não leva `status` nem `message`: o envelope `data` é o mesmo das demais respostas, e `links`/`meta` (página atual, total, URLs) são acrescentados pelo Laravel. A página vem de `?page=N`; o tamanho fixo é 15 (as opções do manifest virão no ticket 11).
+- `destroy`: corpo vazio.
+
+Os controllers não têm try/catch: erros chegam ao handler do Laravel e saem com o status certo. Registro inexistente na rota dá 404, validação falha com 422 (`{ "message": ..., "errors": { ... } }`), autorização negada dá 403, e só exceções não tratadas viram 500. Os registros usam soft delete, e a resource devolve `created_at`/`updated_at` como `{ timestamp, description }`.
 
 ## Problemas conhecidos
 
 Os bugs do código gerado e as limitações do manifest estão listados em [manifest.md](manifest.md#limitações-conhecidas) e na spec da v2. Os principais:
 
 - a regra `unique` não barra duplicatas na edição;
-- `update` responde 201;
 - a FK aponta para a tabela errada em entidades camelCase;
 - a model usa `HasFactory`, mas nenhuma factory é gerada.
