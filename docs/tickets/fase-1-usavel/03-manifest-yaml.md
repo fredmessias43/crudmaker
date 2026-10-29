@@ -8,12 +8,12 @@
 
 - [02 — CLI `crudmaker generate`](../fase-1-usavel/02-cli-generate.md)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Critérios de aceite
 
-- [ ] Um manifest YAML equivalente a um JSON gera exatamente a mesma saída (teste de snapshot).
-- [ ] Os manifests JSON existentes continuam funcionando.
-- [ ] Uma extensão desconhecida dá um erro claro.
-- [ ] `crudmaker init` aceita escolher o formato.
-- [ ] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.
+- [x] Um manifest YAML equivalente a um JSON gera exatamente a mesma saída (teste de snapshot).
+- [x] Os manifests JSON existentes continuam funcionando.
+- [x] Uma extensão desconhecida dá um erro claro.
+- [x] `crudmaker init` aceita escolher o formato.
+- [x] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.

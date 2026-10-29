@@ -8,13 +8,13 @@
 
 Nenhum — pode começar imediatamente.
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Critérios de aceite
 
-- [ ] `generate` recebe o manifest e devolve os arquivos sem nenhuma escrita em disco.
-- [ ] Os snapshots dos três manifests de exemplo passam e representam a saída de hoje, byte a byte.
-- [ ] `npm test` roda a suíte, e `npx tsc --noEmit` passa sem erros.
-- [ ] O código morto listado foi removido.
-- [ ] Rodar a geração pelo script atual produz os mesmos arquivos de antes.
-- [ ] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.
+- [x] `generate` recebe o manifest e devolve os arquivos sem nenhuma escrita em disco.
+- [x] Os snapshots dos três manifests de exemplo passam e representam a saída de hoje, byte a byte.
+- [x] `npm test` roda a suíte, e `npx tsc --noEmit` passa sem erros.
+- [x] O código morto listado foi removido.
+- [x] Rodar a geração pelo script atual produz os mesmos arquivos de antes.
+- [x] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.

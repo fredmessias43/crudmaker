@@ -12,8 +12,10 @@
 
 ## Critérios de aceite
 
-- [ ] Os manifests de exemplo continuam válidos e os snapshots não mudam.
-- [ ] Manifests inválidos (tipo desconhecido, chave obrigatória ausente, relacionamento para entidade inexistente, enum vazio) falham com a mensagem e o caminho certos.
-- [ ] O JSON Schema é gerado a partir do schema zod e publicado no pacote.
+- [x] Os manifests de exemplo continuam válidos e os snapshots não mudam.
+- [x] Manifests inválidos (tipo desconhecido, chave obrigatória ausente, relacionamento para entidade inexistente, enum vazio) falham com a mensagem e o caminho certos.
+- [x] O JSON Schema é gerado a partir do schema zod e publicado no pacote.
 - [ ] O VS Code valida um manifest YAML/JSON que referencia o schema.
-- [ ] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.
+- [x] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.
+
+> **Pendente:** o critério do VS Code ainda não foi conferido num editor real. O JSON Schema é gerado, versionado e publicado no pacote, e o `crudmaker init` grava a chave `$schema`/modeline que o referencia, mas falta abrir um manifest YAML e um JSON no VS Code e confirmar o autocomplete e os erros. Por isso o status continua `ready-for-agent`.

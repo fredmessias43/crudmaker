@@ -7,7 +7,8 @@
     "cli": "tsx src/bin.ts",
     "prepare": "npm run build",
     "test": "vitest run",
-    "schema": "tsx scripts/generateSchema.ts"
+    "schema": "tsx scripts/generateSchema.ts",
+    "lint:php": "tsx scripts/checkPhpSyntax.ts"
   },
   "keywords": [],
   "author": "",

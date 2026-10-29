@@ -8,13 +8,13 @@
 
 - [01 — Núcleo `generate()` puro e testes de snapshot](../fase-1-usavel/01-nucleo-generate-e-snapshots.md)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Critérios de aceite
 
-- [ ] `crudmaker generate manifest.json --out <dir>` escreve os arquivos no diretório informado.
-- [ ] `--dry-run` não escreve nada e lista o que aconteceria com cada arquivo.
-- [ ] O resumo final mostra as contagens de criados, sobrescritos e preservados.
-- [ ] `crudmaker init` cria um manifest de exemplo válido.
-- [ ] Teste de integração da CLI num diretório temporário.
-- [ ] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.
+- [x] `crudmaker generate manifest.json --out <dir>` escreve os arquivos no diretório informado.
+- [x] `--dry-run` não escreve nada e lista o que aconteceria com cada arquivo.
+- [x] O resumo final mostra as contagens de criados, sobrescritos e preservados.
+- [x] `crudmaker init` cria um manifest de exemplo válido.
+- [x] Teste de integração da CLI num diretório temporário.
+- [x] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.

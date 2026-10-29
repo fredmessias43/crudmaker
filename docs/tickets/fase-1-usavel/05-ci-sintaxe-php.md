@@ -13,6 +13,10 @@
 ## Critérios de aceite
 
 - [ ] Workflow de CI rodando `npm test` e a checagem de sintaxe.
-- [ ] A checagem roda localmente com um comando npm, usando só o Docker.
-- [ ] Um PHP propositalmente inválido faz a checagem falhar.
-- [ ] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.
+- [x] A checagem roda localmente com um comando npm, usando só o Docker.
+- [x] Um PHP propositalmente inválido faz a checagem falhar.
+- [x] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.
+
+> **Pendente:** o workflow `.github/workflows/ci.yml` existe e seus passos (`tsc`, `npm test`, `build`, `npm run lint:php`) foram rodados localmente, mas o arquivo ainda não rodou no GitHub Actions. Marque o primeiro critério depois da primeira execução verde após o push.
+>
+> A checagem (`npm run lint:php`) roda `php -l` na saída de `generate` para as fixtures e tem uma allowlist de falhas conhecidas em `scripts/phpSyntaxAllowlist.ts` (entidade `class` do fixture `curso`, a ser corrigida pela validação de palavras reservadas, ticket 09).
