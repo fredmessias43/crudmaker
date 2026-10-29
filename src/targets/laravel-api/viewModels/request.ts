@@ -5,16 +5,20 @@ import { EntityFileType } from "../fileType";
 import { BASE_NAMESPACE, entityNames } from "../names";
 import { enumClass } from "./enum";
 import { foreignKeyTable } from "./migration";
+import { USERS_TABLE } from "./skeleton";
 import { classHeader, classPair, finalClassFile } from "./classHeader";
 
 const namespace = `${BASE_NAMESPACE}\\Http\\Requests`;
 
 /** Regras de validação de um campo, cada item já como expressão PHP (`'bail'`, `Rule::in(...)`...). */
-function ruleItems(entity: Entity, field: Field, table: string, routeParam: string): string[] {
+function ruleItems(entity: Entity, field: Field, table: string, routeParam: string, skeletonUsers: boolean): string[] {
   const items = ["'bail'", `'${field.required ? "required" : "nullable"}'`];
+  const parent = (entity.relationships?.belongsTo ?? []).find((relationship) => relationship.field === field.name);
+  // FK para o `users` do esqueleto: o id dele é bigint, não uuid.
+  const type = skeletonUsers && parent !== undefined && foreignKeyTable(parent) === USERS_TABLE ? "integer" : field.type;
 
-  if (["uuid", "string", "integer", "boolean"].includes(field.type)) {
-    items.push(`'${field.type}'`);
+  if (["uuid", "string", "integer", "boolean"].includes(type)) {
+    items.push(`'${type}'`);
   } else if (field.type === "double") {
     // O Laravel não tem a regra `double`; `numeric` aceita inteiros e decimais.
     items.push("'numeric'");
@@ -33,7 +37,6 @@ function ruleItems(entity: Entity, field: Field, table: string, routeParam: stri
   }
 
   // FK de belongsTo: o registro referenciado precisa existir (na tabela de `foreignKeyTable`, a mesma da migration).
-  const parent = (entity.relationships?.belongsTo ?? []).find((relationship) => relationship.field === field.name);
   if (parent !== undefined) items.push(`Rule::exists('${foreignKeyTable(parent)}', 'id')`);
 
   if (field.unique) {
@@ -74,7 +77,7 @@ function currentValue(field: Field, variable: string): string {
 export const requestBaseFile: EntityFileType = {
   template: "request.base",
   layer: "generated",
-  build(entity) {
+  build(entity, { skeletonUsers }) {
     const { pascal, camel, snake, table } = entityNames(entity);
     const pair = classPair(namespace, `${pascal}Request`);
     const modelClass = `${BASE_NAMESPACE}\\Models\\${pascal}`;
@@ -83,7 +86,7 @@ export const requestBaseFile: EntityFileType = {
     const fields = Object.entries(entity.fields);
     const rules = fields
       .filter(([, field]) => field.name !== "id")
-      .map(([, field]) => ({ name: field.name, items: ruleItems(entity, field, table, snake) }));
+      .map(([, field]) => ({ name: field.name, items: ruleItems(entity, field, table, snake, skeletonUsers) }));
     const belongsTo = entity.relationships?.belongsTo ?? [];
     const usesRule = fields.some(
       ([, field]) => field.name !== "id" && (field.type === "enum" || field.unique || belongsTo.some((relationship) => relationship.field === field.name)),

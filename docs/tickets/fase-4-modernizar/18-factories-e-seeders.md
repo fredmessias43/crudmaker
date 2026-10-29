@@ -9,6 +9,7 @@
 - [16 — Enums PHP e FKs validadas](../fase-4-modernizar/16-enums-e-fks-validadas.md)
 - [10 — Camada gerada × customizada com hooks](../fase-3-arquitetura/10-camada-gerada-e-hooks.md)
 - [12 — Opções de campo no manifest](../fase-3-arquitetura/12-opcoes-de-campo.md)
+- [24 — Não sobrescrever arquivos do esqueleto do Laravel](../fase-4-modernizar/24-arquivos-do-esqueleto.md)
 
 **Status:** ready-for-agent
 

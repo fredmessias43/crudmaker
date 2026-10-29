@@ -1,5 +1,7 @@
 <?php
 
+// ARQUIVO GERADO PELO CRUDMAKER. Depois de registrada no manifest-lock.json, a migration não é mais sobrescrita.
+// Sem este cabeçalho (e fora do lock), o crudmaker trata a migration como de terceiros e nunca a reescreve.
 
 <% for (const use of it.imports) { -%>
 use <%~ use %>;

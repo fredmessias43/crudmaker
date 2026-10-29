@@ -1,10 +1,11 @@
 import { camelCase, pascalCase } from "change-case";
 import { relationName } from "../../../relationNames";
-import { snakeCase } from "lodash";
+import { snakeCase, uniq } from "lodash";
 import { EntityFileType } from "../fileType";
 import { BASE_NAMESPACE, entityNames } from "../names";
 import { enumClass } from "./enum";
 import { classHeader, classPair, finalClassFile } from "./classHeader";
+import { isUserEntity } from "./skeleton";
 
 const namespace = `${BASE_NAMESPACE}\\Models`;
 
@@ -27,16 +28,25 @@ const castTypes: { [type: string]: string } = {
 export const modelBaseFile: EntityFileType = {
   template: "model.base",
   layer: "generated",
-  build(entity) {
+  build(entity, { skeletonUsers }) {
     const names = entityNames(entity);
-    const fields = Object.entries(entity.fields);
-    const imports = [
-      "Illuminate\\Database\\Eloquent\\Factories\\HasFactory",
-      "Illuminate\\Database\\Eloquent\\SoftDeletes",
-      "Illuminate\\Database\\Eloquent\\Model",
-      "Illuminate\\Support\\Str",
-      "Illuminate\\Database\\Eloquent\\Concerns\\HasUuids",
-    ];
+    // `user` sobre a tabela `users` do esqueleto: autenticável, com o id bigint do esqueleto (sem uuid) e sem soft delete.
+    const authenticatable = skeletonUsers && isUserEntity(entity);
+    // O id bigint é do banco: fora do `$fillable`.
+    const fields = Object.entries(entity.fields).filter(([, field]) => !(authenticatable && field.name === "id"));
+    const imports = authenticatable
+      ? [
+          "Illuminate\\Database\\Eloquent\\Factories\\HasFactory",
+          "Illuminate\\Foundation\\Auth\\User as Authenticatable",
+          "Illuminate\\Notifications\\Notifiable",
+        ]
+      : [
+          "Illuminate\\Database\\Eloquent\\Factories\\HasFactory",
+          "Illuminate\\Database\\Eloquent\\SoftDeletes",
+          "Illuminate\\Database\\Eloquent\\Model",
+          "Illuminate\\Support\\Str",
+          "Illuminate\\Database\\Eloquent\\Concerns\\HasUuids",
+        ];
 
     // `cast` já é a expressão PHP: texto entre aspas ('boolean') ou a classe do enum (ClientStatus::class).
     const casts: { name: string; cast: string }[] = [];
@@ -49,6 +59,13 @@ export const modelBaseFile: EntityFileType = {
       }
       const cast = castTypes[field.type];
       if (cast !== undefined) casts.push({ name: field.name, cast: `'${cast}'` });
+    }
+
+    // Colunas de autenticação do esqueleto: o cast `hashed` (cifra a senha ao atribuir) e a data de verificação.
+    if (authenticatable) {
+      for (const [name, cast] of [["email_verified_at", "'datetime'"], ["password", "'hashed'"]]) {
+        if (!casts.some((item) => item.name === name)) casts.push({ name, cast });
+      }
     }
 
     const relations = Object.values(entity.relationships)
@@ -78,12 +95,16 @@ export const modelBaseFile: EntityFileType = {
     return {
       path: pair.base.path,
       view: {
-        ...classHeader(entity, pair, { imports, extends: "Model", layer: "base" }),
-        traits: ["HasFactory", "SoftDeletes", "HasUuids"],
+        ...classHeader(entity, pair, { imports, extends: authenticatable ? "Authenticatable" : "Model", layer: "base" }),
+        uuidKey: !authenticatable,
+        traits: authenticatable ? ["HasFactory", "Notifiable"] : ["HasFactory", "SoftDeletes", "HasUuids"],
         casts,
         fillable: fields.map(([key]) => key),
         // `hidden` também esconde o campo de `toArray()`/`toJson()` da model, para não vazar fora da resource.
-        hidden: fields.filter(([, field]) => field.hidden).map(([, field]) => field.name),
+        hidden: uniq([
+          ...fields.filter(([, field]) => field.hidden).map(([, field]) => field.name),
+          ...(authenticatable ? ["password", "remember_token"] : []),
+        ]),
         relations,
       },
     };

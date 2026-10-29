@@ -112,10 +112,22 @@ Regras de `generate` por tabela (a entidade é achada no lock pela tabela):
 
 | Situação | Migration de criação | Migration `alter` |
 |---|---|---|
-| Sem lock anterior, ou a tabela não estava no lock | gerada; se já há uma com o sufixo `_create_<tabela>_table.php`, o nome é reaproveitado e o conteúdo é reescrito (`overwrite`, comportamento de antes do lock) | nenhuma |
+| Sem lock anterior, ou a tabela não estava no lock | gerada; se já há uma do crudmaker (com cabeçalho) com o sufixo `_create_<tabela>_table.php`, o nome é reaproveitado e o conteúdo é reescrito (`overwrite`, comportamento de antes do lock); se a que existe não é do crudmaker, nada é gerado (veja abaixo) | nenhuma |
 | Estava no lock e a migration de criação existe no destino | `create-once`: nunca reescrita | uma, se o schema mudou |
 | Estava no lock mas a migration de criação não existe no destino | gerada nova com o schema atual (`overwrite`) e um aviso | nenhuma |
 | Estava no lock e saiu do manifest | continua no destino (órfã, aviso do ticket 10) | nenhuma: não há `drop table` automático |
+
+#### Propriedade das migrations (ticket 24)
+
+Só uma migration "do crudmaker" é reaproveitada, preservada ou reescrita. É do crudmaker a que o lock registra em `migrations` ou que tem o cabeçalho `ARQUIVO GERADO PELO CRUDMAKER` (os templates `migration` e `migration.alter` o trazem, com a mesma constante `GENERATED_MARKER` dos arquivos de `app/Generated`). A CLI lê o início de cada arquivo de `database/migrations` e passa a `generate` a lista `unmarkedMigrations` (os sem cabeçalho); `generate` tira dela as registradas no lock (e, com lock formato 1, as de criação das tabelas do lock) e passa o resto ao target como `foreignMigrations`. Sem `unmarkedMigrations` (chamadas diretas a `generate`, testes), tudo vale como do crudmaker.
+
+No target, `existingMigrations` do contexto passa a conter só as do crudmaker. Uma entidade cuja tabela tem uma migration de criação "de fora" e nenhuma do crudmaker entra em `foreignTables`: o tipo de arquivo `migration` é pulado e o fluxo das `alter` trata a tabela:
+
+- `users` (`SKELETON_COLUMNS`, em `viewModels/skeleton.ts`): o estado anterior é as colunas do esqueleto mais as do lock, e o diff descarta qualquer operação sobre uma coluna do esqueleto (só se acrescenta);
+- outra tabela, sem entrada no lock: nada é gerado, só um aviso (as colunas existentes são desconhecidas). Com entrada no lock, o diff contra o lock vale (sem tocar o `id`);
+- nenhuma migration "de fora" entra no `migrations` do lock.
+
+`skeletonUsers` (contexto): `users` é uma tabela de fora e há uma entidade `user`. Liga o modo do esqueleto: model base `Authenticatable` sem `HasUuids`/`SoftDeletes`, FKs para `users` como `unsignedBigInteger` (`columnField`, em `viewModels/migration.ts`, usado pela migration, pelo diff e pela `alter`) e regra `integer` nas requests. O aviso de migração do `User.php` do esqueleto (que estende `Authenticatable`) está em `legacyFinalWarnings`, em `writeFiles.ts`.
 
 O diff (`diffEntity`, em `viewModels/migrationAlter.ts`) compara as colunas pelo `name` e as FKs pelos `belongsTo`. Só entra no banco o que muda tipo, `required`, `default` efetivo (em enum, o primeiro item conta), itens do enum, `unique` e FK; `hidden`, `rules` e `api` não geram migration. Cada operação sabe se inverter, e o `down()` é o `up()` invertido na ordem contrária. O `up()` roda: `dropForeign`, `dropUnique`, `dropColumn`, `addColumn`, `changeColumn` (`->change()`), `addUnique`, `addForeign`.
 
@@ -279,6 +291,8 @@ O `generate` continua puro: a CLI lê o `routes/api.php` do destino (ou `null` s
 `tests/alterMigrations.test.ts` cobre o ticket 14: regerar sem mudança (nenhuma migration, lock idêntico), criação imutável (`create-once`, projeto sem lock, migration ausente, entidade nova), campo adicionado, removido e alterado (tipo, `required`, `default`, itens do enum, `unique`), FK adicionada e removida, o `down()`, o aviso de renomeação, nomes e timestamps sem colisão, o formato do lock (e o lock antigo e o malformado), entidade removida sem `drop table`, o snapshot da fixture `alter` (`manifest.json` → `manifest.after.json`) e a CLI em três gerações seguidas.
 
 `tests/targetVersion.test.ts` cobre o ticket 15: a menor versão de uma restrição do Composer, a detecção com `composer.json`/`composer.lock` de exemplo (`tests/fixtures/composer/`), a resolução (prioridade flag > manifest > composer > padrão, partes independentes, aviso de divergência, erros de versão não suportada, PHP abaixo do mínimo e valores mal formados), as capacidades por versão, `generate` por versão e a CLI (resumo com origem, aviso, erro, mensagem de `routes/api.php` ausente por versão). **Saída por versão:** os snapshots completos de todas as fixtures rodam no padrão (Laravel 12). Para não triplicar, o Laravel 11 é comparado byte a byte com o 12 (a saída é idêntica, salvo o `target` do lock), e o Laravel 10 é comparado com o 12 aceitando só a diferença do cast da model base, que ganha snapshot próprio em `tests/__snapshots__/laravel-10/<fixture>/` (mais o da migration `alter` com o comentário do `doctrine/dbal`). Uma diferença nova entre versões quebra essas comparações e obriga a decidir e registrar.
+
+`tests/skeleton.test.ts` cobre o ticket 24 com fixtures do esqueleto do Laravel 10 e 11 (`tests/fixtures/skeleton/`): nenhuma migration nem o `User.php` do esqueleto muda, `alter_users_table` só com as colunas extras (e idempotente), FKs para `users` em bigint, model base autenticável, aviso de migração do `User.php`, e migrations de fora de outras tabelas nunca reescritas (com cabeçalho ou registro no lock voltam a ser do crudmaker). O e2e `CRUDMAKER_E2E=1` tem um caso com `user` (`tests/e2e/blog-user.json`).
 
 `tests/yaml.test.ts` cobre o YAML: cada fixture tem um `manifest.yaml` que precisa ler o mesmo objeto e gerar a mesma saída do JSON, os erros de sintaxe/vazio/multi-documento/extensão, e o `init` em cada formato (o exemplo YAML tem de ser igual ao JSON).
 

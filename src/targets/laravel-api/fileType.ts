@@ -11,6 +11,13 @@ export type EntityFileContext = {
   migrationDates: Map<Entity, Date>;
   /** Tabelas das entidades do `manifest-lock.json` anterior (a migration delas já foi emitida em alguma geração). */
   previousTables: Set<string>;
+  /**
+   * Tabelas que já existem no destino por uma migration de criação que não é do crudmaker (esqueleto do Laravel,
+   * escrita à mão): nunca são recriadas nem reescritas (veja `foreignMigrations` em `LaravelApiInput`).
+   */
+  foreignTables: Set<string>;
+  /** A tabela `users` veio do esqueleto do Laravel: id bigint (não uuid), model Authenticatable e FKs para ela em bigint. */
+  skeletonUsers: boolean;
 };
 
 /**

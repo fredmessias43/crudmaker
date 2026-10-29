@@ -254,6 +254,11 @@ Regerar não renomeia migrations existentes: se já há um arquivo terminado em 
 
 **Ciclos de FK** (`a` `belongsTo` `b` e `b` `belongsTo` `a`, direto ou por mais entidades) são erro de validação: nenhuma ordem cria as duas tabelas com a FK já apontando para uma tabela existente. Para resolver, remova um dos `belongsTo` do ciclo (por exemplo, deixe só o `hasMany` no lado "um").
 
+### Entidade `user` e tabelas que já existem
+
+- A entidade `user` (tabela `users`) sobre a migration `create_users_table` do esqueleto do Laravel não recria a tabela: os campos que faltam vão numa `alter_users_table`, o `id: uuid` é ignorado (o id continua bigint), a model base é autenticável e as FKs que apontam para `users` viram `unsignedBigInteger`. Os detalhes e a migração do `User.php` estão em [Como usar](como-usar.md#a-entidade-user).
+- Para as demais tabelas que já existem por uma migration que não é do crudmaker (sem o cabeçalho de gerado e fora do `manifest-lock.json`), as colunas existentes são desconhecidas: o crudmaker não gera migration para elas e só avisa. Veja [Tabelas que já existem](como-usar.md#tabelas-que-já-existem-migrations-que-não-são-do-crudmaker).
+
 ### Limitações conhecidas
 
 - `owned` e `morphed` adicionam os campos `owner_id` e `owner_class`, mas `ownOne`, `ownMany`, `morphOne`, `morphMany` e `morphTo` ainda **não** geram métodos válidos na model. Não use.

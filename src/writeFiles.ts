@@ -77,7 +77,20 @@ export function legacyFinalWarnings(plan: PlannedWrite[]): string[] {
 
     const baseName = file.generatedBase.fqcn.split("\\").pop()!;
     const extendsBase = new RegExp(`\\bextends\\s+\\\\?(?:[\\w\\\\]*\\\\)?${baseName}\\b`);
-    if (extendsBase.test(fs.readFileSync(fullPath, "utf8"))) continue;
+    const content = fs.readFileSync(fullPath, "utf8");
+    if (extendsBase.test(content)) continue;
+
+    // Model `User` do esqueleto do Laravel: estende Authenticatable direto, não é código de versão antiga do crudmaker.
+    if (/\bextends\s+(?:\\?Illuminate\\Foundation\\Auth\\)?(?:Authenticatable|User)\b/.test(content)) {
+      warnings.push(
+        `${file.path}: é o model do esqueleto do Laravel e estende Authenticatable direto, não a base gerada ${baseName}; o arquivo foi preservado, ` +
+          `mas ${file.generatedBase.path} (campos, casts, $hidden e relacionamentos do manifest) fica sem uso. ` +
+          `Migre: troque "extends Authenticatable" por "extends \\${file.generatedBase.fqcn}", remova o "use Illuminate\\Foundation\\Auth\\User as Authenticatable;" ` +
+          `e mantenha só o que é seu (traits como HasApiTokens, métodos). Apague $fillable, $hidden e $casts/casts() repetidos: redeclarados aqui, ` +
+          `substituem os da base (veja "A entidade user" em docs/como-usar.md).`,
+      );
+      continue;
+    }
 
     warnings.push(
       `${file.path}: não estende a base gerada ${baseName}; o arquivo foi preservado, mas ${file.generatedBase.path} fica sem uso ` +

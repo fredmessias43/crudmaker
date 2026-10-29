@@ -15,6 +15,14 @@ export type GenerateOptions = {
   /** Nomes de arquivo (sem pasta) das migrations que já existem no destino. */
   existingMigrations: string[];
   /**
+   * Subconjunto de `existingMigrations` sem o cabeçalho de arquivo gerado pelo crudmaker (a CLI lê o início de cada arquivo).
+   * Uma migration dessas só é do crudmaker se o `previousLock` a registra em `migrations`; senão é de fora (esqueleto do Laravel,
+   * escrita à mão) e nunca é reescrita nem reaproveitada: a tabela dela vira "já existente" e as colunas que faltam saem numa
+   * migration `alter`. Omitido, todas valem como do crudmaker (o comportamento de antes). Num lock antigo, sem `migrations`,
+   * as migrations de criação das tabelas do lock também valem como do crudmaker.
+   */
+  unmarkedMigrations?: string[];
+  /**
    * Conteúdo atual do `routes/api.php` do destino, ou `null` se o arquivo não existe.
    * Quando há conteúdo, `generate` devolve o `routes/api.php` com o include das rotas geradas
    * (acrescentado só se faltar). Quando é `null`/omitido, o arquivo não é gerado: criá-lo sozinho
@@ -115,11 +123,18 @@ export function generate(manifestObj: { [key: string]: any }, options: GenerateO
   const entities = Object.keys(manifest.entities).map((key) => new Entity(key, manifest.entities[key]));
 
   const lockedMigrations = previousMigrations(options.previousLock);
+  const previousTables = previousEntities(options.previousLock).map((entity) => entity.getTableName());
+  const legacyLock = !Array.isArray(options.previousLock?.migrations);
+  const locked = new Set(lockedMigrations.map((migration) => migration.file));
+  const foreignMigrations = (options.unmarkedMigrations ?? []).filter(
+    (file) => !locked.has(file) && !(legacyLock && previousTables.some((table) => file.endsWith(`_create_${table}_table.php`))),
+  );
 
   const api = generateLaravelApi({
     entities,
     now: options.now,
     existingMigrations: options.existingMigrations,
+    foreignMigrations,
     existingApiRoutes: options.existingApiRoutes,
     previousEntities: previousEntities(options.previousLock),
     previousMigrations: lockedMigrations,

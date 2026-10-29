@@ -11,6 +11,7 @@ import { exampleManifestText } from "./initTemplate";
 import { acceptedExtensionsText, manifestFormat, readManifest, UserError } from "./readManifest";
 import { CommandRunner, spawnRunner } from "./commandRunner";
 import { assertDockerAvailable, composerImage, assertEmptyTarget, DEFAULT_DATABASE, defaultComposerHome, runScaffold, SAIL_DATABASES, SailDatabase } from "./scaffold";
+import { GENERATED_MARKER } from "./targets/types";
 import { applyPlan, applyRemovals, legacyFinalWarnings, planRemovals, planWrites, PlannedRemoval, PlannedWrite, WriteAction } from "./writeFiles";
 
 export type CliIo = {
@@ -255,6 +256,10 @@ function generateProject(
 
   const migrationsDir = path.join(outDir, "database/migrations");
   const existingMigrations = fs.existsSync(migrationsDir) ? fs.readdirSync(migrationsDir) : [];
+  // Sem o cabeçalho de gerado, a migration não é do crudmaker (a menos que o lock a registre): veja `unmarkedMigrations`.
+  const unmarkedMigrations = existingMigrations.filter(
+    (file) => file.endsWith(".php") && !fs.readFileSync(path.join(migrationsDir, file), "utf8").includes(GENERATED_MARKER),
+  );
 
   const apiRoutesPath = path.join(outDir, "routes/api.php");
   const existingApiRoutes = fs.existsSync(apiRoutesPath) ? fs.readFileSync(apiRoutesPath, "utf8") : null;
@@ -276,6 +281,7 @@ function generateProject(
   const { files, warnings, obsolete } = generate(manifestObj, {
     now: io.now(),
     existingMigrations,
+    unmarkedMigrations,
     existingApiRoutes,
     normalizeNames,
     previousLock,

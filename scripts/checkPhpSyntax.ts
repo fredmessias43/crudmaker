@@ -82,7 +82,10 @@ export function writeFixtureOutputs(outDir: string, target?: TargetVersion): voi
     const manifestPath = path.join(fixturesDir, name, "manifest.json");
     if (!fs.existsSync(manifestPath)) continue;
     const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-    const first = generate(manifest, { now, existingMigrations: [], target }).files;
+    // Fixture com `laravel-11/database/migrations`: o destino já tem as migrations do esqueleto (que não são do crudmaker).
+    const skeletonDir = path.join(fixturesDir, name, "laravel-11/database/migrations");
+    const skeleton = fs.existsSync(skeletonDir) ? fs.readdirSync(skeletonDir) : [];
+    const first = generate(manifest, { now, existingMigrations: skeleton, unmarkedMigrations: skeleton, target }).files;
     for (const file of first) {
       const target = path.join(outDir, name, file.path);
       fs.mkdirSync(path.dirname(target), { recursive: true });

@@ -5,6 +5,8 @@ import { Field, RelationshipValue } from "../../../types";
 import { EntityFileType } from "../fileType";
 import { phpString } from "../entityApi";
 import { entityNames } from "../names";
+import { createMigrationOf, USERS_TABLE } from "./skeleton";
+import { Entity } from "../../../models/Entity";
 
 /** Tabela referenciada por um `belongsTo`: snake_case plural da entidade (a mesma de `Entity.getTableName`). */
 export function foreignKeyTable(relationship: RelationshipValue): string {
@@ -16,11 +18,27 @@ function phpLiteral(value: string | number | boolean): string {
   return typeof value === "string" ? phpString(value) : String(value);
 }
 
+/** Campo como a migration o declara: igual ao do manifest, exceto o tipo da FK para o `users` do esqueleto (bigint). */
+export type ColumnField = Omit<Field, "type"> & { type: Field["type"] | "unsignedBigInteger" };
+
+/**
+ * Campo efetivo na migration. Com o `users` do esqueleto (id bigint, não uuid), a coluna de FK que aponta para ele
+ * vira `unsignedBigInteger`; todo o resto segue o manifest.
+ */
+export function columnField(entity: Entity, field: Field, skeletonUsers: boolean): ColumnField {
+  if (!skeletonUsers) return field;
+  const referencesUsers = (entity.relationships?.belongsTo ?? []).some(
+    (relationship) => relationship.field === field.name && foreignKeyTable(relationship) === USERS_TABLE,
+  );
+
+  return referencesUsers ? { ...field, type: "unsignedBigInteger" } : field;
+}
+
 /**
  * Declaração de uma coluna no Blueprint, com o `;` final. Com `change`, é a redeclaração completa de uma
  * coluna existente (termina em `->change()`, e a chave primária não é repetida).
  */
-export function column(field: Field, change = false): string {
+export function column(field: ColumnField, change = false): string {
   let line = `$table->${field.type}('${field.name}')`;
 
   if (field.name === "id" && !change) line += "->primary()";
@@ -50,15 +68,13 @@ function fileName(table: string, date: Date, existingMigrations: string[]): stri
 
 /** Nome da migration de criação da tabela que já existe no destino, se houver. */
 export function existingMigration(table: string, existingMigrations: string[]): string | undefined {
-  const suffix = `_create_${table}_table.php`;
-
-  return existingMigrations.find((file) => file.endsWith(suffix));
+  return createMigrationOf(table, existingMigrations);
 }
 
 export const migrationFile: EntityFileType = {
   template: "migration",
   layer: "migration",
-  build(entity, { migrationDates, existingMigrations, previousTables }) {
+  build(entity, { migrationDates, existingMigrations, previousTables, skeletonUsers }) {
     const { table } = entityNames(entity);
     const fields = Object.values(entity.fields);
     const belongsTo = entity.relationships?.belongsTo ?? [];
@@ -77,7 +93,7 @@ export const migrationFile: EntityFileType = {
           "Illuminate\\Support\\Facades\\Schema",
         ],
         table,
-        columns: fields.map((field) => column(field)),
+        columns: fields.map((field) => column(columnField(entity, field, skeletonUsers))),
         foreignKeys: belongsTo.map((relationship) => ({
           field: relationship.field,
           table: foreignKeyTable(relationship),

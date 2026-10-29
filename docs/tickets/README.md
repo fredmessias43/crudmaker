@@ -42,7 +42,8 @@ Desde o ticket 15 (versão alvo), o código gerado segue a versão do Laravel (1
 | 15 | [Versão alvo do Laravel/PHP](fase-4-modernizar/15-versao-alvo.md) | 02, 07, 06 |
 | 16 | [Enums PHP e FKs validadas](fase-4-modernizar/16-enums-e-fks-validadas.md) | 09, 15 |
 | 17 | [`crudmaker new` via Docker + Sail](fase-4-modernizar/17-crudmaker-new-docker.md) | 15, 06 |
-| 18 | [Factories e seeders](fase-4-modernizar/18-factories-e-seeders.md) | 16, 10, 12 |
+| 18 | [Factories e seeders](fase-4-modernizar/18-factories-e-seeders.md) | 16, 10, 12, 24 |
 | 19 | [Testes Pest gerados](fase-4-modernizar/19-testes-pest-gerados.md) | 17, 18 |
 | 20 | [Rotas e controllers aninhados](fase-4-modernizar/20-rotas-aninhadas.md) | 06, 10 |
 | 21 | [Documento para IA e docs da v2](fase-4-modernizar/21-doc-para-ia.md) | 11, 12 |
+| 24 | [Não sobrescrever arquivos do esqueleto do Laravel (entidade `user`)](fase-4-modernizar/24-arquivos-do-esqueleto.md) | 17 |

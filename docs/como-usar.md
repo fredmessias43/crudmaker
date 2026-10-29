@@ -98,7 +98,9 @@ docker run --rm --user $(id -u):$(id -g) -v "$PWD":/var/www/html -w /var/www/htm
 - **"não está vazio"**: escolha outro diretório. Para gerar num projeto que já existe, use `crudmaker generate`.
 - **"Não existe a imagem laravelsail/phpXX-composer"**: só há imagens para o PHP 8.1 a 8.4; use `--php` (ou `pkg.target.php`) com um desses.
 - **Falha no `composer require` do Pest**: geralmente rede ou conflito de versões; repita o `docker run` impresso na mensagem para ver o erro completo.
-- **Entidade chamada `user` no manifest**: colide com o `User` e a migration `create_users_table` do esqueleto do Laravel (o `generate` sobrescreve a migration dos users e preserva o `app/Models/User.php`, com aviso). Use outro nome ou revise à mão.
+- **Entidade chamada `user` no manifest**: é tratada de forma especial, sem estragar o esqueleto do Laravel. Veja [A entidade `user`](#a-entidade-user).
+- **`php artisan migrate` falha com "table already exists" ou "duplicate column"**: a migration de criação da tabela não é do crudmaker e a tabela já tem colunas do manifest. Veja [Tabelas que já existem](#tabelas-que-já-existem-migrations-que-não-são-do-crudmaker).
+- **Aviso "A tabela X já existe ... as colunas dela são desconhecidas"**: o crudmaker não gerou migration para ela. Crie à mão a `alter` do que faltar, ou faça o crudmaker assumir a tabela (veja a seção acima).
 - **`sail up` falha por porta ocupada**: veja `APP_PORT`/`FORWARD_DB_PORT` acima.
 
 ## 2. Ter o projeto Laravel de destino
@@ -394,7 +396,7 @@ A referência exata é o próprio template embutido (`crudmaker stubs:publish <t
 
 O `manifest-lock.json` guarda o schema e as migrations já emitidas. Com ele:
 
-- **a migration de criação nunca é reescrita** depois de emitida: se a tabela está no lock e o arquivo existe em `database/migrations`, ele aparece como `preservados`. (Projeto gerado sem lock, por uma versão antiga: a migration de criação ainda é reescrita, porque não há como saber o que o banco já rodou. Na primeira geração com a versão nova o lock passa a existir, e dali em diante vale a regra acima. Um lock antigo, sem `lockVersion`, vale como "o schema são as `entities` dele".)
+- **a migration de criação nunca é reescrita** depois de emitida: se a tabela está no lock e o arquivo existe em `database/migrations`, ele aparece como `preservados`. (Projeto gerado sem lock, por uma versão antiga: sem lock e sem o cabeçalho de gerado a migration de criação não é do crudmaker e não é tocada (veja [Tabelas que já existem](#tabelas-que-já-existem-migrations-que-não-são-do-crudmaker)); com o cabeçalho, ainda é reescrita, porque não há como saber o que o banco já rodou. Na primeira geração com a versão nova o lock passa a existir, e dali em diante vale a regra acima. Um lock antigo, sem `lockVersion`, vale como "o schema são as `entities` dele".)
 - **o que mudou vira uma migration `alter`**, uma por tabela, `<data>_alter_<tabela>_table.php`, com data depois das migrations existentes (e depois das criações da mesma geração):
 
 | Mudança no manifest | No `up()` |
@@ -417,6 +419,34 @@ Cuidados:
 - **Entidade removida**: continua só o aviso de órfãos; nenhum `drop table` é gerado.
 - O arquivo de uma `alter` já emitida é seu: se editá-lo, ele não é reescrito. Se apagar uma migration de criação que está no lock, a próxima geração cria uma nova de criação com o schema atual (e avisa).
 - O diff é calculado contra o lock, não contra o banco: se você rodou `generate` e depois descartou as migrations geradas, o lock já registrou a mudança e ela não será gerada de novo. Restaure o lock anterior (git) para refazê-la.
+
+### Tabelas que já existem (migrations que não são do crudmaker)
+
+O crudmaker só reescreve ou reaproveita uma migration de criação que **é dele**: uma que o `manifest-lock.json` registra em `migrations`, ou que carrega o cabeçalho `ARQUIVO GERADO PELO CRUDMAKER` (as migrations geradas por esta versão o têm, tanto as de criação quanto as `alter`). Qualquer outra migration `*_create_<tabela>_table.php` (do esqueleto do Laravel, escrita à mão, de um pacote) **nunca é reescrita**, e a tabela é tratada como já existente:
+
+- **`users`**: o crudmaker conhece as colunas do esqueleto (`id`, `name`, `email`, `email_verified_at`, `password`, `remember_token`, `created_at`, `updated_at`; é o mesmo no Laravel 10, 11 e 12). As colunas do manifest que faltam saem numa migration `alter_users_table`; as do esqueleto nunca são redeclaradas, alteradas nem removidas (mesmo que saiam do manifest).
+- **Qualquer outra tabela**: as colunas existentes são desconhecidas. **Nenhuma migration é gerada** e o resumo traz um aviso com as colunas do manifest, para você conferir e criar à mão a `alter` do que faltar. (Gerar uma `alter` com tudo falharia no `migrate` se a tabela já tem aquelas colunas.) A model gerada assume `id` uuid e soft delete (`deleted_at`). Depois do primeiro `generate`, mudanças de schema no manifest viram `alter` normalmente (o diff é contra o lock).
+- Para o crudmaker **assumir** uma tabela que existe: apague a migration antiga (se o banco ainda não a rodou) ou acrescente o cabeçalho `// ARQUIVO GERADO PELO CRUDMAKER` logo depois do `<?php`. Sem lock, uma migration sem cabeçalho nunca é tocada.
+- Projeto gerado por versão anterior, sem o cabeçalho nas migrations: se o lock as registra (`lockVersion: 2`), ou é um lock antigo (formato 1) que cita a tabela, elas continuam valendo como do crudmaker.
+
+### A entidade `user`
+
+Uma entidade `user` (tabela `users`) num projeto criado pelo esqueleto oficial (com `crudmaker new` ou `laravel new`) convive com o que o Laravel já trouxe:
+
+- a migration `create_users_table` do esqueleto **não é tocada** (no Laravel 11+ ela também cria `password_reset_tokens` e `sessions`). Os campos extras do manifest saem em `alter_users_table`;
+- **o `id` fica bigint auto-incremento do esqueleto**: o `id: uuid` do manifest é ignorado para `user` (o resumo avisa). Por isso:
+  - a **model base** (`app/Generated/Models/BaseUser.php`) estende `Illuminate\Foundation\Auth\User as Authenticatable`, usa `HasFactory` e `Notifiable`, **sem** `HasUuids` e **sem** `SoftDeletes` (a tabela do esqueleto não tem `deleted_at`, então `destroy` apaga de verdade), mantém `password` e `remember_token` em `$hidden` e os casts `password => hashed` e `email_verified_at => datetime`. O `id` fica fora do `$fillable`;
+  - as colunas de **FK que apontam para `users`** (`user_id`, `author_id`...) são geradas como `unsignedBigInteger`, e as requests validam com `integer` (em vez de `uuid`), mais o `exists:users,id`. Isso vale também para as `alter`;
+- **Sanctum**: `HasApiTokens` não vai na base (o pacote só existe se instalado: já vem no Laravel 10 e no `install:api` do 11+). Se usa tokens, deixe `use HasApiTokens;` na sua classe final `User`;
+- **o `app/Models/User.php` do esqueleto é preservado** (`create-once`), com um aviso por `generate` até migrá-lo. Como ele estende `Authenticatable` direto, a base fica sem uso. Para usá-la:
+  1. troque `extends Authenticatable` por `extends \App\Generated\Models\BaseUser` e remova o `use Illuminate\Foundation\Auth\User as Authenticatable;`;
+  2. mantenha só o que é seu (traits como `HasApiTokens`, métodos);
+  3. apague `$fillable`, `$hidden` e `$casts`/`casts()` repetidos: redeclarados na final, **substituem** os da base (e o `$fillable` do esqueleto não inclui os campos novos do manifest);
+  4. o mesmo vale para `database/factories/UserFactory.php` e quaisquer outros arquivos do esqueleto que o crudmaker passe a gerar (como a factory do ticket 18): são `create-once`, preservados, e só recebem aviso.
+- declare `password` no manifest com `hidden: true` (`"password": { "type": "string", "hidden": true }`) para a API aceitar a senha sem devolvê-la; o cast `hashed` a cifra ao salvar. Sem esse campo a API não cria usuários com senha. No Laravel 10, o cast `hashed` exige a versão 10.14 ou mais nova;
+- o login padrão do esqueleto (colunas `password`, `remember_token`, `email_verified_at`) continua funcionando.
+
+Esse modo só vale quando a tabela `users` vem de uma migration de fora do crudmaker. Se não há nenhuma migration `create_users_table` no destino (ou se ela é do crudmaker), `user` é uma entidade comum, com id uuid, como qualquer outra.
 
 ### Remover uma entidade
 

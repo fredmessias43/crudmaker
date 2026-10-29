@@ -1,7 +1,7 @@
 import { Entity } from "../../../models/Entity";
-import { Field, LockMigrationChange } from "../../../types";
+import { LockMigrationChange } from "../../../types";
 import { Capabilities } from "../capabilities";
-import { column, foreignKeyTable } from "./migration";
+import { column, ColumnField, columnField, foreignKeyTable } from "./migration";
 
 /**
  * Operação de schema de uma migration `alter`. Cada uma sabe se desfazer (`invertOperation`),
@@ -12,9 +12,9 @@ export type SchemaOperation =
   | { op: "addForeign"; column: string; table: string }
   | { op: "dropUnique"; column: string }
   | { op: "addUnique"; column: string }
-  | { op: "dropColumn"; column: string; field: Field }
-  | { op: "addColumn"; column: string; field: Field }
-  | { op: "changeColumn"; column: string; from: Field; to: Field };
+  | { op: "dropColumn"; column: string; field: ColumnField }
+  | { op: "addColumn"; column: string; field: ColumnField }
+  | { op: "changeColumn"; column: string; from: ColumnField; to: ColumnField };
 
 const inverseOf = {
   dropForeign: "addForeign",
@@ -32,8 +32,8 @@ export function invertOperation(operation: SchemaOperation): SchemaOperation {
 }
 
 /** Colunas da entidade por nome de coluna (o `name` do campo, que é o que a migration usa). */
-function columnsOf(entity: Entity): Map<string, Field> {
-  return new Map(Object.values(entity.fields).map((field) => [field.name, field]));
+function columnsOf(entity: Entity, skeletonUsers: boolean): Map<string, ColumnField> {
+  return new Map(Object.values(entity.fields).map((field) => [field.name, columnField(entity, field, skeletonUsers)]));
 }
 
 /** Tabela referenciada por cada coluna de FK (`belongsTo`) da entidade. */
@@ -42,12 +42,12 @@ function foreignKeysOf(entity: Entity): Map<string, string> {
 }
 
 /** Valor padrão efetivo na migration: o declarado ou, em enum, o primeiro item (o mesmo critério de `column`). */
-function effectiveDefault(field: Field): string | number | boolean | undefined {
+function effectiveDefault(field: ColumnField): string | number | boolean | undefined {
   return field.default ?? (field.type === "enum" ? field.enumItems[0] : undefined);
 }
 
 /** O que, na coluna, exige um `->change()`: tipo, obrigatoriedade, default e itens do enum. `unique` tem operação própria. */
-function columnSignature(field: Field): string {
+function columnSignature(field: ColumnField): string {
   return JSON.stringify([field.type, field.required, effectiveDefault(field) ?? null, field.type === "enum" ? field.enumItems : []]);
 }
 
@@ -56,9 +56,9 @@ function columnSignature(field: Field): string {
  * remover FKs e índices únicos, remover colunas, adicionar colunas, alterar colunas, criar índices únicos e FKs.
  * Lista vazia = nada mudou no banco (hidden, rules, api... não contam).
  */
-export function diffEntity(previous: Entity, current: Entity): SchemaOperation[] {
-  const before = columnsOf(previous);
-  const after = columnsOf(current);
+export function diffEntity(previous: Entity, current: Entity, skeletonUsers = false): SchemaOperation[] {
+  const before = columnsOf(previous, skeletonUsers);
+  const after = columnsOf(current, skeletonUsers);
   const beforeKeys = foreignKeysOf(previous);
   const afterKeys = foreignKeysOf(current);
 
