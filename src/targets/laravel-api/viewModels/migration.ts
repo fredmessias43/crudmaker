@@ -16,11 +16,14 @@ function phpLiteral(value: string | number | boolean): string {
   return typeof value === "string" ? phpString(value) : String(value);
 }
 
-/** Declaração de uma coluna no Blueprint, com o `;` final. */
-function column(field: Field): string {
+/**
+ * Declaração de uma coluna no Blueprint, com o `;` final. Com `change`, é a redeclaração completa de uma
+ * coluna existente (termina em `->change()`, e a chave primária não é repetida).
+ */
+export function column(field: Field, change = false): string {
   let line = `$table->${field.type}('${field.name}')`;
 
-  if (field.name === "id") line += "->primary()";
+  if (field.name === "id" && !change) line += "->primary()";
 
   if (field.type === "enum") {
     line = line.substring(0, line.length - 1);
@@ -33,7 +36,7 @@ function column(field: Field): string {
 
   if (!field.required) line += "->nullable()";
 
-  return `${line};`;
+  return `${line}${change ? "->change()" : ""};`;
 }
 
 /**
@@ -55,12 +58,17 @@ export function existingMigration(table: string, existingMigrations: string[]): 
 export const migrationFile: EntityFileType = {
   template: "migration",
   layer: "migration",
-  build(entity, { migrationDates, existingMigrations }) {
+  build(entity, { migrationDates, existingMigrations, previousTables }) {
     const { table } = entityNames(entity);
     const fields = Object.values(entity.fields);
     const belongsTo = entity.relationships?.belongsTo ?? [];
 
+    // Migration de criação é imutável depois de emitida: se o lock anterior já tem a tabela e o arquivo existe,
+    // ele é preservado (create-once). Sem lock (projeto antigo) ou sem o arquivo, vale o comportamento antigo.
+    const emitted = previousTables.has(table) && existingMigration(table, existingMigrations) !== undefined;
+
     return {
+      ...(emitted && { policy: "create-once" as const }),
       path: `database/migrations/${fileName(table, migrationDates.get(entity)!, existingMigrations)}`,
       view: {
         imports: [
@@ -69,7 +77,7 @@ export const migrationFile: EntityFileType = {
           "Illuminate\\Support\\Facades\\Schema",
         ],
         table,
-        columns: fields.map(column),
+        columns: fields.map((field) => column(field)),
         foreignKeys: belongsTo.map((relationship) => ({
           field: relationship.field,
           table: foreignKeyTable(relationship),

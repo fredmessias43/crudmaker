@@ -214,7 +214,7 @@ Na forma curta a FK é sempre `<entidade em snake_case>_id` (`"belongsTo": ["ord
 
 As migrations são ordenadas por dependência de FK: a tabela referenciada por um `belongsTo` é criada antes da que a referencia, mesmo que a entidade seja declarada depois no manifest. Entre entidades sem dependência entre si vale a ordem do manifest. Cada migration nova recebe o timestamp `now` + 1 segundo por posição (a primeira em `now`, a seguinte em `now + 1s`...), então a saída é determinística e a ordem de execução do Laravel é a de dependência. Auto-referência (`belongsTo` para a própria entidade) não conta como dependência.
 
-Regerar não renomeia migrations existentes: se já há um arquivo terminado em `_create_<tabela>_table.php` no destino, ele é reaproveitado; só as tabelas novas ganham um nome novo.
+Regerar não renomeia migrations existentes: se já há um arquivo terminado em `_create_<tabela>_table.php` no destino, ele é reaproveitado; só as tabelas novas ganham um nome novo. Depois de emitida (a tabela consta no `manifest-lock.json`), a migration de criação também não é mais reescrita: mudanças de campo, `unique`, `default` ou `belongsTo` numa entidade já gerada viram uma migration `alter` (veja [Mudanças de schema](como-usar.md#mudanças-de-schema-migrations-de-alteração) e o [formato do lock](arquitetura.md#lock-e-migrations)). Renomear um campo no manifest não é detectável: vira remover + adicionar (perde os dados da coluna) e gera um aviso.
 
 **Ciclos de FK** (`a` `belongsTo` `b` e `b` `belongsTo` `a`, direto ou por mais entidades) são erro de validação: nenhuma ordem cria as duas tabelas com a FK já apontando para uma tabela existente. Para resolver, remova um dos `belongsTo` do ciclo (por exemplo, deixe só o `hasMany` no lado "um").
 

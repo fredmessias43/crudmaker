@@ -1,7 +1,7 @@
 import { snakeCase } from "lodash";
 import { resolveApi } from "../apiOptions";
 import { ApiInput, FieldInput, ManifestInput, RELATION_KEYS, OWNER_KEYS } from "../manifestSchema";
-import { Field, ManifestEntities, ManifestEntity, RelationshipValue, Relationships } from "../types";
+import { Field, LOCK_VERSION, LockMigration, ManifestEntities, ManifestEntity, RelationshipValue, Relationships } from "../types";
 import { validateManifest, ValidateOptions } from "../validateManifest";
 
 function normalizeField(fieldKey: string, fieldValue: FieldInput): [string, Field] {
@@ -131,14 +131,16 @@ export class Manifest {
   }
 
   /**
-   * manifestToString
+   * Conteúdo do `manifest-lock.json`: o schema normalizado (`entities`) e as migrations já emitidas.
    */
-  public manifestToString(): string {
+  public manifestToString(migrations: LockMigration[] = []): string {
     return JSON.stringify(
       {
+        lockVersion: LOCK_VERSION,
         code: this.pkgCode,
         version: "0.1.0",
-        entities: this.entities
+        entities: this.entities,
+        migrations,
       },
       null,
       2

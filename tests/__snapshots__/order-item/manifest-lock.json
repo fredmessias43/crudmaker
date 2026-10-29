@@ -1,4 +1,5 @@
 {
+  "lockVersion": 2,
   "code": "order-item",
   "version": "0.1.0",
   "entities": {
@@ -190,5 +191,22 @@
         ]
       }
     }
-  }
+  },
+  "migrations": [
+    {
+      "file": "2025_01_02_030407_create_order_items_table.php",
+      "table": "order_items",
+      "type": "create"
+    },
+    {
+      "file": "2025_01_02_030406_create_orders_table.php",
+      "table": "orders",
+      "type": "create"
+    },
+    {
+      "file": "2025_01_02_030405_create_users_table.php",
+      "table": "users",
+      "type": "create"
+    }
+  ]
 }

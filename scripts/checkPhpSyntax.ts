@@ -71,10 +71,23 @@ export function writeFixtureOutputs(outDir: string): void {
     const manifestPath = path.join(fixturesDir, name, "manifest.json");
     if (!fs.existsSync(manifestPath)) continue;
     const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-    for (const file of generate(manifest, { now, existingMigrations: [] }).files) {
+    const first = generate(manifest, { now, existingMigrations: [] }).files;
+    for (const file of first) {
       const target = path.join(outDir, name, file.path);
       fs.mkdirSync(path.dirname(target), { recursive: true });
       fs.writeFileSync(target, file.content);
+    }
+
+    // Fixture com `manifest.after.json`: segunda geração sobre a primeira, para checar também as migrations `alter`.
+    const afterPath = path.join(fixturesDir, name, "manifest.after.json");
+    if (!fs.existsSync(afterPath)) continue;
+    const second = generate(JSON.parse(fs.readFileSync(afterPath, "utf8")), {
+      now,
+      existingMigrations: first.filter((file) => file.path.startsWith("database/migrations/")).map((file) => path.basename(file.path)),
+      previousLock: JSON.parse(first.find((file) => file.path === "manifest-lock.json")!.content),
+    }).files;
+    for (const file of second.filter((file) => file.path.includes("_alter_"))) {
+      fs.writeFileSync(path.join(outDir, name, file.path), file.content);
     }
   }
 }

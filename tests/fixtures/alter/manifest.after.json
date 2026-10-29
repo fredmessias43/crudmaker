@@ -1,0 +1,33 @@
+{
+  "system": { "title": "Loja", "code": "loja" },
+  "pkg": {
+    "code": "alter",
+    "entities": {
+      "client": {
+        "fields": {
+          "id": "uuid",
+          "name": { "type": "string", "required": false },
+          "email": "string",
+          "age": "double",
+          "status": { "type": "enum", "enumItems": ["active", "blocked", "archived"], "default": "active" },
+          "phone": { "type": "string", "required": false, "unique": true }
+        }
+      },
+      "order": {
+        "fields": {
+          "id": "uuid",
+          "total": "double"
+        },
+        "relationships": {
+          "belongsTo": ["invoice"]
+        }
+      },
+      "invoice": {
+        "fields": {
+          "id": "uuid",
+          "number": "string"
+        }
+      }
+    }
+  }
+}

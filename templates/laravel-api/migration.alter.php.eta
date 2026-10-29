@@ -1,0 +1,47 @@
+<?php
+
+
+<% for (const use of it.imports) { -%>
+use <%~ use %>;
+<% } -%>
+
+
+return new class extends Migration
+{
+
+	/**
+	 * Run the migrations.
+	 *
+	 * @return void
+	 */
+	public function up()
+	{
+		Schema::table('<%~ it.table %>', function (Blueprint $table) {
+<% for (const note of it.notes) { -%>
+			// <%~ note %>
+<% } -%>
+<% for (const line of it.up) { -%>
+			<%~ line %>
+<% } -%>
+		});
+	}
+
+
+	/**
+	 * Reverse the migrations.
+	 *
+	 * @return void
+	 */
+	public function down(): void
+	{
+		Schema::table('<%~ it.table %>', function (Blueprint $table) {
+<% for (const note of it.downNotes) { -%>
+			// <%~ note %>
+<% } -%>
+<% for (const line of it.down) { -%>
+			<%~ line %>
+<% } -%>
+		});
+	}
+
+};

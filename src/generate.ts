@@ -4,7 +4,7 @@ import { generateLaravelApi } from "./targets/laravel-api";
 import { FilePolicy, GeneratedFile, ObsoleteFile } from "./targets/types";
 import { Stubs } from "./targets/laravel-api/render";
 import { prepareStubs } from "./targets/laravel-api/stubs";
-import { ManifestEntities } from "./types";
+import { LockMigration, PreviousLock } from "./types";
 
 export { FilePolicy, GeneratedFile, ObsoleteFile };
 
@@ -30,8 +30,13 @@ export type GenerateOptions = {
    * Conteúdo (já parseado) do `manifest-lock.json` anterior do destino, ou `null`/omitido se não existe.
    * Serve para saber o que a geração anterior produziu: as entidades que estavam nele e saíram do manifest
    * viram `obsolete` no resultado. Um lock sem `entities` válidas é ignorado.
+   *
+   * O lock é também a fonte de verdade do schema já emitido: para as tabelas que estavam nele e cuja migration de
+   * criação existe no destino, a migration de criação é preservada (`create-once`) e as diferenças de schema viram
+   * migrations `alter`. Sem lock, tudo é tratado como novo (a migration de criação é reescrita, como antes).
+   * Lock antigo (sem `lockVersion`/`migrations`) vale como "schema = `entities`".
    */
-  previousLock?: { entities?: ManifestEntities } | null;
+  previousLock?: PreviousLock | null;
   /**
    * Stubs do projeto: nome do template (ex.: `controller.base`, `migration`, `routes`) → conteúdo do arquivo.
    * Cada um substitui o template embutido de mesmo nome. Só a camada gerada pode ser substituída; nomes
@@ -67,6 +72,17 @@ function previousEntities(lock: GenerateOptions["previousLock"]): Entity[] {
     .map(([key, entity]) => new Entity(key, { fields: entity.fields, relationships: entity.relationships ?? {} }));
 }
 
+/** Migrations registradas no lock anterior; entradas sem o formato esperado são descartadas (lock antigo = nenhuma). */
+function previousMigrations(lock: GenerateOptions["previousLock"]): LockMigration[] {
+  const list = lock?.migrations;
+  if (!Array.isArray(list)) return [];
+
+  return list.filter(
+    (item): item is LockMigration =>
+      typeof item?.file === "string" && typeof item?.table === "string" && (item.type === "create" || item.type === "alter"),
+  );
+}
+
 /**
  * Função pura: não lê nem escreve em disco.
  * Recebe o manifest cru (já parseado) e devolve os arquivos a gravar e os avisos.
@@ -76,23 +92,30 @@ export function generate(manifestObj: { [key: string]: any }, options: GenerateO
   const manifest = new Manifest(manifestObj, { normalizeNames: options.normalizeNames });
   const entities = Object.keys(manifest.entities).map((key) => new Entity(key, manifest.entities[key]));
 
+  const lockedMigrations = previousMigrations(options.previousLock);
+
   const api = generateLaravelApi({
     entities,
     now: options.now,
     existingMigrations: options.existingMigrations,
     existingApiRoutes: options.existingApiRoutes,
     previousEntities: previousEntities(options.previousLock),
+    previousMigrations: lockedMigrations,
     stubs: stubs.stubs,
   });
+
+  // Histórico do lock: o que já estava registrado mais o que esta geração acrescenta (sem repetir arquivo).
+  const known = new Set(lockedMigrations.map((migration) => migration.file));
+  const migrations = [...lockedMigrations, ...api.migrations.filter((migration) => !known.has(migration.file))];
 
   const files: GeneratedFile[] = [
     {
       path: "manifest-lock.json",
-      content: manifest.manifestToString(),
+      content: manifest.manifestToString(migrations),
       policy: "overwrite",
     },
     ...api.files,
   ];
 
-  return { files, warnings: [...manifest.warnings, ...stubs.warnings], obsolete: api.obsolete };
+  return { files, warnings: [...manifest.warnings, ...api.warnings, ...stubs.warnings], obsolete: api.obsolete };
 }

@@ -1,4 +1,5 @@
 {
+  "lockVersion": 2,
   "code": "vende-que-vende-api",
   "version": "0.1.0",
   "entities": {
@@ -201,5 +202,27 @@
         ]
       }
     }
-  }
+  },
+  "migrations": [
+    {
+      "file": "2025_01_02_030405_create_clients_table.php",
+      "table": "clients",
+      "type": "create"
+    },
+    {
+      "file": "2025_01_02_030406_create_notes_table.php",
+      "table": "notes",
+      "type": "create"
+    },
+    {
+      "file": "2025_01_02_030407_create_alerts_table.php",
+      "table": "alerts",
+      "type": "create"
+    },
+    {
+      "file": "2025_01_02_030408_create_addresses_table.php",
+      "table": "addresses",
+      "type": "create"
+    }
+  ]
 }

@@ -1,0 +1,189 @@
+{
+  "lockVersion": 2,
+  "code": "alter",
+  "version": "0.1.0",
+  "entities": {
+    "client": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "name": {
+          "type": "string",
+          "name": "name",
+          "required": false,
+          "unique": false,
+          "enumItems": []
+        },
+        "email": {
+          "type": "string",
+          "name": "email",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "age": {
+          "type": "double",
+          "name": "age",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "status": {
+          "type": "enum",
+          "name": "status",
+          "required": true,
+          "unique": false,
+          "enumItems": [
+            "active",
+            "blocked",
+            "archived"
+          ],
+          "default": "active"
+        },
+        "phone": {
+          "type": "string",
+          "name": "phone",
+          "required": false,
+          "unique": true,
+          "enumItems": []
+        }
+      },
+      "relationships": {}
+    },
+    "order": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "total": {
+          "type": "double",
+          "name": "total",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "invoice_id": {
+          "type": "uuid",
+          "name": "invoice_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        }
+      },
+      "relationships": {
+        "belongsTo": [
+          {
+            "entity": "invoice",
+            "field": "invoice_id",
+            "required": true,
+            "relationship": "belongsTo"
+          }
+        ]
+      }
+    },
+    "invoice": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "number": {
+          "type": "string",
+          "name": "number",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        }
+      },
+      "relationships": {}
+    }
+  },
+  "migrations": [
+    {
+      "file": "2025_01_02_030405_create_clients_table.php",
+      "table": "clients",
+      "type": "create"
+    },
+    {
+      "file": "2025_01_02_030406_create_orders_table.php",
+      "table": "orders",
+      "type": "create"
+    },
+    {
+      "file": "2025_01_02_030408_create_invoices_table.php",
+      "table": "invoices",
+      "type": "create"
+    },
+    {
+      "file": "2025_01_02_030410_alter_clients_table.php",
+      "table": "clients",
+      "type": "alter",
+      "changes": [
+        {
+          "op": "dropUnique",
+          "column": "email"
+        },
+        {
+          "op": "dropColumn",
+          "column": "nickname"
+        },
+        {
+          "op": "addColumn",
+          "column": "phone"
+        },
+        {
+          "op": "changeColumn",
+          "column": "name"
+        },
+        {
+          "op": "changeColumn",
+          "column": "age"
+        },
+        {
+          "op": "changeColumn",
+          "column": "status"
+        },
+        {
+          "op": "addUnique",
+          "column": "phone"
+        }
+      ]
+    },
+    {
+      "file": "2025_01_02_030411_alter_orders_table.php",
+      "table": "orders",
+      "type": "alter",
+      "changes": [
+        {
+          "op": "dropForeign",
+          "column": "client_id"
+        },
+        {
+          "op": "dropColumn",
+          "column": "client_id"
+        },
+        {
+          "op": "addColumn",
+          "column": "invoice_id"
+        },
+        {
+          "op": "addForeign",
+          "column": "invoice_id"
+        }
+      ]
+    }
+  ]
+}

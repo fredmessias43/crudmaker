@@ -63,4 +63,5 @@ Model, controller, request, resource e collection saem em duas classes: a **base
 ## Cuidados
 
 - **`crudmaker generate --out <dir>` sobrescreve a camada gerada (`app/Generated/`, migrations, rotas, lock) em `<dir>` sem perguntar**, inclusive edições feitas à mão nesses arquivos, e apaga as bases de entidades que saíram do manifest. As classes finais (`create-once`) são preservadas. Antes de rodar, use `--dry-run` e confira se o destino tem código que não pode ser perdido. Nos testes e experimentos, use sempre diretórios temporários, nunca `generated/`.
+- O `manifest-lock.json` é a fonte de verdade do schema emitido (formato em `docs/arquitetura.md`, seção "Lock e migrations"). Mudou o schema de uma entidade já gerada, o `generate` cria uma migration `alter` e não reescreve a de criação; não mexa nesse comportamento sem atualizar os testes de `tests/alterMigrations.test.ts`.
 - Não apague nem limpe `generated/`. Ela não está versionada aqui, então não dá para recuperar.

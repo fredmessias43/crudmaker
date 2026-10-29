@@ -41,14 +41,14 @@ O `npx`/`npm link` usam o campo `bin` do `package.json` (`dist/bin.js`), gerado 
 `generate` (`src/generate.ts`) não lê nem escreve em disco. Tudo o que seria "ambiente" entra por `options`:
 
 - `now`: base do prefixo das migrations novas (`yyyy_MM_dd_HHmmss`). A migration na posição *n* da ordem de dependência de FK usa `now` + *n* segundos;
-- `existingMigrations`: nomes de arquivo das migrations que já existem no destino. Se algum termina com `_create_<tabela>_table.php`, o nome é reaproveitado em vez de gerar um novo (regerar nunca renomeia);
+- `existingMigrations`: nomes de arquivo das migrations que já existem no destino. Se algum termina com `_create_<tabela>_table.php`, o nome é reaproveitado em vez de gerar um novo (regerar nunca renomeia). O prefixo das migrations novas nunca é anterior à migration mais recente que já existe (no destino ou no lock): a base é `max(now, mais recente + 1 s)`;
 - `existingApiRoutes`: conteúdo do `routes/api.php` do destino (ou `null`);
 - `normalizeNames` (opcional): liga/desliga a normalização de nomes; quando definida, vale mais que `pkg.normalizeNames` do manifest;
-- `previousLock` (opcional): o `manifest-lock.json` anterior do destino, já parseado (ou `null`). As entidades que estavam nele e não geram mais os mesmos caminhos viram `obsolete`.
+- `previousLock` (opcional): o `manifest-lock.json` anterior do destino, já parseado (ou `null`). As entidades que estavam nele e não geram mais os mesmos caminhos viram `obsolete`; é também a fonte de verdade do schema já emitido, de onde saem as migrations `alter` (veja [Lock e migrations](#lock-e-migrations)).
 
 O retorno é `{ files, warnings, obsolete }`. Os avisos (`string[]`, um por nome alterado ou fora da convenção) vêm junto com os arquivos, em vez de serem impressos, para `generate` continuar pura e quem chama (CLI, scripts, testes) decidir o que mostrar.
 
-Cada arquivo de `files` tem `path`, `content` e `policy` (`overwrite` ou `create-once`) e, nas classes finais, `generatedBase` (a base que ela deve estender). A política vem da camada: bases gerada, migrations, rotas e lock são `overwrite`; as classes finais são `create-once`. O primeiro item da lista é sempre o `manifest-lock.json`.
+Cada arquivo de `files` tem `path`, `content` e `policy` (`overwrite` ou `create-once`) e, nas classes finais, `generatedBase` (a base que ela deve estender). A política vem da camada: bases gerada, rotas e lock são `overwrite`; as classes finais são `create-once`. As migrations dependem do lock: a de criação de uma tabela que o lock anterior já tinha (e cujo arquivo existe no destino) e toda `alter` são `create-once`; a de criação de tabela nova, ou sem lock anterior, é `overwrite`. O primeiro item da lista é sempre o `manifest-lock.json`.
 
 `obsolete` é uma lista `{ path, kind }` de caminhos *possíveis* de entidades que saíram do manifest: `generated` (bases, que o crudmaker pode apagar), `custom` (finais, que só são listadas) e `migration` (só se já existe uma migration da tabela no destino; nunca é apagada). É calculada refazendo, para as entidades do lock anterior, os caminhos dos mesmos tipos de arquivo e tirando os que a geração atual também produz; nenhum conteúdo é renderizado. Como `generate` não olha o disco, quem decide o que existe é o plano de remoção.
 
@@ -64,6 +64,45 @@ Mais três funções, também em `src/writeFiles.ts`:
 - `legacyFinalWarnings(plan)` lê os arquivos `preserved` que têm `generatedBase` e avisa os que não contêm `extends ...Base<Classe>`: são classes completas de uma versão antiga do crudmaker, que a base nova não alcança. A checagem é textual;
 - `planRemovals(obsolete, baseDir)` olha só os caminhos de `obsolete` que existem no disco. Um arquivo de `kind: "generated"` vira `removed` somente se o caminho está em `app/Generated/` dentro do destino (sem escapar por `..`) e o arquivo tem o cabeçalho `ARQUIVO GERADO PELO CRUDMAKER`; tudo o mais (finais, migrations, uma base sem cabeçalho) vira `orphaned`;
 - `applyRemovals(removals, baseDir)` apaga os `removed` e as pastas vazias que sobrarem dentro de `app/Generated/`.
+
+### Lock e migrations
+
+O `manifest-lock.json` é o registro do que foi emitido: o schema normalizado e as migrations já geradas. Formato (`lockVersion: 2`):
+
+```json
+{
+  "lockVersion": 2,
+  "code": "alter",
+  "version": "0.1.0",
+  "entities": { "client": { "fields": { "id": { "type": "uuid", "name": "id", "required": true, "unique": false, "enumItems": [] } }, "relationships": {} } },
+  "migrations": [
+    { "file": "2025_01_02_030405_create_clients_table.php", "table": "clients", "type": "create" },
+    {
+      "file": "2025_01_02_030410_alter_clients_table.php",
+      "table": "clients",
+      "type": "alter",
+      "changes": [ { "op": "dropColumn", "column": "nickname" }, { "op": "addColumn", "column": "phone" } ]
+    }
+  ]
+}
+```
+
+- `entities`: o manifest normalizado (o mesmo de antes do ticket 14), o schema que a geração anterior emitiu;
+- `migrations`: histórico acumulado, em ordem de emissão. `type` é `create` ou `alter`; `changes` (só nas `alter`) lista as operações (`addColumn`, `dropColumn`, `changeColumn`, `addUnique`, `dropUnique`, `addForeign`, `dropForeign`) e a coluna de cada uma. Entradas sem esse formato são ignoradas ao ler;
+- **Compatibilidade**: um lock sem `lockVersion` (formato 1) tem só `code`, `version` e `entities`. É lido como "schema = `entities` do lock; migrations = as de criação que existirem no destino": `generate` não precisa de `migrations` para decidir nada, usa o nome das migrations de `existingMigrations`. O lock regravado já sai no formato 2, com as de criação registradas.
+
+Regras de `generate` por tabela (a entidade é achada no lock pela tabela):
+
+| Situação | Migration de criação | Migration `alter` |
+|---|---|---|
+| Sem lock anterior, ou a tabela não estava no lock | gerada; se já há uma com o sufixo `_create_<tabela>_table.php`, o nome é reaproveitado e o conteúdo é reescrito (`overwrite`, comportamento de antes do lock) | nenhuma |
+| Estava no lock e a migration de criação existe no destino | `create-once`: nunca reescrita | uma, se o schema mudou |
+| Estava no lock mas a migration de criação não existe no destino | gerada nova com o schema atual (`overwrite`) e um aviso | nenhuma |
+| Estava no lock e saiu do manifest | continua no destino (órfã, aviso do ticket 10) | nenhuma: não há `drop table` automático |
+
+O diff (`diffEntity`, em `viewModels/migrationAlter.ts`) compara as colunas pelo `name` e as FKs pelos `belongsTo`. Só entra no banco o que muda tipo, `required`, `default` efetivo (em enum, o primeiro item conta), itens do enum, `unique` e FK; `hidden`, `rules` e `api` não geram migration. Cada operação sabe se inverter, e o `down()` é o `up()` invertido na ordem contrária. O `up()` roda: `dropForeign`, `dropUnique`, `dropColumn`, `addColumn`, `changeColumn` (`->change()`), `addUnique`, `addForeign`.
+
+Nome e data: `<yyyy_MM_dd_HHmmss>_alter_<tabela>_table.php`, um por tabela alterada por execução. O prefixo é `base + (nº de entidades) + posição`, na ordem de dependência de FK, onde `base = max(now, migration mais recente conhecida + 1 s)` (conhecida = no destino ou no lock). Assim as `alter` rodam depois de todas as criações da mesma geração, e dois `alter` da mesma tabela em execuções diferentes nunca têm o mesmo nome, mesmo que o relógio seja o mesmo. O template é `templates/laravel-api/migration.alter.php.eta` e não é substituível por stub.
 
 ## Módulos
 
@@ -140,13 +179,15 @@ Módulos do target:
 | `viewModels/classHeader.ts` | parte comum dos templates de classe (namespace, `use`s deduplicados na ordem de declaração, classe e `extends`), `classPair` (base × final), `finalClassFile` (tipo das finais) e `classPath` |
 | `entityApi.ts` | `entityApi(entity)`: o `entity.api` com os padrões do gerador aplicados (todas as actions, 15 por página, `with` resolvido para método, tipo e resource relacionada). Usado pelos view models do controller, da resource e das rotas; também tem `phpString` (literal PHP entre aspas simples) |
 | `viewModels/{model,resource,collection,controller,request}.ts` | os view models da base e da final de cada classe |
-| `viewModels/migration.ts` | view model da migration por entidade |
+| `viewModels/migration.ts` | view model da migration de criação por entidade; a criação já emitida (tabela no lock e arquivo no destino) sai como `create-once` |
+| `viewModels/migrationAlter.ts` | diff de schema entre duas versões da entidade (`diffEntity`), as operações e suas inversas, o view model da migration `alter` (`migration.alter.php.eta`) e os avisos (renomeação provável, coluna obrigatória sem default, enum) |
 | `viewModels/routes.ts` | view model de `routes/crudmaker.php` (uma `apiResource` por entidade, recurso = tabela em kebab-case, com `->only(...)` e `->middleware(...)` vindos de `api`) e `ensureRoutesInclude`, que acrescenta o `require` ao `routes/api.php` se faltar |
 
 | Tipo | Gera |
 |---|---|
 | `model` | Base: Model com UUID, SoftDeletes, `$casts`, `$fillable` e métodos de relacionamento. Final: vazia |
-| `migration` | Migration anônima de criação da tabela, com FKs, timestamps, soft deletes e índices únicos. Reaproveita o nome de uma migration já existente |
+| `migration` | Migration anônima de criação da tabela, com FKs, timestamps, soft deletes e índices únicos. Reaproveita o nome de uma migration já existente; depois de emitida (tabela no lock) não é mais reescrita |
+| `migration.alter` | Migration anônima de alteração (`Schema::table`) gerada pelo diff entre o lock anterior e o manifest atual; não é um tipo por entidade em `entityFileTypes`, `generateLaravelApi` a emite depois do laço das entidades |
 | `request` | Base: FormRequest com `prepareForValidation` (completa campos ausentes a partir da model da rota), `rules` e o hook `extraRules`. Final: vazia |
 | `resource` / `collection` | Base: JsonResource (campos, datas formatadas, os relacionamentos de `api.with` com `whenLoaded` e o hook `extra`) e ResourceCollection (usa a resource final). Finais: vazias |
 | `controller` | Base: controller de API com `index`, `store`, `show`, `update`, `destroy` e os 7 hooks (só as actions e os hooks mantidos em `api.actions`; o `index` aplica `with`, filtros, busca e ordenação de `api` antes do `indexQuery`). Final: vazia |
@@ -198,13 +239,15 @@ O `generate` continua puro: a CLI lê o `routes/api.php` do destino (ou `null` s
 
 `tests/apiOptions.test.ts` cobre o ticket 11: a fixture `api-options` (snapshot completo, com `pkg.defaults.api` e entidades que herdam, sobrescrevem e restringem actions), asserções explícitas das rotas (`only`, `middleware`), das actions e hooks removidos, de `perPage`, da ordem `with` → filtros → busca → ordenação → `indexQuery` → `paginate`, do `with` no `index`/`show`, da resource com `whenLoaded`, a validação de cada erro e a normalização de nomes no bloco `api`.
 
+`tests/alterMigrations.test.ts` cobre o ticket 14: regerar sem mudança (nenhuma migration, lock idêntico), criação imutável (`create-once`, projeto sem lock, migration ausente, entidade nova), campo adicionado, removido e alterado (tipo, `required`, `default`, itens do enum, `unique`), FK adicionada e removida, o `down()`, o aviso de renomeação, nomes e timestamps sem colisão, o formato do lock (e o lock antigo e o malformado), entidade removida sem `drop table`, o snapshot da fixture `alter` (`manifest.json` → `manifest.after.json`) e a CLI em três gerações seguidas.
+
 `tests/yaml.test.ts` cobre o YAML: cada fixture tem um `manifest.yaml` que precisa ler o mesmo objeto e gerar a mesma saída do JSON, os erros de sintaxe/vazio/multi-documento/extensão, e o `init` em cada formato (o exemplo YAML tem de ser igual ao JSON).
 
 `tests/generate.test.ts` também cobre a ordem e os timestamps das migrations, a regeração sem renomear, as FKs, o `ignore` do `unique` e os casts, com asserções explícitas (a fixture `order-item`, com entidade camelCase e FK customizada, roda com a normalização ligada e tem snapshot próprio), e as rotas (nome do recurso, include, idempotência, detecção por variações de espaço e aspas). Ele chama `generate` para os manifests de `tests/fixtures/` com data fixa e sem migrations existentes. Os snapshots de `bingo`, `curso` e `vende-que-vende-api` são a saída de antes da normalização de nomes e valem com ela **desligada** (`normalizeNames: false`); `bingo-2` (entidades no plural, FKs declaradas à mão) tem snapshot com a normalização ligada, o padrão. O conteúdo de cada arquivo é comparado com um snapshot em `tests/__snapshots__/<fixture>/<path>`, e a lista de caminhos com `_paths.txt`. Os snapshots registram a saída atual (bases em `app/Generated/` e finais iniciais), inclusive bugs conhecidos. Foram eles que provaram que a migração para templates (ticket 07) não mudou a saída.
 
 ### Sintaxe do PHP gerado
 
-`npm run lint:php` (`scripts/checkPhpSyntax.ts`) valida que o PHP gerado é sintaticamente válido. Ele chama `generate` (normalização no padrão, ligada) para as fixtures de `tests/fixtures/` com data fixa, grava a saída num diretório temporário do sistema (nunca em `generated/` nem no repositório) e monta esse diretório como volume somente leitura num único `docker run --rm` da imagem oficial `php:8.1-cli`, com o UID/GID do usuário, que roda `php -l` em cada `.php`. O script lista os arquivos com erro, sai com código diferente de zero se houver falha inesperada (ou 2 se o Docker não estiver disponível) e apaga o diretório temporário no fim. A versão 8.1 é a mínima prometida pela spec: se parseia nela, parseia nas mais novas.
+`npm run lint:php` (`scripts/checkPhpSyntax.ts`) valida que o PHP gerado é sintaticamente válido. Ele chama `generate` (normalização no padrão, ligada) para as fixtures de `tests/fixtures/` com data fixa (e, nas que têm `manifest.after.json`, faz uma segunda geração sobre a primeira para também validar as migrations `alter`), grava a saída num diretório temporário do sistema (nunca em `generated/` nem no repositório) e monta esse diretório como volume somente leitura num único `docker run --rm` da imagem oficial `php:8.1-cli`, com o UID/GID do usuário, que roda `php -l` em cada `.php`. O script lista os arquivos com erro, sai com código diferente de zero se houver falha inesperada (ou 2 se o Docker não estiver disponível) e apaga o diretório temporário no fim. A versão 8.1 é a mínima prometida pela spec: se parseia nela, parseia nas mais novas.
 
 A checagem olha a saída de `generate`, e não os snapshots, para não depender deles: um snapshot pode ser atualizado com `-u` sem que ninguém perceba que o PHP ficou inválido, e a checagem continua valendo mesmo que a forma de guardar os snapshots mude.
 

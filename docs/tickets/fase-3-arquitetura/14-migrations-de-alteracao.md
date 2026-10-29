@@ -9,12 +9,12 @@
 - [09 — Corrigir schema, migrations e validação](../fase-2-bugs/09-corrigir-schema-e-validacao.md)
 - [10 — Camada gerada × customizada com hooks](../fase-3-arquitetura/10-camada-gerada-e-hooks.md)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Critérios de aceite
 
-- [ ] Teste com lock anterior e sem mudança: nenhuma migration nova.
-- [ ] Testes de campo adicionado, removido e alterado gerando a migration `alter` esperada.
-- [ ] As migrations de criação existentes nunca são reescritas.
-- [ ] O formato do lock está documentado.
-- [ ] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.
+- [x] Teste com lock anterior e sem mudança: nenhuma migration nova.
+- [x] Testes de campo adicionado, removido e alterado gerando a migration `alter` esperada.
+- [x] As migrations de criação existentes nunca são reescritas.
+- [x] O formato do lock está documentado.
+- [x] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.

@@ -1,12 +1,14 @@
-import { addSeconds } from "date-fns";
+import { addSeconds, format } from "date-fns";
 import { orderByDependency } from "../../dependencyOrder";
 import { Entity } from "../../models/Entity";
+import { LockMigration } from "../../types";
 import { GeneratedFile, ObsoleteFile } from "../types";
 import { EntityFileType } from "./fileType";
 import { renderTemplate, Stubs } from "./render";
 import { collectionBaseFile, collectionFinalFile } from "./viewModels/collection";
 import { controllerBaseFile, controllerFinalFile } from "./viewModels/controller";
 import { existingMigration, foreignKeyTable, migrationFile } from "./viewModels/migration";
+import { alterView, alterWarnings, diffEntity, lockChanges } from "./viewModels/migrationAlter";
 import { modelBaseFile, modelFinalFile } from "./viewModels/model";
 import { requestBaseFile, requestFinalFile } from "./viewModels/request";
 import { resourceBaseFile, resourceFinalFile } from "./viewModels/resource";
@@ -23,6 +25,8 @@ export type LaravelApiInput = {
   existingApiRoutes?: string | null;
   /** Entidades do `manifest-lock.json` anterior do destino, para detectar as que saíram do manifest. */
   previousEntities?: Entity[];
+  /** Migrations registradas no `manifest-lock.json` anterior (vazio para lock antigo ou ausente). */
+  previousMigrations?: LockMigration[];
   /** Stubs do projeto já validados (nome do template → conteúdo), com prioridade sobre os embutidos. */
   stubs?: Stubs;
 };
@@ -77,7 +81,7 @@ function migrationDates(entities: Entity[], now: Date): Map<Entity, Date> {
  * Migrations só entram se já existe no destino uma com o nome da tabela.
  */
 function obsoleteFiles(previous: Entity[], currentPaths: Set<string>, input: LaravelApiInput): ObsoleteFile[] {
-  const context = { ...input, migrationDates: migrationDates(previous, input.now) };
+  const context = { ...input, migrationDates: migrationDates(previous, input.now), previousTables: new Set<string>() };
   const obsolete: ObsoleteFile[] = [];
 
   for (const entity of previous) {
@@ -95,7 +99,36 @@ function obsoleteFiles(previous: Entity[], currentPaths: Set<string>, input: Lar
   return obsolete;
 }
 
-export type LaravelApiOutput = { files: GeneratedFile[]; obsolete: ObsoleteFile[] };
+/** Data/hora do prefixo de um nome de migration (`yyyy_MM_dd_HHmmss`), ou `null` se o nome não segue o padrão. */
+function migrationTimestamp(file: string): Date | null {
+  const match = /^(\d{4})_(\d{2})_(\d{2})_(\d{2})(\d{2})(\d{2})_/.exec(file);
+  if (!match) return null;
+  const [year, month, day, hour, minute, second] = match.slice(1).map(Number);
+  return new Date(year, month - 1, day, hour, minute, second);
+}
+
+/**
+ * Base dos prefixos das migrations novas: `now`, ou 1 segundo depois da migration mais recente que já existe
+ * (no destino ou no lock), o que vier por último. Assim as novas rodam sempre depois das antigas e um nome nunca colide.
+ */
+function migrationBase(input: LaravelApiInput): Date {
+  const known = [...input.existingMigrations, ...(input.previousMigrations ?? []).map((migration) => migration.file)];
+  const latest = known.map(migrationTimestamp).filter((date): date is Date => date !== null).reduce<Date | null>((a, b) => (a === null || b > a ? b : a), null);
+
+  return latest !== null && latest >= input.now ? addSeconds(latest, 1) : input.now;
+}
+
+export type LaravelApiOutput = {
+  files: GeneratedFile[];
+  obsolete: ObsoleteFile[];
+  /** Avisos do schema (renomeação provável, coluna obrigatória sem default...). */
+  warnings: string[];
+  /**
+   * Migrations desta geração para o lock: a de criação de cada tabela (do manifest e, se ainda existir no destino,
+   * das entidades removidas) e as `alter` novas. `generate` as junta às que o lock anterior já tinha.
+   */
+  migrations: LockMigration[];
+};
 
 /**
  * Target `laravel-api`: recebe o modelo normalizado e devolve os arquivos (sem tocar o disco).
@@ -103,18 +136,72 @@ export type LaravelApiOutput = { files: GeneratedFile[]; obsolete: ObsoleteFile[
  */
 export function generateLaravelApi(input: LaravelApiInput): LaravelApiOutput {
   const files: GeneratedFile[] = [];
-  const context = { ...input, migrationDates: migrationDates(input.entities, input.now) };
+  const warnings: string[] = [];
+  const migrations: LockMigration[] = [];
+  const previous = input.previousEntities ?? [];
+  const previousByTable = new Map(previous.map((entity) => [entity.getTableName(), entity]));
+  const base = migrationBase(input);
+  const context = {
+    ...input,
+    now: base,
+    migrationDates: migrationDates(input.entities, base),
+    previousTables: new Set(previousByTable.keys()),
+  };
+  const baseName = (path: string) => path.slice(path.lastIndexOf("/") + 1);
 
   for (const entity of input.entities) {
     for (const fileType of entityFileTypes) {
-      const { path, view, generatedBase } = fileType.build(entity, context);
+      const { path, view, generatedBase, policy } = fileType.build(entity, context);
       files.push({
         path,
         content: renderTemplate(fileType.template, view, input.stubs),
-        policy: policyByLayer[fileType.layer],
+        policy: policy ?? policyByLayer[fileType.layer],
         ...(generatedBase && { generatedBase }),
       });
+      if (fileType.layer === "migration") migrations.push({ file: baseName(path), table: entity.getTableName(), type: "create" });
     }
+  }
+
+  // Migrations de alteração: só para tabelas que o lock anterior já tinha e cuja migration de criação existe no destino.
+  // Se ela sumiu, a geração acima criou uma nova com o schema atual (e não há o que alterar).
+  // Cada tabela alterada ganha uma migration, depois de todas as de criação desta geração, na ordem de dependência.
+  const dates = context.migrationDates;
+  const ordered = [...input.entities].sort((a, b) => dates.get(a)!.getTime() - dates.get(b)!.getTime());
+  let alterIndex = 0;
+
+  for (const entity of ordered) {
+    const table = entity.getTableName();
+    const before = previousByTable.get(table);
+    if (before === undefined) continue;
+
+    if (existingMigration(table, input.existingMigrations) === undefined) {
+      warnings.push(
+        `A migration de criação da tabela ${table} não existe em database/migrations; foi gerada uma nova com o schema atual, ` +
+          `sem migration de alteração. Se o banco já tem a tabela, apague essa migration nova.`,
+      );
+      continue;
+    }
+
+    const operations = diffEntity(before, entity);
+    if (operations.length === 0) continue;
+
+    const date = addSeconds(base, input.entities.length + alterIndex++);
+    const file = `${format(date, "yyyy_MM_dd_HHmmss")}_alter_${table}_table.php`;
+    files.push({
+      path: `database/migrations/${file}`,
+      content: renderTemplate("migration.alter", alterView(table, operations), input.stubs),
+      // Imutável depois de emitida, como a de criação; o nome é novo a cada geração, então na prática sempre é criada.
+      policy: "create-once",
+    });
+    migrations.push({ file, table, type: "alter", changes: lockChanges(operations) });
+    warnings.push(...alterWarnings(entity, operations, file));
+  }
+
+  // Entidades removidas do manifest: a migration de criação delas, se ainda existe, continua registrada no lock.
+  const currentTables = new Set(input.entities.map((entity) => entity.getTableName()));
+  for (const [table] of previousByTable) {
+    const file = existingMigration(table, input.existingMigrations);
+    if (!currentTables.has(table) && file !== undefined) migrations.push({ file, table, type: "create" });
   }
 
   files.push({ path: routesPath, content: renderTemplate("routes", routesView(input.entities), input.stubs), policy: "overwrite" });
@@ -126,7 +213,7 @@ export function generateLaravelApi(input: LaravelApiInput): LaravelApiOutput {
   }
 
   const currentPaths = new Set(files.map((file) => file.path));
-  const obsolete = obsoleteFiles(input.previousEntities ?? [], currentPaths, input);
+  const obsolete = obsoleteFiles(previous, currentPaths, input);
 
-  return { files, obsolete };
+  return { files, obsolete, warnings, migrations };
 }

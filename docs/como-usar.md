@@ -72,7 +72,8 @@ Para cada entidade (`Client`, no exemplo) são escritos dois arquivos por classe
 
 | Arquivo | Pasta | Política |
 |---|---|---|
-| `<data>_create_<tabela>_table.php` | `database/migrations/` | `overwrite`, arquivo único (sem base nem final) |
+| `<data>_create_<tabela>_table.php` | `database/migrations/` | `overwrite` na primeira geração; depois de emitida (a tabela consta no lock) vira `create-once`. Arquivo único, sem base nem final |
+| `<data>_alter_<tabela>_table.php` | `database/migrations/` | `create-once`; gerada quando o schema de uma tabela já emitida muda (veja [Regerar](#regerar)) |
 
 Além disso, são gravados na raiz do destino:
 
@@ -204,7 +205,7 @@ Use a camada mais simples que resolve, nesta ordem:
 2. **Hooks** nas classes finais: regra de negócio de uma entidade (`beforeStore`, `extraRules()`, `extra()`...).
 3. **Stubs**: o formato de um tipo de arquivo para todas as entidades (envelope `data`/`message`, transação, estilo do código gerado).
 
-Stubs só mudam a **camada gerada** (bases, migration e rotas). Não existe stub das classes finais: elas são `create-once` e são do usuário, então mudar o comportamento delas é papel dos hooks (um stub só valeria para classes novas e deixaria o projeto com finais de padrões diferentes). Um `controller.final.php.eta` na pasta de stubs é ignorado, com aviso.
+Stubs só mudam a **camada gerada** (bases, migration e rotas). Também não existe stub da migration de alteração (`migration.alter`): só a de criação (`migration`) é substituível. Não existe stub das classes finais: elas são `create-once` e são do usuário, então mudar o comportamento delas é papel dos hooks (um stub só valeria para classes novas e deixaria o projeto com finais de padrões diferentes). Um `controller.final.php.eta` na pasta de stubs é ignorado, com aviso.
 
 ### Publicar, editar e atualizar
 
@@ -247,10 +248,38 @@ A referência exata é o próprio template embutido (`crudmaker stubs:publish <t
 
 ## Regerar
 
-- **Camada gerada**: as bases em `app/Generated/`, as migrations, `routes/crudmaker.php` e o `manifest-lock.json` são sobrescritos (veja o `--dry-run`). Não edite as bases: a edição se perde. Exceção no nome das migrations: se já existe uma terminada em `_create_<tabela>_table.php`, o mesmo arquivo é reaproveitado (e o conteúdo é reescrito). Tabelas novas ganham o timestamp novo, na ordem de dependência.
+- **Camada gerada**: as bases em `app/Generated/`, `routes/crudmaker.php` e o `manifest-lock.json` são sobrescritos (veja o `--dry-run`). Não edite as bases: a edição se perde. Tabelas novas ganham a migration de criação com o timestamp novo, na ordem de dependência.
 - **Camada de customização**: as classes finais existentes são **preservadas** sempre e só são criadas se faltarem. Hooks e código seu sobrevivem a qualquer regeração.
-- Mudanças de schema não viram migration de alteração; a migration de criação é reescrita. Num banco que já rodou a migration, você precisa criar a alteração à mão ou usar `migrate:fresh`.
+- **Migrations**: veja [Mudanças de schema](#mudanças-de-schema-migrations-de-alteração).
 - O Laravel carrega `app/Generated/` pelo autoload PSR-4 padrão (`App\` → `app/`); não precisa configurar nada.
+
+### Mudanças de schema: migrations de alteração
+
+O `manifest-lock.json` guarda o schema e as migrations já emitidas. Com ele:
+
+- **a migration de criação nunca é reescrita** depois de emitida: se a tabela está no lock e o arquivo existe em `database/migrations`, ele aparece como `preservados`. (Projeto gerado sem lock, por uma versão antiga: a migration de criação ainda é reescrita, porque não há como saber o que o banco já rodou. Na primeira geração com a versão nova o lock passa a existir, e dali em diante vale a regra acima. Um lock antigo, sem `lockVersion`, vale como "o schema são as `entities` dele".)
+- **o que mudou vira uma migration `alter`**, uma por tabela, `<data>_alter_<tabela>_table.php`, com data depois das migrations existentes (e depois das criações da mesma geração):
+
+| Mudança no manifest | No `up()` |
+|---|---|
+| campo adicionado | `$table->tipo('campo')...` com `nullable`/`default`; `unique` vira `$table->unique('campo')` |
+| `belongsTo` adicionado | coluna da FK + `$table->foreign(...)` |
+| campo removido | `$table->dropColumn('campo')` (antes, `dropUnique` se era único) |
+| `belongsTo` removido | `$table->dropForeign(['campo_id'])` e `dropColumn` |
+| tipo, `required`, `default` ou itens do enum alterados | a coluna redeclarada com `->change()` |
+| `unique` ligado ou desligado | `$table->unique('campo')` / `$table->dropUnique(['campo'])` |
+
+O `down()` desfaz na ordem inversa, o melhor possível. `hidden`, `rules` e `api` não mudam o banco e não geram migration. **Regerar sem mudanças não cria migration nenhuma.** O `--dry-run` lista as `alter` que seriam criadas (em `criados`). Entidade nova ganha a migration de criação normal.
+
+Cuidados:
+
+- **Renomear um campo não é detectável**: vira remover + adicionar, e a coluna antiga perde os dados. O resumo traz um aviso `ATENÇÃO` quando uma tabela tem remoção e adição ao mesmo tempo. Edite a migration `alter` gerada (antes do `migrate`) trocando o par `dropColumn`/`addColumn` por `$table->renameColumn('antigo', 'novo');` no `up()` e a inversa no `down()`.
+- **`->change()`**: nativo no Laravel 11+. No Laravel 10 ou anterior precisa de `composer require doctrine/dbal` (a migration gerada traz um comentário lembrando). `->change()` redeclara a coluna inteira; mudar a lista de um `enum` depende do banco (em alguns não atualiza os valores permitidos): o crudmaker avisa, confira a migration.
+- **Campo novo obrigatório** (`required` padrão) sem `default` falha no `migrate` se a tabela já tem linhas: o crudmaker avisa. Declare `default` ou `required: false`.
+- **`down()` não recupera dados**: desfazer um `dropColumn` recria a coluna vazia (e, se era obrigatória, falha em tabela com linhas).
+- **Entidade removida**: continua só o aviso de órfãos; nenhum `drop table` é gerado.
+- O arquivo de uma `alter` já emitida é seu: se editá-lo, ele não é reescrito. Se apagar uma migration de criação que está no lock, a próxima geração cria uma nova de criação com o schema atual (e avisa).
+- O diff é calculado contra o lock, não contra o banco: se você rodou `generate` e depois descartou as migrations geradas, o lock já registrou a mudança e ela não será gerada de novo. Restaure o lock anterior (git) para refazê-la.
 
 ### Remover uma entidade
 

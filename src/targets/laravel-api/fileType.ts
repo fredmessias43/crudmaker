@@ -1,4 +1,5 @@
 import { Entity } from "../../models/Entity";
+import { FilePolicy } from "../types";
 
 /** Dados de ambiente que os tipos de arquivo por entidade podem precisar. */
 export type EntityFileContext = {
@@ -8,6 +9,8 @@ export type EntityFileContext = {
   existingMigrations: string[];
   /** Data/hora de cada entidade nas migrations novas: `now` + posição na ordem de dependência das FKs. */
   migrationDates: Map<Entity, Date>;
+  /** Tabelas das entidades do `manifest-lock.json` anterior (a migration delas já foi emitida em alguma geração). */
+  previousTables: Set<string>;
 };
 
 /**
@@ -33,6 +36,8 @@ export type EntityFileType = {
   ): {
     path: string;
     view: object;
+    /** Substitui a política da camada (a migration de criação já emitida vira `create-once`). */
+    policy?: FilePolicy;
     /** Só na camada `custom`: a base gerada que a classe estende (veja `GeneratedFile.generatedBase`). */
     generatedBase?: { fqcn: string; path: string };
   };

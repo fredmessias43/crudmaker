@@ -446,7 +446,10 @@ describe("CLI: regerar com segurança", () => {
     expect(read("app/Http/Requests/ClientRequest.php")).not.toContain("nickname");
     expect(stdout).toMatch(/sobrescritos \(\d+\):[\s\S]*app\/Generated\/Models\/BaseClient\.php/);
     expect(section("preservados")).toContain("app/Http/Controllers/Api/ClientController.php");
-    expect(section("preservados")).toHaveLength(10);
+    // as 10 finais e as 2 migrations de criação (imutáveis depois de emitidas); o campo novo de client vira uma migration alter
+    expect(section("preservados")).toHaveLength(12);
+    expect(section("criados")).toHaveLength(1);
+    expect(section("criados")[0]).toMatch(/_alter_clients_table\.php$/);
     expect(stdout).not.toContain("não estende a base");
   });
 
@@ -513,7 +516,7 @@ describe("CLI: regerar com segurança", () => {
     expect(run(["generate", manifest, "--out", out], io())).toBe(0);
 
     expect(stdout.replace(/^.*\n/, "")).toBe(dry);
-    expect(stdout).toContain("(0 criados, 2 sobrescritos, 6 sem mudança, 5 preservados, 5 removidos)");
+    expect(stdout).toContain("(0 criados, 2 sobrescritos, 5 sem mudança, 6 preservados, 5 removidos)");
     expect(stdout).toMatch(/Total: \d+ arquivos \(.*, 5 removidos\)/);
     for (const p of ["Models/BaseNote", "Http/Resources/BaseNoteResource", "Http/Resources/BaseNoteCollection", "Http/Controllers/Api/BaseNoteController", "Http/Requests/BaseNoteRequest"]) {
       expect(exists(`app/Generated/${p}.php`), p).toBe(false);

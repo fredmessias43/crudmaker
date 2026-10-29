@@ -57,3 +57,29 @@ export type ApiOptions = {
   /** Nomes de método de relacionamento da model. */
   with?: string[],
 }
+
+/** Formato atual do `manifest-lock.json` (veja `docs/arquitetura.md`). Locks sem `lockVersion` são o formato 1. */
+export const LOCK_VERSION = 2;
+
+/** Operação de schema que uma migration `alter` faz; o suficiente para recalcular o estado do banco. */
+export type LockMigrationChange = {
+  op: "addColumn" | "dropColumn" | "changeColumn" | "addUnique" | "dropUnique" | "addForeign" | "dropForeign",
+  column: string,
+};
+
+/** Migration já emitida, registrada no lock. `create` cria a tabela; `alter` altera o que mudou no schema. */
+export type LockMigration = {
+  /** Nome do arquivo, sem pasta. */
+  file: string,
+  table: string,
+  type: "create" | "alter",
+  /** Só nas `alter`. */
+  changes?: LockMigrationChange[],
+};
+
+/** O que `generate` lê do lock anterior (já parseado). Tudo é opcional: lock antigo ou malformado é tolerado. */
+export type PreviousLock = {
+  lockVersion?: number,
+  entities?: ManifestEntities,
+  migrations?: unknown,
+};
