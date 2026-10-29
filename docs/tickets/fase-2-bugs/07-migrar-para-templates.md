@@ -8,12 +8,12 @@
 
 - [01 — Núcleo `generate()` puro e testes de snapshot](../fase-1-usavel/01-nucleo-generate-e-snapshots.md)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Critérios de aceite
 
-- [ ] Todos os tipos de arquivo saem de templates.
-- [ ] Os snapshots dos três manifests de exemplo continuam idênticos.
-- [ ] As classes que concatenavam strings foram removidas.
-- [ ] A convenção de arrays de linhas sai do `CLAUDE.md`, que passa a apontar para os templates.
-- [ ] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.
+- [x] Todos os tipos de arquivo saem de templates.
+- [x] Os snapshots dos três manifests de exemplo continuam idênticos.
+- [x] As classes que concatenavam strings foram removidas.
+- [x] A convenção de arrays de linhas sai do `CLAUDE.md`, que passa a apontar para os templates.
+- [x] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.

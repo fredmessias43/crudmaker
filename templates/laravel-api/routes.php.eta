@@ -1,0 +1,12 @@
+<?php
+
+// ARQUIVO GERADO PELO CRUDMAKER. NÃO EDITE: ele é sobrescrito a cada `crudmaker generate`.
+// Rotas próprias ou ajustes ficam em routes/api.php (fora deste arquivo).
+
+<% for (const use of it.imports) { -%>
+use <%~ use %>;
+<% } -%>
+
+<% for (const route of it.routes) { -%>
+Route::apiResource('<%~ route.resource %>', <%~ route.controller %>::class);
+<% } -%>

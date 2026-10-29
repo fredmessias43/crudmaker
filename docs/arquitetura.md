@@ -11,7 +11,7 @@ crudmaker generate <manifest> --out <dir> [--dry-run] [--[no-]normalize-names]  
 generate(manifest, { now, existingMigrations, ... })     função pura, sem acesso ao disco
     │  Manifest        schema (zod) → normalização de nomes → validação entre entidades → normalização
     │  Entity          (uma por entidade) nome + casings + nome da tabela
-    │  geradores       (PhpFile) Model, Resource, Collection, Controller, Request, Migration
+    │  target laravel-api   view model (TS) → template (Eta) → arquivo: Model, Resource, Collection, Controller, Request, Migration, rotas
     ▼
 { files, warnings }      files: { path, content, policy }, path relativo à raiz do projeto Laravel
     │  planWrites(files, out)     classifica: criado / sobrescrito / sem mudança / preservado
@@ -74,30 +74,60 @@ Recebe o objeto cru do manifest (e a opção `normalizeNames`) e produz `entitie
 ### `models/Entity`
 Envolve uma entidade normalizada. `getEntityName(casing)` devolve o nome em qualquer formato do `change-case` (`pascalCase`, `snakeCase`...), e `getTableName()` devolve o snake_case no plural.
 
-### `fileCreators/PhpFile`
-Classe base abstrata de todos os geradores. Monta a casca de um arquivo PHP (`<?php`, namespace, `use`, declaração da classe, traits). Não escreve no disco: `mountFile()` devolve o conteúdo e `getRelativePath()` o caminho.
+### Targets e templates
 
-Cada subclasse:
+A saída é organizada em *targets*: um target recebe o modelo normalizado de entidades (mais o ambiente da geração) e devolve arquivos, sem tocar o disco. Hoje existe um só, o `laravel-api`, em `src/targets/laravel-api/`. O modelo normalizado não tem nada específico de PHP/Laravel; tudo o que é Laravel fica dentro do target.
 
-1. no construtor, define `namespace`, `imports`, `extendsClauses`, `traits` e `className`, e preenche arrays de linhas (`fillXxxFunction()`);
-2. sobrescreve `getContentLine()` para juntar essas linhas no corpo da classe.
+Cada arquivo gerado passa por três etapas:
 
-O caminho relativo é o namespace convertido em pasta (`App\Http\Requests` → `app/Http/Requests/<arquivo>`). `getFileName()` pode ser sobrescrito; a `MigrationFile` faz isso para montar o nome com a data recebida ou reaproveitar o de uma migration já existente (ambos recebidos no construtor).
+```
+modelo normalizado (Entity)  →  view model (TS)  →  template (Eta)  →  { path, content, policy }
+```
 
-O PHP é montado concatenando strings linha a linha, com `\t` como indentação.
+- **View model** (`src/targets/laravel-api/viewModels/<tipo>.ts`): converte a entidade nas variáveis do template (`it.*`): nomes em cada casing, `use`s sem repetição, linhas de `$casts`, métodos de relacionamento, regras de validação, colunas da migration. Também decide o caminho do arquivo. É aqui que fica a lógica; o template só imprime.
+- **Template** (`templates/laravel-api/<tipo>.php.eta`, na raiz do pacote e listado em `files` do `package.json`): texto parecido com o PHP final, com tags do [Eta](https://eta.js.org) só para interpolar variáveis e repetir blocos. Cada template é autocontido (sem partials), para facilitar a futura cópia como stub do projeto.
+- **Motor** (`src/targets/laravel-api/render.ts`): configura o Eta com `autoTrim: false` e `autoEscape: false`. O resultado precisa bater byte a byte com os snapshots, então nada de espaço é removido ou normalizado implicitamente.
 
-### Geradores usados hoje
+Convenções de whitespace dos templates (para a saída ser previsível):
 
-| Classe | Gera |
+- indentação com tabs (`\t`); linhas só com um tab existem de propósito (os snapshots as registram) e não devem ser "limpas" pelo editor;
+- tags de controle (`<% for ... { -%>`, `<% } -%>`) ficam sozinhas na linha, em coluna 0, e terminam em `-%>`, que remove só a quebra de linha seguinte;
+- tags de saída (`<%~ it.x %>`, sem escape) ficam no meio da linha e não alteram nada em volta;
+- o arquivo termina com uma única quebra de linha após o `};` ou a última linha.
+
+Módulos do target:
+
+| Arquivo | Papel |
 |---|---|
-| `ModelFile` | Model com UUID, SoftDeletes, `$casts`, `$fillable` e métodos de relacionamento |
-| `MigrationFile` | Migration anônima de criação da tabela, com FKs, timestamps, soft deletes e índices únicos |
-| `RequestFile` | FormRequest com `prepareForValidation` (completa campos ausentes a partir da model da rota) e `rules` |
-| `ResourceFile` / `CollectionFile` | JsonResource e ResourceCollection com os campos e as datas formatadas |
-| `ControllerFile` | Controller de API com `index`, `store`, `show`, `update` e `destroy` |
-| `RoutesFile` | `routes/crudmaker.php`, com uma `apiResource` por entidade (recurso = tabela em kebab-case). Não estende `PhpFile`: não há classe, só `use` e chamadas `Route::`. Também exporta `ensureRoutesInclude`, que acrescenta o `require` ao conteúdo do `routes/api.php` se faltar |
+| `index.ts` | `generateLaravelApi(input)`: percorre as entidades, aplica cada tipo de arquivo (`entityFileTypes`) e acrescenta as rotas e o `routes/api.php` |
+| `fileType.ts` | tipos `EntityFileType` (template + `build(entity, ctx)` que devolve `{ path, view }`) e `EntityFileContext` |
+| `render.ts` | motor Eta e `renderTemplate(nome, dados)`; ponto único de resolução de template |
+| `names.ts` | `BASE_NAMESPACE` (`App`), nomes da entidade em cada casing e `namespaceToFolder` (`App\Http\Requests` → `app/Http/Requests`) |
+| `viewModels/classHeader.ts` | parte comum dos templates de classe (namespace, `use`s deduplicados na ordem de declaração, classe e `extends`) e `classPath` |
+| `viewModels/{model,resource,collection,controller,request,migration}.ts` | um view model por tipo de arquivo por entidade |
+| `viewModels/routes.ts` | view model de `routes/crudmaker.php` (uma `apiResource` por entidade, recurso = tabela em kebab-case) e `ensureRoutesInclude`, que acrescenta o `require` ao `routes/api.php` se faltar |
+
+| Tipo | Gera |
+|---|---|
+| `model` | Model com UUID, SoftDeletes, `$casts`, `$fillable` e métodos de relacionamento |
+| `migration` | Migration anônima de criação da tabela, com FKs, timestamps, soft deletes e índices únicos. Reaproveita o nome de uma migration já existente |
+| `request` | FormRequest com `prepareForValidation` (completa campos ausentes a partir da model da rota) e `rules` |
+| `resource` / `collection` | JsonResource e ResourceCollection com os campos e as datas formatadas |
+| `controller` | Controller de API com `index`, `store`, `show`, `update` e `destroy` |
+| `routes` | `routes/crudmaker.php`, gerado uma vez por projeto (não por entidade) |
+
+#### Como adicionar um tipo de arquivo
+
+1. Crie `templates/laravel-api/<tipo>.php.eta`.
+2. Crie `src/targets/laravel-api/viewModels/<tipo>.ts` exportando um `EntityFileType` (`template: "<tipo>"` e `build` devolvendo `{ path, view }`; use `classHeader` e `classPath` para classes).
+3. Registre-o em `entityFileTypes` (`src/targets/laravel-api/index.ts`); a ordem da lista é a ordem dos arquivos na saída.
+4. Gere os snapshots (revisando o diff) e rode `npm run lint:php`.
+
+Um arquivo por projeto (como as rotas) não passa por `entityFileTypes`: renderize-o direto em `generateLaravelApi`.
 
 O `generate` continua puro: a CLI lê o `routes/api.php` do destino (ou `null` se não existe) e passa o texto em `options.existingApiRoutes`. Com texto, o `generate` devolve o `routes/api.php` com o include (idêntico ao atual se já estiver lá), e o `planWrites` o classifica como qualquer outro arquivo (sobrescrito ou sem mudança), o que mantém o `--dry-run` fiel. Com `null`, o arquivo não é gerado e a CLI imprime o aviso sobre `php artisan install:api`.
+
+Ainda não existem stubs do projeto (prioridade arquivo a arquivo sobre os templates embutidos) nem variantes por versão do Laravel; `renderTemplate` é o ponto onde a resolução do template passará a considerar essas camadas.
 
 ## Dependências
 
@@ -106,6 +136,7 @@ O `generate` continua puro: a CLI lê o `routes/api.php` do destino (ou `null` s
 | `change-case` | casings dos nomes |
 | `pluralize` | nome das tabelas e dos métodos `hasMany` |
 | `lodash` | `snakeCase`, `uniq` |
+| `eta` | motor dos templates do PHP gerado (`templates/`) |
 | `date-fns` | timestamp do nome da migration |
 | `yaml` | parse do manifest em YAML 1.2 (modo padrão, sem tags customizadas; erros com linha e coluna) |
 | `zod` | schema e validação do manifest, e o JSON Schema publicado |
@@ -120,7 +151,7 @@ O `generate` continua puro: a CLI lê o `routes/api.php` do destino (ou `null` s
 
 `tests/yaml.test.ts` cobre o YAML: cada fixture tem um `manifest.yaml` que precisa ler o mesmo objeto e gerar a mesma saída do JSON, os erros de sintaxe/vazio/multi-documento/extensão, e o `init` em cada formato (o exemplo YAML tem de ser igual ao JSON).
 
-`tests/generate.test.ts` também cobre as rotas (nome do recurso, include, idempotência, detecção por variações de espaço e aspas). Ele chama `generate` para os manifests de `tests/fixtures/` com data fixa e sem migrations existentes. Os snapshots de `bingo`, `curso` e `vende-que-vende-api` são a saída de antes da normalização de nomes e valem com ela **desligada** (`normalizeNames: false`); `bingo-2` (entidades no plural, FKs declaradas à mão) tem snapshot com a normalização ligada, o padrão. O conteúdo de cada arquivo é comparado com um snapshot em `tests/__snapshots__/<fixture>/<path>`, e a lista de caminhos com `_paths.txt`. Os snapshots registram a saída atual, inclusive bugs conhecidos.
+`tests/generate.test.ts` também cobre as rotas (nome do recurso, include, idempotência, detecção por variações de espaço e aspas). Ele chama `generate` para os manifests de `tests/fixtures/` com data fixa e sem migrations existentes. Os snapshots de `bingo`, `curso` e `vende-que-vende-api` são a saída de antes da normalização de nomes e valem com ela **desligada** (`normalizeNames: false`); `bingo-2` (entidades no plural, FKs declaradas à mão) tem snapshot com a normalização ligada, o padrão. O conteúdo de cada arquivo é comparado com um snapshot em `tests/__snapshots__/<fixture>/<path>`, e a lista de caminhos com `_paths.txt`. Os snapshots registram a saída atual, inclusive bugs conhecidos. Foram eles que provaram que a migração para templates (ticket 07) não mudou a saída.
 
 ### Sintaxe do PHP gerado
 

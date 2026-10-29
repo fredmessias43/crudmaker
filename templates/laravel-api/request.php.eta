@@ -1,0 +1,68 @@
+<?php
+
+namespace <%~ it.namespace %>;
+
+<% for (const use of it.imports) { -%>
+use <%~ use %>;
+<% } -%>
+
+
+class <%~ it.className %> extends <%~ it.extends %>
+{
+
+	/**
+	 * Determine if the user is authorized to make this request.
+	 *
+	 * @return bool
+	 */
+	public function authorize()
+	{
+		return true;
+	}
+
+	/**
+	 * Prepare the data for validation.
+	 *
+	 * @return void
+	 */
+	protected function prepareForValidation()
+	{
+			$<%~ it.entity.camel %> = $this->route('<%~ it.entity.snake %>');
+	
+			if ($<%~ it.entity.camel %> instanceof <%~ it.entity.pascal %>)
+			{
+					$this->merge(['id' => $<%~ it.entity.camel %>->id]);
+	
+<% for (const field of it.fields) { -%>
+					if ( ! $this->has('<%~ field.key %>'))
+					{
+							$this->merge(['<%~ field.key %>' => $<%~ it.entity.camel %>-><%~ field.key %>]);
+					}
+	
+<% } -%>
+			}
+			else
+			{
+					//
+			}
+	}
+
+	/**
+	 * Get the validation rules that apply to the request.
+	 *
+	 * @return array
+	*/
+	public function rules()
+	{
+			return [
+<% for (const rule of it.rules) { -%>
+				'<%~ rule.name %>' => array(
+<% for (const item of rule.items) { -%>
+					<%~ item %>,
+<% } -%>
+				),
+<% } -%>
+			];
+	}
+
+};

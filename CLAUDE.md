@@ -27,8 +27,9 @@ Gerador de API Laravel a partir de um manifest YAML ou JSON: lê entidades, camp
 - `src/validateManifest.ts`: pipeline de validação (schema → normalização de nomes → entre entidades) e `ManifestValidationError` com `{ path, message }` por problema.
 - `src/models/Manifest.ts`: valida via `validateManifest` e normaliza (formas curtas, aliases, campos de FK, unificação de FK declarada + derivada).
 - `src/models/Entity.ts`: nome da entidade em vários casings e nome da tabela.
-- `src/fileCreators/PhpFile.ts`: classe base dos geradores (casca do arquivo PHP e caminho relativo; não escreve no disco).
-- `src/fileCreators/*File.ts`: um gerador por tipo de arquivo PHP. `RoutesFile.ts` gera `routes/crudmaker.php` e o include no `routes/api.php` (não estende `PhpFile`).
+- `src/targets/types.ts`: `GeneratedFile` (`{ path, content, policy }`) e `FilePolicy`.
+- `src/targets/laravel-api/`: o target que transforma o modelo normalizado em arquivos Laravel. `index.ts` (`generateLaravelApi`, lista `entityFileTypes`), `render.ts` (motor Eta), `names.ts`, `fileType.ts` e `viewModels/<tipo>.ts` (variáveis de cada template, caminho do arquivo; também `routes.ts` com `ensureRoutesInclude`).
+- `templates/laravel-api/<tipo>.php.eta`: os templates do PHP gerado (model, migration, request, resource, collection, controller, routes). Vão no pacote publicado (`files` do `package.json`).
 - `generated/<pkg.code>/`: saída. Está no `.gitignore` e costuma conter projetos Laravel reais (com código escrito à mão).
 
 ## Documentação
@@ -42,7 +43,7 @@ Atualize os docs quando mudar o comportamento do gerador ou o formato do manifes
 
 ## Convenções
 
-- Os geradores montam PHP como arrays de linhas (`result.push(...)`), indentados com `this.tab` (`\t`) e unidos por `this.lineBreak`. Siga esse padrão até a migração para templates prevista na spec.
+- O PHP gerado vem de templates Eta em `templates/laravel-api/`, alimentados por view models em `src/targets/laravel-api/viewModels/` (a lógica fica no TS; o template só imprime). Mantenha a saída byte a byte: tabs, linhas só com `\t` e a linha final importam, e as tags de controle ficam sozinhas na linha, em coluna 0, terminando em `-%>`. Detalhes e passo a passo para um novo tipo de arquivo em `docs/arquitetura.md`.
 - O namespace base é sempre `App`, e a pasta de saída é derivada do namespace (`App\Http\...` → `app/Http/...`).
 - Os nomes de entidade no manifest ficam no singular; tabela = snake_case plural.
 - Documentação e comunicação em português.

@@ -1,0 +1,39 @@
+<?php
+
+namespace <%~ it.namespace %>;
+
+<% for (const use of it.imports) { -%>
+use <%~ use %>;
+<% } -%>
+
+
+class <%~ it.className %> extends <%~ it.extends %>
+{
+
+	/**
+	 * Transform the resource into an array.
+	 *
+	 * @param  \Illuminate\Http\Request  $request
+	 * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
+	 */
+	public function toArray($request)
+	{
+		$createdAt = $this->created_at->locale(App::getLocale());
+		$updatedAt = $this->updated_at->locale(App::getLocale());
+	
+		return [
+<% for (const field of it.fields) { -%>
+			'<%~ field.key %>' => $this-><%~ field.key %>,
+<% } -%>
+			'created_at' => array(
+				'timestamp' => $createdAt->timestamp,
+				'description' => $createdAt->diffForHumans(),
+			),
+			'updated_at' => array(
+				'timestamp' => $updatedAt->timestamp,
+				'description' => $updatedAt->diffForHumans(),
+			),
+		];
+	}
+
+};

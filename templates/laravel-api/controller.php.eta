@@ -1,0 +1,136 @@
+<?php
+
+namespace <%~ it.namespace %>;
+
+<% for (const use of it.imports) { -%>
+use <%~ use %>;
+<% } -%>
+
+
+class <%~ it.className %> extends <%~ it.extends %>
+{
+
+	/**
+	 * Display a listing of the resource.
+	 *
+	 * @return \Illuminate\Http\Response
+	 */
+	public function index()
+	{
+		try
+		{
+			$<%~ it.entity.camel %> = <%~ it.entity.pascal %>::all();
+	
+			return response()->json([
+				'status' => 200,
+				'data' => new <%~ it.entity.pascal %>Collection($<%~ it.entity.camel %>),
+			], 200);
+		}
+		catch(\Throwable $th)
+		{
+			throw new \Exception('<%~ it.entity.pascal %> can not be listed.' . $th->getMessage(), 500);
+		}
+	}
+
+
+	/**
+	 * Store a newly created resource in storage.
+	 *
+	 * @param  \App\Http\Requests\<%~ it.entity.pascal %>Request $request
+	 *
+	 * @return \Illuminate\Http\Response
+	 */
+	public function store(<%~ it.entity.pascal %>Request $request)
+	{
+		try
+		{
+			$<%~ it.entity.camel %> = <%~ it.entity.pascal %>::create($request->validated());
+	
+			return response()->json([
+				'status' => 201,
+				'message' => trans('<%~ it.entity.pascal %> created successfully.'),
+				'data' => new <%~ it.entity.pascal %>Resource($<%~ it.entity.camel %>),
+			], 201);
+		}
+		catch (\Throwable $th)
+		{
+			throw new \Exception('<%~ it.entity.pascal %> can not be created.' . $th->getMessage(), 500);
+		}
+	}
+
+
+	/**
+	 * Display the specified resource.
+	 *
+	 * @param  \App\Models\<%~ it.entity.pascal %> $<%~ it.entity.camel %>
+	 *
+	 * @return \Illuminate\Http\Response
+	 */
+	public function show(<%~ it.entity.pascal %> $<%~ it.entity.camel %>)
+	{
+		try
+		{
+			return response()->json([
+				'status' => 200,
+				'data' => new <%~ it.entity.pascal %>Resource($<%~ it.entity.camel %>),
+			], 200);
+		}
+		catch(\Throwable $th)
+		{
+			throw new \Exception('<%~ it.entity.pascal %> can not be shown.' . $th->getMessage(), 500);
+		}
+	}
+
+
+	/**
+	 * Update the specified resource in storage.
+	 *
+	 * @param  \App\Http\Requests\<%~ it.entity.pascal %>Request $request
+	 *
+	 * @return \Illuminate\Http\Response
+	 */
+	public function update(<%~ it.entity.pascal %>Request $request, <%~ it.entity.pascal %> $<%~ it.entity.camel %>)
+	{
+		try
+		{
+			$<%~ it.entity.camel %>->update($request->validated());
+	
+			return response()->json([
+				'status' => 201,
+				'message' => trans('<%~ it.entity.pascal %> updated successfully.'),
+				'data' => new <%~ it.entity.pascal %>Resource($<%~ it.entity.camel %>),
+			], 201);
+		}
+		catch (\Throwable $th)
+		{
+			throw new \Exception('<%~ it.entity.pascal %> can not be updated.' . $th->getMessage(), 500);
+		}
+	}
+
+
+	/**
+	 * Remove the specified resource from storage.
+	 *
+	 * @param  \App\Models\<%~ it.entity.pascal %> $<%~ it.entity.camel %>
+	 *
+	 * @return \Illuminate\Http\Response
+	 */
+	public function destroy(<%~ it.entity.pascal %> $<%~ it.entity.camel %>)
+	{
+		try
+		{
+			$<%~ it.entity.camel %>->delete();
+	
+			return response()->json([
+				'status' => 204,
+				'message' => trans('<%~ it.entity.pascal %> deleted successfully.'),
+				'data' => new <%~ it.entity.pascal %>Resource($<%~ it.entity.camel %>),
+			], 204);
+		}
+		catch(\Throwable $th)
+		{
+			throw new \Exception('<%~ it.entity.pascal %> can not be deleted.' . $th->getMessage(), 500);
+		}
+	}
+
+};

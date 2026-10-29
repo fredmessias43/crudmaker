@@ -1,0 +1,47 @@
+<?php
+
+
+<% for (const use of it.imports) { -%>
+use <%~ use %>;
+<% } -%>
+
+
+return new class extends Migration
+{
+
+	/**
+	 * Run the migrations.
+	 *
+	 * @return void
+	 */
+	public function up()
+	{
+		Schema::create('<%~ it.table %>', function (Blueprint $table) {
+<% for (const column of it.columns) { -%>
+			<%~ column %>
+<% } -%>
+	
+<% for (const foreign of it.foreignKeys) { -%>
+			$table->foreign('<%~ foreign.field %>')->references('id')->on('<%~ foreign.table %>');
+<% } -%>
+	
+			$table->timestamps();
+			$table->softDeletes();
+<% for (const name of it.uniques) { -%>
+			$table->unique('<%~ name %>');
+<% } -%>
+		});
+	}
+
+
+	/**
+	 * Reverse the migrations.
+	 *
+	 * @return void
+	 */
+	public function down(): void
+	{
+		Schema::dropIfExists('<%~ it.table %>');
+	}
+
+};

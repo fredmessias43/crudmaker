@@ -1,0 +1,49 @@
+<?php
+
+namespace <%~ it.namespace %>;
+
+<% for (const use of it.imports) { -%>
+use <%~ use %>;
+<% } -%>
+
+
+class <%~ it.className %> extends <%~ it.extends %>
+{
+<% for (const trait of it.traits) { -%>
+	use <%~ trait %>;
+<% } -%>
+
+	protected $keyType = "string";
+	public $incrementing = false;
+	
+	/**
+	 * The attributes that should be cast.
+	 *
+	 * @var array
+	 */
+	protected $casts = [
+<% for (const cast of it.casts) { -%>
+		'<%~ cast.name %>' => '<%~ cast.cast %>',
+<% } -%>
+	];
+	
+	/**
+	 * The attributes that are mass assignable.
+	 *
+	 * @var array
+	 */
+	protected $fillable = [
+<% for (const name of it.fillable) { -%>
+		'<%~ name %>',
+<% } -%>
+	];
+
+<% for (const relation of it.relations) { -%>
+	public function <%~ relation.name %>(): <%~ relation.returnType %>
+	{
+		return $this-><%~ relation.method %>(<%~ relation.arguments %>);
+	}
+	
+<% } -%>
+
+};
