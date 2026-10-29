@@ -92,12 +92,14 @@ Propriedades da forma completa:
 | `string` | `string()` | `string` | — |
 | `text` | `text()` | `string` | — |
 | `integer` (alias `int`) | `integer()` | `integer` | `integer` |
-| `double` | `double()` | `double` | `double` |
+| `double` | `double()` | `numeric` | `double` |
 | `boolean` | `boolean()` | `boolean` | `boolean` |
 | `date` | `date()` | `date_format:Y-m-d` | `date` |
 | `datetime` | `datetime()` | `date_format:Y-m-d H:i` | `datetime` |
 | `json` | `json()` | `array` | `array` |
 | `enum` | `enum(..., [itens])` com default no primeiro item | `Rule::in([itens])` | — |
+
+Todas as regras geradas existem no Laravel 10–12 (`bail`, `required`, `nullable`, `uuid`, `string`, `numeric`, `integer`, `boolean`, `array`, `date_format`, `Rule::in`, `Rule::unique`). O `json` usa `array` (e não a regra `json` do Laravel, que valida uma string JSON) porque o corpo chega já decodificado e o cast da model é `array`.
 
 O tipo especial `displayName` vira um campo `string` chamado `display_name`, seja qual for a chave usada.
 
@@ -140,7 +142,20 @@ O que cada tipo gera:
 | `hasOne` | Método `hasOne` na model (a FK fica do outro lado, declarada com `belongsTo`). |
 | `hasMany` | Método `hasMany` na model, com nome no plural (`alerts()`). |
 
-Quando `field` é diferente de `<entidade>_id`, o método da model recebe o nome do campo sem o `_id` (`author_id` → `author()`) e a FK é passada explicitamente.
+### FK customizada (`field`)
+
+Em todos os tipos, `field` é a coluna de FK **no lado filho** (a entidade que tem o `belongsTo`). Quando é diferente de `<entidade>_id`, a model passa a FK explicitamente (`$foreignKey`); a chave do pai continua `id`:
+
+| Declaração | Método gerado |
+|---|---|
+| `orderItem`: `belongsTo: [{ entity: user, field: author_id }]` | `author(): BelongsTo` → `belongsTo(User::class, 'author_id')` |
+| `user`: `hasMany: [{ entity: orderItem, field: author_id }]` | `orderItemsByAuthor(): HasMany` → `hasMany(OrderItem::class, 'author_id')` |
+| `user`: `hasOne: [{ entity: profile, field: author_id }]` | `profileByAuthor(): HasOne` → `hasOne(Profile::class, 'author_id')` |
+
+- No `belongsTo`, o método leva o nome do campo sem o `_id` (`author_id` → `author()`).
+- No `hasOne`/`hasMany`, `field` deve ser o mesmo nome declarado no `belongsTo` do filho (o gerador não confere isso). O método leva `<entidade relacionada (plural no hasMany)>By<Campo>` (`orderItemsByAuthor`), para não colidir com `author()` do outro lado nem entre dois relacionamentos com o mesmo filho.
+- Com a FK padrão, o método leva só o nome da entidade (`orders()`) e o Eloquent deduz as chaves.
+- No `hasOne`/`hasMany` o `field` não cria coluna: a coluna vem do `belongsTo` do filho. Sem `field`, o valor padrão (`<filho>_id`) só indica que o Eloquent deve deduzir a FK.
 
 Na forma curta a FK é sempre `<entidade em snake_case>_id` (`"belongsTo": ["orderItem"]` gera `order_item_id`), com a [normalização de nomes](#normalização-de-nomes) ligada ou desligada; a FK da migration (`->on('order_items')`) aponta para a tabela em snake_case plural.
 

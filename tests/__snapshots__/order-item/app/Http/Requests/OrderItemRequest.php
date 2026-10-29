@@ -117,7 +117,7 @@ class OrderItemRequest extends FormRequest
 				'price' => array(
 					'bail',
 					'required',
-					'double',
+					'numeric',
 				),
 				'gift' => array(
 					'bail',

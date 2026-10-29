@@ -9,11 +9,16 @@ const namespace = `${BASE_NAMESPACE}\\Http\\Requests`;
 function ruleItems(field: Field, table: string, routeParam: string): string[] {
   const items = ["'bail'", `'${field.required ? "required" : "nullable"}'`];
 
-  if (["uuid", "string", "double", "integer", "boolean"].includes(field.type)) {
+  if (["uuid", "string", "integer", "boolean"].includes(field.type)) {
     items.push(`'${field.type}'`);
+  } else if (field.type === "double") {
+    // O Laravel não tem a regra `double`; `numeric` aceita inteiros e decimais.
+    items.push("'numeric'");
   } else if (field.type === "text") {
     items.push("'string'");
   } else if (field.type === "json") {
+    // O corpo chega como JSON já decodificado (array/objeto), que é o que o cast `array` espera;
+    // a regra `json` do Laravel valida uma string JSON, não serve aqui.
     items.push("'array'");
   } else if (field.type === "date") {
     items.push("'date_format:Y-m-d'");

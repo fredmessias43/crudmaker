@@ -166,10 +166,24 @@
         }
       },
       "relationships": {
+        "hasOne": [
+          {
+            "entity": "order",
+            "field": "user_id",
+            "required": true,
+            "relationship": "hasOne"
+          }
+        ],
         "hasMany": [
           {
             "entity": "order",
             "field": "order_id",
+            "required": true,
+            "relationship": "hasMany"
+          },
+          {
+            "entity": "orderItem",
+            "field": "author_id",
             "required": true,
             "relationship": "hasMany"
           }

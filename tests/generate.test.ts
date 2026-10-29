@@ -152,6 +152,73 @@ describe("generate (order-item)", () => {
     expect(request).toContain("$this->merge(['quantity' => $orderItem->quantity]);");
   });
 
+  // Regras que existem no Laravel 10–12 e que a request gerada pode usar (sem os parâmetros, ex.: `date_format:...`).
+  const validRules = ["bail", "required", "nullable", "uuid", "string", "numeric", "integer", "boolean", "array", "date_format"];
+
+  /** Itens do `array(...)` de regras de cada campo na request (um item por linha, sem a vírgula final). */
+  function allRules(request: string): { [field: string]: string[] } {
+    const result: { [field: string]: string[] } = {};
+    for (const match of request.matchAll(/^\s*'(\w+)' => array\(\n([\s\S]*?)\n\s*\),$/gm)) {
+      result[match[1]] = match[2].split("\n").map((line) => line.trim().replace(/,$/, ""));
+    }
+    return result;
+  }
+
+  it("cada tipo de campo gera a regra de validação certa", () => {
+    const request = content("app/Http/Requests/OrderItemRequest.php");
+    const expected: { [field: string]: string[] } = {
+      sku: ["'bail'", "'required'", "'string'", "Rule::unique('order_items', 'sku')->ignore($this->route('order_item'))"],
+      quantity: ["'bail'", "'required'", "'integer'"],
+      price: ["'bail'", "'required'", "'numeric'"],
+      gift: ["'bail'", "'required'", "'boolean'"],
+      options: ["'bail'", "'nullable'", "'array'"],
+      shipped_on: ["'bail'", "'nullable'", "'date_format:Y-m-d'"],
+      packed_at: ["'bail'", "'nullable'", "'date_format:Y-m-d H:i'"],
+      status: ["'bail'", "'required'", "Rule::in(array('pending','shipped'))"],
+      order_id: ["'bail'", "'required'", "'uuid'"],
+      author_id: ["'bail'", "'required'", "'uuid'"],
+    };
+
+    const rules = allRules(request);
+    for (const [field, items] of Object.entries(expected)) {
+      expect(rules[field], field).toEqual(items);
+    }
+  });
+
+  it("nenhuma request usa regra inexistente no Laravel (nem `double`)", () => {
+    for (const file of files.filter((f) => f.path.startsWith("app/Http/Requests/"))) {
+      expect(file.content).not.toContain("'double'");
+      const rules = Object.values(allRules(file.content)).flat();
+      expect(rules.length).toBeGreaterThan(0);
+      for (const rule of rules) {
+        if (rule.startsWith("Rule::")) continue;
+        const name = rule.replace(/^'|'$/g, "").split(":")[0];
+        expect(validRules, `${file.path}: ${rule}`).toContain(name);
+      }
+    }
+  });
+
+  it("belongsTo com FK customizada passa só a FK (foreignKey) e o método leva o nome da FK sem _id", () => {
+    const model = content("app/Models/OrderItem.php");
+
+    expect(model).toContain("public function author(): BelongsTo");
+    expect(model).toContain("return $this->belongsTo(User::class, 'author_id');");
+    expect(model).not.toContain("'id', 'author_id'");
+    expect(model).toContain("return $this->belongsTo(Order::class);");
+  });
+
+  it("hasMany e hasOne com FK customizada apontam para a coluna do filho", () => {
+    const user = content("app/Models/User.php");
+
+    expect(user).toContain("public function orderItemsByAuthor(): HasMany");
+    expect(user).toContain("return $this->hasMany(OrderItem::class, 'author_id');");
+    expect(user).toContain("public function orderByUser(): HasOne");
+    expect(user).toContain("return $this->hasOne(Order::class, 'user_id');");
+    // com a FK padrão, o Eloquent deduz tudo
+    expect(user).toContain("return $this->hasMany(Order::class);");
+    expect(user).not.toContain("'id', 'author_id'");
+  });
+
   it("a model tem um cast por tipo que precisa dele", () => {
     const model = content("app/Models/OrderItem.php");
 

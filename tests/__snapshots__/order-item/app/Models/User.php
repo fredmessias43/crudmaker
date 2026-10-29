@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 
@@ -37,9 +38,19 @@ class User extends Model
 		'name',
 	];
 
+	public function orderByUser(): HasOne
+	{
+		return $this->hasOne(Order::class, 'user_id');
+	}
+	
 	public function orders(): HasMany
 	{
 		return $this->hasMany(Order::class);
+	}
+	
+	public function orderItemsByAuthor(): HasMany
+	{
+		return $this->hasMany(OrderItem::class, 'author_id');
 	}
 	
 

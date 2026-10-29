@@ -122,5 +122,3 @@ Os controllers não têm try/catch: erros chegam ao handler do Laravel e saem co
 Os bugs do código gerado e as limitações do manifest estão listados em [manifest.md](manifest.md#limitações-conhecidas) e na spec da v2. Os principais:
 
 - a model usa `HasFactory`, mas nenhuma factory é gerada;
-- a regra de validação `double` não existe no Laravel (use `numeric` à mão se precisar);
-- a model de uma FK com nome customizado (`field: "author_id"`) passa as chaves de `belongsTo`/`hasMany` na ordem trocada.

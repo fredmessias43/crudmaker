@@ -38,7 +38,8 @@
           "name": "string"
         },
         "relationships": {
-          "hasMany": ["order"]
+          "hasMany": ["order", { "entity": "orderItem", "field": "author_id" }],
+          "hasOne": [{ "entity": "order", "field": "user_id" }]
         }
       }
     }

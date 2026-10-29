@@ -23,6 +23,7 @@ Até o ticket 15 (versão alvo), o código gerado mira o layout do Laravel 11+.
 | 08 | [Corrigir o comportamento dos controllers](fase-2-bugs/08-corrigir-controllers.md) | 07 |
 | 09 | [Corrigir schema, migrations e validação](fase-2-bugs/09-corrigir-schema-e-validacao.md) | 07, 04 |
 | 22 | [Normalizar nomes fora da convenção](fase-2-bugs/22-normalizar-nomes.md) | 04 |
+| 23 | [Regra `double` e FK customizada na model](fase-2-bugs/23-regra-double-e-fk-customizada.md) | 09 |
 
 ## Fase 3 — Arquitetura de customização
 
