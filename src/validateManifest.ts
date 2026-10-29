@@ -1,4 +1,5 @@
 import { pascalCase } from "change-case";
+import { enumCaseName } from "./enumCase";
 import { findCycles } from "./dependencyOrder";
 import { entityColumns, IMPLICIT_SORT_COLUMNS, withableRelations } from "./apiOptions";
 import { ENTITY_ONLY_API_KEYS, INPUT_FIELD_TYPES, manifestSchema, ManifestInput, RelationItemInput } from "./manifestSchema";
@@ -109,6 +110,59 @@ function relationTarget(item: RelationItemInput): string {
   return typeof item === "string" ? item : item.entity;
 }
 
+/**
+ * Cada item do enum vira um `case` do PHP enum (`enumCaseName`). Erro para item que não vira identificador
+ * válido (`2fa`, só símbolos, `class`) e para itens que dão o mesmo nome (`in-progress` e `in_progress`).
+ */
+function enumCaseProblems(path: string, items: string[]): ManifestProblem[] {
+  const problems: ManifestProblem[] = [];
+  const seen = new Map<string, string>();
+
+  items.forEach((item, index) => {
+    const name = enumCaseName(item);
+    if (name === undefined) {
+      problems.push({
+        path: `${path}[${index}]`,
+        message: `o item ${JSON.stringify(item)} não vira um nome de case válido no PHP enum (use letras, números e _ ou -, sem começar por número, e não use "class")`,
+      });
+      return;
+    }
+
+    const first = seen.get(name);
+    if (first === undefined) seen.set(name, item);
+    else {
+      problems.push({
+        path: `${path}[${index}]`,
+        message: `o item ${JSON.stringify(item)} gera o mesmo case "${name}" que ${JSON.stringify(first)}; deixe os itens diferentes depois da conversão para PascalCase`,
+      });
+    }
+  });
+
+  return problems;
+}
+
+/** Duas entidades/campos que geram o mesmo nome de PHP enum (`orderItem.status` e `order.itemStatus` → `OrderItemStatus`). Roda com os nomes normalizados. */
+function validateEnumClassNames(manifest: ManifestInput, originalEntityKeys: { [normalized: string]: string }): ManifestProblem[] {
+  const problems: ManifestProblem[] = [];
+  const seen = new Map<string, string>();
+
+  for (const [entityName, entity] of Object.entries(manifest.pkg.entities)) {
+    const base = `pkg.entities.${originalEntityKeys[entityName] ?? entityName}`;
+
+    for (const [fieldKey, field] of Object.entries(entity.fields ?? {})) {
+      if (typeof field === "string" || field.type !== "enum") continue;
+
+      const className = `${pascalCase(entityName)}${pascalCase(field.name ?? fieldKey)}`;
+      const path = `${base}.fields.${fieldKey}`;
+      const first = seen.get(className);
+      if (first === undefined) seen.set(className, path);
+      else problems.push({ path, message: `gera o PHP enum ${className}, o mesmo de ${first}; renomeie a entidade ou o campo` });
+    }
+  }
+
+  return problems;
+}
+
 /** Campos enum sem `enumItems`. Roda com os nomes originais, para os caminhos baterem com o arquivo. */
 function validateEnums(manifest: ManifestInput): ManifestProblem[] {
   const problems: ManifestProblem[] = [];
@@ -121,7 +175,10 @@ function validateEnums(manifest: ManifestInput): ManifestProblem[] {
       if (type !== "enum") continue;
 
       const items = typeof field === "string" ? undefined : field.enumItems;
-      if (items && items.length > 0) continue;
+      if (items && items.length > 0) {
+        problems.push(...enumCaseProblems(`${base}.fields.${fieldKey}.enumItems`, items));
+        continue;
+      }
 
       problems.push(
         typeof field === "string"
@@ -411,6 +468,7 @@ export function validateManifest(obj: unknown, options: ValidateOptions = {}): V
     problems.push(...targetProblems);
     problems.push(...validateEntities(normalized.manifest, normalized.originalEntityKeys));
     problems.push(...validateApiNames(normalized.manifest, normalized.originalEntityKeys));
+    problems.push(...validateEnumClassNames(normalized.manifest, normalized.originalEntityKeys));
     // Alvos inexistentes já são erro; o ciclo só faz sentido num grafo completo.
     if (targetProblems.length === 0) {
       problems.push(...validateForeignKeyCycles(normalized.manifest, normalized.originalEntityKeys));

@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use App\Generated\Enums\OrderItemStatus;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Models\Order;
 use App\Models\User;
@@ -38,6 +39,7 @@ abstract class BaseOrderItem extends Model
 			'options' => 'array',
 			'shipped_on' => 'date',
 			'packed_at' => 'datetime',
+			'status' => OrderItemStatus::class,
 		];
 	}
 	

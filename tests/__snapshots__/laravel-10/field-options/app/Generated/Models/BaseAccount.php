@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use App\Generated\Enums\AccountStatus;
+use App\Generated\Enums\AccountPlan;
 
 
 abstract class BaseAccount extends Model
@@ -27,6 +29,8 @@ abstract class BaseAccount extends Model
 	 * @var array
 	 */
 	protected $casts = [
+		'status' => AccountStatus::class,
+		'plan' => AccountPlan::class,
 		'age' => 'integer',
 		'credit' => 'double',
 		'score' => 'integer',

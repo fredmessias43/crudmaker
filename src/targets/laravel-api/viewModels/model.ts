@@ -3,11 +3,12 @@ import { relationName } from "../../../relationNames";
 import { snakeCase } from "lodash";
 import { EntityFileType } from "../fileType";
 import { BASE_NAMESPACE, entityNames } from "../names";
+import { enumClass } from "./enum";
 import { classHeader, classPair, finalClassFile } from "./classHeader";
 
 const namespace = `${BASE_NAMESPACE}\\Models`;
 
-/** Cast do Eloquent por tipo de campo. Tipos fora da lista (uuid, string, text, enum) não precisam de cast. */
+/** Cast do Eloquent por tipo de campo. Tipos fora da lista (uuid, string, text) não precisam de cast; enum tem cast próprio, para o PHP enum gerado. */
 const castTypes: { [type: string]: string } = {
   boolean: "boolean",
   json: "array",
@@ -37,10 +38,17 @@ export const modelBaseFile: EntityFileType = {
       "Illuminate\\Database\\Eloquent\\Concerns\\HasUuids",
     ];
 
+    // `cast` já é a expressão PHP: texto entre aspas ('boolean') ou a classe do enum (ClientStatus::class).
     const casts: { name: string; cast: string }[] = [];
     for (const [, field] of fields) {
+      if (field.type === "enum") {
+        const enumRef = enumClass(entity, field);
+        imports.push(enumRef.fqcn);
+        casts.push({ name: field.name, cast: `${enumRef.className}::class` });
+        continue;
+      }
       const cast = castTypes[field.type];
-      if (cast !== undefined) casts.push({ name: field.name, cast });
+      if (cast !== undefined) casts.push({ name: field.name, cast: `'${cast}'` });
     }
 
     const relations = Object.values(entity.relationships)

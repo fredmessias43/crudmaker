@@ -287,7 +287,14 @@ describe.each(["bingo", "curso", "vende-que-vende-api", "field-options"])("saíd
     const different = [...l10.keys()].filter((file) => l10.get(file) !== l12.get(file));
 
     expect([...l10.keys()]).toEqual([...l12.keys()]);
-    expect(different.filter((file) => file !== "manifest-lock.json" && !file.startsWith("app/Generated/Models/"))).toEqual([]);
+    expect(different.filter((file) => file !== "manifest-lock.json" && !file.startsWith("app/Generated/Models/") && !file.startsWith("app/Models/"))).toEqual([]);
+
+    // A model final só difere no nome do mecanismo de casts citado nos comentários.
+    for (const file of different.filter((file) => file.startsWith("app/Models/"))) {
+      expect(l10.get(file)).toContain("$casts");
+      expect(l12.get(file)).toContain("casts()");
+      expect(l10.get(file)!.replaceAll("$casts", "casts()")).toBe(l12.get(file));
+    }
     expect(different).toContain("manifest-lock.json");
     expect(withoutTarget(l10.get("manifest-lock.json")!)).toBe(withoutTarget(l12.get("manifest-lock.json")!));
 

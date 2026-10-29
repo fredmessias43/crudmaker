@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use App\Generated\Enums\PlayerInviteStatus;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Models\Player;
 use App\Models\Game;
@@ -30,6 +31,7 @@ abstract class BasePlayerInvite extends Model
 	 * @var array
 	 */
 	protected $casts = [
+		'status' => PlayerInviteStatus::class,
 	];
 	
 	/**

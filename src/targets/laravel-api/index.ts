@@ -9,6 +9,7 @@ import { EntityFileType } from "./fileType";
 import { renderTemplate, Stubs } from "./render";
 import { collectionBaseFile, collectionFinalFile } from "./viewModels/collection";
 import { controllerBaseFile, controllerFinalFile } from "./viewModels/controller";
+import { enumFiles } from "./viewModels/enum";
 import { existingMigration, foreignKeyTable, migrationFile } from "./viewModels/migration";
 import { alterView, alterWarnings, diffEntity, lockChanges } from "./viewModels/migrationAlter";
 import { modelBaseFile, modelFinalFile } from "./viewModels/model";
@@ -98,6 +99,11 @@ function obsoleteFiles(previous: Entity[], currentPaths: Set<string>, input: Lar
 
       obsolete.push({ path, kind: fileType.layer });
     }
+
+    // Enums de campos enum: camada gerada. Campo que deixou de ser enum também deixa o arquivo obsoleto.
+    for (const { path } of enumFiles(entity)) {
+      if (!currentPaths.has(path)) obsolete.push({ path, kind: "generated" });
+    }
   }
 
   return obsolete;
@@ -166,6 +172,11 @@ export function generateLaravelApi(input: LaravelApiInput): LaravelApiOutput {
         ...(generatedBase && { generatedBase }),
       });
       if (fileType.layer === "migration") migrations.push({ file: baseName(path), table: entity.getTableName(), type: "create" });
+    }
+
+    // Um PHP enum por campo enum: dado puro derivado do manifest, arquivo único sempre regravado (sem camada final).
+    for (const { path, view } of enumFiles(entity)) {
+      files.push({ path, content: render("enum", view), policy: "overwrite" });
     }
   }
 

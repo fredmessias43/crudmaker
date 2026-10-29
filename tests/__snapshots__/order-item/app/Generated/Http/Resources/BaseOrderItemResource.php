@@ -33,7 +33,7 @@ abstract class BaseOrderItemResource extends JsonResource
 			'options' => $this->options,
 			'shipped_on' => $this->shipped_on,
 			'packed_at' => $this->packed_at,
-			'status' => $this->status,
+			'status' => $this->status?->value,
 			'order_id' => $this->order_id,
 			'author_id' => $this->author_id,
 			'created_at' => array(

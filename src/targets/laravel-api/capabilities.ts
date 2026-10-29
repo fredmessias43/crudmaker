@@ -12,7 +12,7 @@ export type Capabilities = {
   apiRoutesViaBootstrap: boolean;
   /** Laravel 11+: `->change()` nativo na migration. No 10 exige o pacote `doctrine/dbal`. */
   nativeColumnChange: boolean;
-  /** PHP 8.1+: backed enums (e `Rule::enum`). Sempre verdadeiro hoje, já que 8.1 é o mínimo; usado pelo ticket 16. */
+  /** PHP 8.1+: backed enums (e `Rule::enum`). Sempre verdadeira hoje, já que 8.1 é o mínimo suportado; por isso a geração de enums (ticket 16) não tem alternativa para o PHP anterior. `Rule::enum` existe desde o Laravel 9, então vale também no 10. */
   backedEnums: boolean;
   /** PHP 8.2+: classes `readonly` e `true`/`false`/`null` como tipos. Ainda não usada. */
   readonlyClasses: boolean;

@@ -7,6 +7,7 @@ namespace App\Generated\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use App\Models\Client;
+use App\Generated\Enums\ClientStatus;
 use Illuminate\Validation\Rule;
 
 
@@ -53,7 +54,7 @@ abstract class BaseClientRequest extends FormRequest
 	
 					if ( ! $this->has('status'))
 					{
-							$this->merge(['status' => $client->status]);
+							$this->merge(['status' => $client->status?->value]);
 					}
 	
 					if ( ! $this->has('vip'))
@@ -111,7 +112,7 @@ abstract class BaseClientRequest extends FormRequest
 				'status' => array(
 					'bail',
 					'required',
-					Rule::in(array('active','blocked')),
+					Rule::enum(ClientStatus::class),
 				),
 				'vip' => array(
 					'bail',

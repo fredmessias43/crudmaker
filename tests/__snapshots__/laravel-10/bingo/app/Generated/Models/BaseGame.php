@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use App\Generated\Enums\GameStatus;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\Awards;
 use App\Models\PlayerInvite;
@@ -33,6 +34,7 @@ abstract class BaseGame extends Model
 	 */
 	protected $casts = [
 		'max_players' => 'integer',
+		'status' => GameStatus::class,
 	];
 	
 	/**

@@ -10,6 +10,7 @@ app/Http/Controllers/Api/ClientController.php
 app/Generated/Http/Requests/BaseClientRequest.php
 app/Http/Requests/ClientRequest.php
 database/migrations/2025_01_02_030405_create_clients_table.php
+app/Generated/Enums/ClientStatus.php
 app/Generated/Models/BaseAddress.php
 app/Models/Address.php
 app/Generated/Http/Resources/BaseAddressResource.php

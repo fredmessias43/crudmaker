@@ -7,6 +7,7 @@ namespace App\Generated\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use App\Models\Award;
+use Illuminate\Validation\Rule;
 
 
 abstract class BaseAwardRequest extends FormRequest
@@ -100,6 +101,7 @@ abstract class BaseAwardRequest extends FormRequest
 					'bail',
 					'required',
 					'uuid',
+					Rule::exists('games', 'id'),
 				),
 				'name' => array(
 					'bail',

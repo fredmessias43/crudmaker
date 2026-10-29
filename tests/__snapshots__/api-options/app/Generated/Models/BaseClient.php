@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use App\Generated\Enums\ClientStatus;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\Address;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -33,6 +34,7 @@ abstract class BaseClient extends Model
 	protected function casts(): array
 	{
 		return [
+			'status' => ClientStatus::class,
 			'vip' => 'boolean',
 		];
 	}

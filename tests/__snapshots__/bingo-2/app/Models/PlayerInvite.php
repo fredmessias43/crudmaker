@@ -8,7 +8,7 @@ use App\Generated\Models\BasePlayerInvite;
  * Camada de customização da model PlayerInvite.
  *
  * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
- * O código gerado (traits, $casts, $fillable e relacionamentos do manifest) fica em
+ * O código gerado (traits, casts(), $fillable e relacionamentos do manifest) fica em
  * App\Generated\Models\BasePlayerInvite (app/Generated/Models/BasePlayerInvite.php), que não deve ser editada.
  */
 class PlayerInvite extends BasePlayerInvite
@@ -22,6 +22,6 @@ class PlayerInvite extends BasePlayerInvite
 	 *   - eventos no booted() (static::creating, static::deleting...);
 	 *   - mais casts ou campos em massa, somados aos gerados: $this->mergeCasts([...]) e
 	 *     $this->mergeFillable([...]) num __construct(array $attributes = []) que chame parent::__construct($attributes).
-	 *     (Redeclarar $casts ou $fillable aqui substituiria os gerados.)
+	 *     (Redeclarar casts() ou $fillable aqui substituiria os gerados.)
 	 */
 }

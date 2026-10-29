@@ -8,7 +8,7 @@ use App\Generated\Models\BaseCourseContent;
  * Camada de customização da model CourseContent.
  *
  * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
- * O código gerado (traits, $casts, $fillable e relacionamentos do manifest) fica em
+ * O código gerado (traits, casts(), $fillable e relacionamentos do manifest) fica em
  * App\Generated\Models\BaseCourseContent (app/Generated/Models/BaseCourseContent.php), que não deve ser editada.
  */
 class CourseContent extends BaseCourseContent
@@ -22,6 +22,6 @@ class CourseContent extends BaseCourseContent
 	 *   - eventos no booted() (static::creating, static::deleting...);
 	 *   - mais casts ou campos em massa, somados aos gerados: $this->mergeCasts([...]) e
 	 *     $this->mergeFillable([...]) num __construct(array $attributes = []) que chame parent::__construct($attributes).
-	 *     (Redeclarar $casts ou $fillable aqui substituiria os gerados.)
+	 *     (Redeclarar casts() ou $fillable aqui substituiria os gerados.)
 	 */
 }

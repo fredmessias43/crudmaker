@@ -7,6 +7,7 @@ namespace App\Generated\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use App\Models\UserCourse;
+use Illuminate\Validation\Rule;
 
 
 abstract class BaseUserCourseRequest extends FormRequest
@@ -100,11 +101,13 @@ abstract class BaseUserCourseRequest extends FormRequest
 					'bail',
 					'required',
 					'uuid',
+					Rule::exists('users', 'id'),
 				),
 				'course_id' => array(
 					'bail',
 					'required',
 					'uuid',
+					Rule::exists('courses', 'id'),
 				),
 			];
 	}

@@ -26,7 +26,7 @@ abstract class <%~ it.className %> extends <%~ it.extends %>
 	
 		return array_merge([
 <% for (const field of it.fields) { -%>
-			'<%~ field.key %>' => $this-><%~ field.key %>,
+			'<%~ field.key %>' => $this-><%~ field.key %><%~ field.enum ? '?->value' : '' %>,
 <% } -%>
 			'created_at' => array(
 				'timestamp' => $createdAt->timestamp,

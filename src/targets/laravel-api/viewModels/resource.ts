@@ -26,8 +26,8 @@ export const resourceBaseFile: EntityFileType = {
           extends: "JsonResource",
           layer: "base",
         }),
-        // Campos `hidden` não saem no JSON.
-        fields: Object.entries(entity.fields).filter(([, field]) => !field.hidden).map(([key]) => ({ key })),
+        // Campos `hidden` não saem no JSON. Campo enum vira objeto enum pelo cast da model; o JSON leva o valor (`?->value`).
+        fields: Object.entries(entity.fields).filter(([, field]) => !field.hidden).map(([key, field]) => ({ key, enum: field.type === "enum" })),
         /** Relacionamentos de `api.with`: entram só se carregados (`whenLoaded`), com o nome do método como chave. */
         relations,
       },

@@ -124,6 +124,8 @@ Para cada entidade (`Client`, no exemplo) são escritos dois arquivos por classe
 | Resource | `app/Generated/Http/Resources/BaseClientResource.php` | `app/Http/Resources/ClientResource.php` |
 | Collection | `app/Generated/Http/Resources/BaseClientCollection.php` | `app/Http/Resources/ClientCollection.php` |
 
+Cada campo `enum` ainda gera um PHP enum em `app/Generated/Enums/<Entidade><Campo>.php` (`ClientStatus.php`): arquivo único `overwrite`, sem classe final, usado no cast da model e na regra da request (veja [Enums](manifest.md#enums)).
+
 | Arquivo | Pasta | Política |
 |---|---|---|
 | `<data>_create_<tabela>_table.php` | `database/migrations/` | `overwrite` na primeira geração; depois de emitida (a tabela consta no lock) vira `create-once`. Arquivo único, sem base nem final |
@@ -290,9 +292,10 @@ Os templates usam [Eta](https://eta.js.org): `<%~ it.x %>` imprime sem escape, e
 
 | Stub | Variáveis específicas |
 |---|---|
-| `model.base` | `fillable`, `hidden`, `casts`, `traits`, `relations` (métodos de relacionamento) |
+| `model.base` | `fillable`, `hidden`, `casts` (`name` e `cast`, este já como expressão PHP: `'boolean'` ou `ClientStatus::class`), `traits`, `relations` (métodos de relacionamento) |
 | `request.base` | `fields`, `rules` (regras de validação por campo) |
-| `resource.base` | `fields`, `relations` (relacionamentos de `api.with`) |
+| `resource.base` | `fields` (`key` e `enum`), `relations` (relacionamentos de `api.with`) |
+| `enum` | `namespace`, `className`, `entity`, `field`, `cases` (`name` e `value`, este já como literal PHP); não tem as variáveis de classe (`imports`, `extends`...) |
 | `collection.base` | `resourceClass` |
 | `controller.base` | `has` (quais actions existem), `hooks` (hooks mantidos), `index` (`with`, filtros, busca, ordenação, `perPage`), `withShow` |
 | `migration` | `table`, `columns`, `foreignKeys`, `uniques`, `imports` |

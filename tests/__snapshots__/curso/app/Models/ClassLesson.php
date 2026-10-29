@@ -8,7 +8,7 @@ use App\Generated\Models\BaseClassLesson;
  * Camada de customização da model ClassLesson.
  *
  * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
- * O código gerado (traits, $casts, $fillable e relacionamentos do manifest) fica em
+ * O código gerado (traits, casts(), $fillable e relacionamentos do manifest) fica em
  * App\Generated\Models\BaseClassLesson (app/Generated/Models/BaseClassLesson.php), que não deve ser editada.
  */
 class ClassLesson extends BaseClassLesson
@@ -22,6 +22,6 @@ class ClassLesson extends BaseClassLesson
 	 *   - eventos no booted() (static::creating, static::deleting...);
 	 *   - mais casts ou campos em massa, somados aos gerados: $this->mergeCasts([...]) e
 	 *     $this->mergeFillable([...]) num __construct(array $attributes = []) que chame parent::__construct($attributes).
-	 *     (Redeclarar $casts ou $fillable aqui substituiria os gerados.)
+	 *     (Redeclarar casts() ou $fillable aqui substituiria os gerados.)
 	 */
 }

@@ -7,6 +7,8 @@ namespace App\Generated\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use App\Models\Account;
+use App\Generated\Enums\AccountStatus;
+use App\Generated\Enums\AccountPlan;
 use Illuminate\Validation\Rule;
 
 
@@ -68,12 +70,12 @@ abstract class BaseAccountRequest extends FormRequest
 	
 					if ( ! $this->has('status'))
 					{
-							$this->merge(['status' => $account->status]);
+							$this->merge(['status' => $account->status?->value]);
 					}
 	
 					if ( ! $this->has('plan'))
 					{
-							$this->merge(['plan' => $account->plan]);
+							$this->merge(['plan' => $account->plan?->value]);
 					}
 	
 					if ( ! $this->has('age'))
@@ -184,12 +186,12 @@ abstract class BaseAccountRequest extends FormRequest
 				'status' => array(
 					'bail',
 					'required',
-					Rule::in(array('pending','active','blocked')),
+					Rule::enum(AccountStatus::class),
 				),
 				'plan' => array(
 					'bail',
 					'required',
-					Rule::in(array('free','pro')),
+					Rule::enum(AccountPlan::class),
 				),
 				'age' => array(
 					'bail',

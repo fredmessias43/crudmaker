@@ -36,9 +36,5 @@
     - [x] belongsTo propiedades
     - [x] nome do campos diferentes do nome da entidade, erro no nome da funcão model
     - [ ] arrumar o address
-- [ ] quando for enum 
-  - [ ] criar um arquivo de enum
-  - [ ] validar na request
-  - [ ] traduzir na resource
 - [ ] adicionar opção de selecionar o base path
 - [ ] mudar resource para ser EntityResource

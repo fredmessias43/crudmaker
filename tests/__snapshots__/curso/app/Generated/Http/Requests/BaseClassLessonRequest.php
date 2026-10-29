@@ -7,6 +7,7 @@ namespace App\Generated\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use App\Models\ClassLesson;
+use Illuminate\Validation\Rule;
 
 
 abstract class BaseClassLessonRequest extends FormRequest
@@ -105,6 +106,7 @@ abstract class BaseClassLessonRequest extends FormRequest
 					'bail',
 					'required',
 					'uuid',
+					Rule::exists('classrooms', 'id'),
 				),
 				'name' => array(
 					'bail',

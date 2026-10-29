@@ -7,6 +7,7 @@ namespace App\Generated\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use App\Models\PlayerInvite;
+use App\Generated\Enums\PlayerInviteStatus;
 use Illuminate\Validation\Rule;
 
 
@@ -53,7 +54,7 @@ abstract class BasePlayerInviteRequest extends FormRequest
 	
 					if ( ! $this->has('status'))
 					{
-							$this->merge(['status' => $playerInvite->status]);
+							$this->merge(['status' => $playerInvite->status?->value]);
 					}
 	
 			}
@@ -96,16 +97,18 @@ abstract class BasePlayerInviteRequest extends FormRequest
 					'bail',
 					'required',
 					'uuid',
+					Rule::exists('players', 'id'),
 				),
 				'game_id' => array(
 					'bail',
 					'required',
 					'uuid',
+					Rule::exists('games', 'id'),
 				),
 				'status' => array(
 					'bail',
 					'required',
-					Rule::in(array('pending','accepted','declined')),
+					Rule::enum(PlayerInviteStatus::class),
 				),
 			];
 	}

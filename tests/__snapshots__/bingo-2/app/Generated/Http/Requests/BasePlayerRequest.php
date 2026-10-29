@@ -7,6 +7,7 @@ namespace App\Generated\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use App\Models\Player;
+use Illuminate\Validation\Rule;
 
 
 abstract class BasePlayerRequest extends FormRequest
@@ -105,6 +106,7 @@ abstract class BasePlayerRequest extends FormRequest
 					'bail',
 					'required',
 					'uuid',
+					Rule::exists('games', 'id'),
 				),
 			];
 	}

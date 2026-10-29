@@ -7,6 +7,7 @@ namespace App\Generated\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use App\Models\Address;
+use Illuminate\Validation\Rule;
 
 
 abstract class BaseAddressRequest extends FormRequest
@@ -125,6 +126,7 @@ abstract class BaseAddressRequest extends FormRequest
 					'bail',
 					'required',
 					'uuid',
+					Rule::exists('clients', 'id'),
 				),
 			];
 	}

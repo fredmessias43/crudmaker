@@ -7,6 +7,7 @@ namespace App\Generated\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use App\Models\OrderItem;
+use App\Generated\Enums\OrderItemStatus;
 use Illuminate\Validation\Rule;
 
 
@@ -78,7 +79,7 @@ abstract class BaseOrderItemRequest extends FormRequest
 	
 					if ( ! $this->has('status'))
 					{
-							$this->merge(['status' => $orderItem->status]);
+							$this->merge(['status' => $orderItem->status?->value]);
 					}
 	
 					if ( ! $this->has('order_id'))
@@ -166,17 +167,19 @@ abstract class BaseOrderItemRequest extends FormRequest
 				'status' => array(
 					'bail',
 					'required',
-					Rule::in(array('pending','shipped')),
+					Rule::enum(OrderItemStatus::class),
 				),
 				'order_id' => array(
 					'bail',
 					'required',
 					'uuid',
+					Rule::exists('orders', 'id'),
 				),
 				'author_id' => array(
 					'bail',
 					'required',
 					'uuid',
+					Rule::exists('users', 'id'),
 				),
 			];
 	}

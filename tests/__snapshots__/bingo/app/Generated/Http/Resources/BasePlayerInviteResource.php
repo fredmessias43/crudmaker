@@ -28,7 +28,7 @@ abstract class BasePlayerInviteResource extends JsonResource
 			'id' => $this->id,
 			'player_id' => $this->player_id,
 			'game_id' => $this->game_id,
-			'status' => $this->status,
+			'status' => $this->status?->value,
 			'created_at' => array(
 				'timestamp' => $createdAt->timestamp,
 				'description' => $createdAt->diffForHumans(),

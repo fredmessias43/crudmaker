@@ -8,7 +8,7 @@ use App\Generated\Models\BaseDrawnNumber;
  * Camada de customização da model DrawnNumber.
  *
  * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
- * O código gerado (traits, $casts, $fillable e relacionamentos do manifest) fica em
+ * O código gerado (traits, casts(), $fillable e relacionamentos do manifest) fica em
  * App\Generated\Models\BaseDrawnNumber (app/Generated/Models/BaseDrawnNumber.php), que não deve ser editada.
  */
 class DrawnNumber extends BaseDrawnNumber
@@ -22,6 +22,6 @@ class DrawnNumber extends BaseDrawnNumber
 	 *   - eventos no booted() (static::creating, static::deleting...);
 	 *   - mais casts ou campos em massa, somados aos gerados: $this->mergeCasts([...]) e
 	 *     $this->mergeFillable([...]) num __construct(array $attributes = []) que chame parent::__construct($attributes).
-	 *     (Redeclarar $casts ou $fillable aqui substituiria os gerados.)
+	 *     (Redeclarar casts() ou $fillable aqui substituiria os gerados.)
 	 */
 }

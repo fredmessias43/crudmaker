@@ -192,7 +192,8 @@ Módulos do target:
 | `model` | Base: Model com UUID, SoftDeletes, `$casts`, `$fillable` e métodos de relacionamento. Final: vazia |
 | `migration` | Migration anônima de criação da tabela, com FKs, timestamps, soft deletes e índices únicos. Reaproveita o nome de uma migration já existente; depois de emitida (tabela no lock) não é mais reescrita |
 | `migration.alter` | Migration anônima de alteração (`Schema::table`) gerada pelo diff entre o lock anterior e o manifest atual; não é um tipo por entidade em `entityFileTypes`, `generateLaravelApi` a emite depois do laço das entidades |
-| `request` | Base: FormRequest com `prepareForValidation` (completa campos ausentes a partir da model da rota), `rules` e o hook `extraRules`. Final: vazia |
+| `enum` | Um por campo `enum` (não por entidade em `entityFileTypes`: `generateLaravelApi` o emite depois dos arquivos da entidade, via `enumFiles` em `viewModels/enum.ts`). Arquivo único `overwrite` em `app/Generated/Enums/<Entidade><Campo>.php`, sem final; é dado puro do manifest. O nome do case vem de `enumCaseName` (`src/enumCase.ts`), validado no manifest. A model faz cast para ele, a request usa `Rule::enum` e a resource `?->value` |
+| `request` | Base: FormRequest com `prepareForValidation` (completa campos ausentes a partir da model da rota; datas voltam ao formato da regra e enums ao `->value`), `rules` (com `Rule::enum` e `Rule::exists` nas FKs de `belongsTo`) e o hook `extraRules`. Final: vazia |
 | `resource` / `collection` | Base: JsonResource (campos, datas formatadas, os relacionamentos de `api.with` com `whenLoaded` e o hook `extra`) e ResourceCollection (usa a resource final). Finais: vazias |
 | `controller` | Base: controller de API com `index`, `store`, `show`, `update`, `destroy` e os 7 hooks (só as actions e os hooks mantidos em `api.actions`; o `index` aplica `with`, filtros, busca e ordenação de `api` antes do `indexQuery`). Final: vazia |
 | `routes` | `routes/crudmaker.php`, gerado uma vez por projeto (não por entidade) |
@@ -210,7 +211,7 @@ A versão do Laravel/PHP entra em `generate` como `options.target`; quem a desco
 | `castsMethod` | Laravel 11+ | `model.base`: `protected function casts(): array` em vez de `protected $casts = [...]` |
 | `apiRoutesViaBootstrap` | Laravel 11+ | mensagem da CLI quando falta o `routes/api.php`: `install:api` (11+) × esqueleto + `RouteServiceProvider` (10) |
 | `nativeColumnChange` | Laravel 11+ | `migration.alter`: sem ela (Laravel 10) a migration traz o comentário sobre o `doctrine/dbal` |
-| `backedEnums` | PHP 8.1+ | sempre verdadeira hoje (8.1 é o mínimo); será usada pelo ticket 16 (enums) |
+| `backedEnums` | PHP 8.1+ | sempre verdadeira hoje (8.1 é o mínimo); a geração de enums (ticket 16) não tem alternativa para PHP anterior. `Rule::enum` existe desde o Laravel 9 |
 | `readonlyClasses` | PHP 8.2+ | ainda sem uso |
 | `typedClassConstants` | PHP 8.3+ | ainda sem uso |
 
@@ -232,7 +233,7 @@ O `generate` continua puro: a CLI lê o `routes/api.php` do destino (ou `null` s
 `renderTemplate(name, data, stubs)` (`render.ts`) é o ponto único de resolução: se `stubs[name]` existe, o Eta renderiza essa string (`renderString`); senão, usa o embutido de `templates/laravel-api`. As diferenças por versão do Laravel/PHP não são variantes de arquivo: o template consulta `it.capabilities` (veja [Versão alvo e capacidades](#versão-alvo-e-capacidades)), e os stubs do projeto também recebem `it.capabilities` e `it.target`.
 
 - `generate` continua puro: recebe `options.stubs` (nome do template → conteúdo) e `options.stubHashes` (o `stubs-lock.json`, nome → hash do embutido na publicação) e devolve os avisos em `warnings`. Quem lê a pasta é a CLI (`src/stubFiles.ts`: `readStubs`, `publishStubs`).
-- `src/targets/laravel-api/stubs.ts` define `replaceableTemplates` (as bases, `migration` e `routes`; **sem** `*.final`, por serem `create-once` e do usuário), os caminhos (`stubs/crudmaker/laravel-api/`, `stubs/crudmaker/stubs-lock.json`), o hash (sha256 do arquivo embutido) e `prepareStubs`, que ignora com aviso os nomes não substituíveis, valida a sintaxe de cada stub (`validateStub`, que traduz o erro do Eta em `Stub "<nome>.php.eta": erro de sintaxe na linha N: ...`, sem stack trace, antes de qualquer arquivo ser produzido) e gera o aviso de stub desatualizado.
+- `src/targets/laravel-api/stubs.ts` define `replaceableTemplates` (as bases, `enum`, `migration` e `routes`; **sem** `*.final`, por serem `create-once` e do usuário), os caminhos (`stubs/crudmaker/laravel-api/`, `stubs/crudmaker/stubs-lock.json`), o hash (sha256 do arquivo embutido) e `prepareStubs`, que ignora com aviso os nomes não substituíveis, valida a sintaxe de cada stub (`validateStub`, que traduz o erro do Eta em `Stub "<nome>.php.eta": erro de sintaxe na linha N: ...`, sem stack trace, antes de qualquer arquivo ser produzido) e gera o aviso de stub desatualizado.
 - O hash fica num arquivo próprio ao lado dos stubs, e não no `manifest-lock.json`: o lock do manifest é uma saída que o `generate` reescreve a cada execução a partir do manifest, enquanto o hash é estado do projeto que nasce na publicação e deve ser versionado junto com os stubs (um `generate` não pode apagá-lo nem precisa conhecê-lo para gerar o lock).
 - `stubs:publish` copia os embutidos pedidos (nome curto = base), pula os existentes (`--force` só para stubs) e grava o hash; `--refresh-lock` só atualiza o hash dos stubs existentes.
 

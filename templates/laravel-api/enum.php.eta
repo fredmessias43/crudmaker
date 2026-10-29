@@ -1,0 +1,13 @@
+<?php
+
+// ARQUIVO GERADO PELO CRUDMAKER. NÃO EDITE: ele é sobrescrito a cada `crudmaker generate`.
+// Enum do campo <%~ it.field %> da entidade <%~ it.entity.pascal %>; para mudar os valores, altere os enumItems no manifest.
+
+namespace <%~ it.namespace %>;
+
+enum <%~ it.className %>: string
+{
+<% for (const item of it.cases) { -%>
+	case <%~ item.name %> = <%~ item.value %>;
+<% } -%>
+}

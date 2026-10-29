@@ -32,7 +32,7 @@ export type ClassHeaderView = {
   base: ClassRef;
 };
 
-function classRef(namespace: string, className: string): ClassRef {
+export function classRef(namespace: string, className: string): ClassRef {
   return { namespace, className, fqcn: `${namespace}\\${className}`, path: classPath(namespace, className) };
 }
 

@@ -116,13 +116,35 @@ Propriedades da forma completa:
 | `date` | `date()` | `date_format:Y-m-d` | `date` |
 | `datetime` | `datetime()` | `date_format:Y-m-d H:i` | `datetime` |
 | `json` | `json()` | `array` | `array` |
-| `enum` | `enum(..., [itens])` com default no primeiro item (ou o `default` declarado) | `Rule::in([itens])` | — |
+| `enum` | `enum(..., [itens])` com default no primeiro item (ou o `default` declarado) | `Rule::enum(<Entidade><Campo>::class)` | o PHP enum gerado (veja [Enums](#enums)) |
 
-Todas as regras geradas existem no Laravel 10–12 (`bail`, `required`, `nullable`, `uuid`, `string`, `numeric`, `integer`, `boolean`, `array`, `date_format`, `Rule::in`, `Rule::unique`). O `json` usa `array` (e não a regra `json` do Laravel, que valida uma string JSON) porque o corpo chega já decodificado e o cast da model é `array`.
+Todas as regras geradas existem no Laravel 10–12 (`bail`, `required`, `nullable`, `uuid`, `string`, `numeric`, `integer`, `boolean`, `array`, `date_format`, `Rule::enum`, `Rule::exists`, `Rule::unique`). O `json` usa `array` (e não a regra `json` do Laravel, que valida uma string JSON) porque o corpo chega já decodificado e o cast da model é `array`.
+
+### Enums
+
+Cada campo `enum` gera um **PHP backed enum** em `app/Generated/Enums/<Entidade><Campo>.php` (namespace `App\Generated\Enums`), por exemplo `orderItem.status` → `OrderItemStatus`:
+
+```php
+enum OrderItemStatus: string
+{
+	case Pending = 'pending';
+	case Shipped = 'shipped';
+}
+```
+
+- É um arquivo único `overwrite`, com o cabeçalho de gerado e **sem classe final**: o enum é dado puro derivado dos `enumItems`; para mudar os valores, mude o manifest.
+- A model faz o cast do campo para o enum (`'status' => OrderItemStatus::class`), a request valida com `Rule::enum(OrderItemStatus::class)` (disponível desde o Laravel 9, então vale no 10 em diante) e a resource devolve o valor string (`$this->status?->value`), então o JSON não muda. O `prepareForValidation` também converte para `->value` ao completar o campo ausente numa atualização.
+- A migration não muda: continua `enum('status', [...])` com strings, e o `default` continua o texto do item.
+- O nome do `case` é o item em PascalCase (`in_progress`, `in-progress` e `in progress` viram `InProgress`; letras com acento valem). O valor do enum é sempre o item original. O manifest é recusado (com o caminho do item) se um item **não vira identificador válido** (começa com número, como `2fa`; só símbolos; vazio; ou `class`) ou se **dois itens geram o mesmo case** (`in-progress` e `in_progress`). Também é recusado se duas entidades/campos geram o mesmo nome de enum (`orderItem.status` × `order.itemStatus`).
+- Mudar os `enumItems` regrava o enum e, como antes, gera uma migration `alter`. Remover o campo (ou a entidade) deixa o enum obsoleto, e ele é apagado como qualquer arquivo de `app/Generated/`.
+
+### FKs validadas com `exists`
+
+Cada campo de FK de um `belongsTo` ganha `Rule::exists('<tabela>', 'id')` na request, com a mesma tabela do `->on('<tabela>')` da migration: snake_case plural da entidade referenciada, mesmo para entidades `camelCase` (`orderItem` → `order_items`) e com FK customizada (`author_id` → `users`). A regra vem depois de `uuid`. Observação: ela não exclui registros apagados (soft delete) da tabela referenciada.
 
 O tipo especial `displayName` vira um campo `string` chamado `display_name`, seja qual for a chave usada.
 
-Os casts ficam no `$casts` da model. Como `date` e `datetime` viram `Carbon` na leitura, o `prepareForValidation` da request devolve esses campos ao formato da regra (`->format('Y-m-d')` / `->format('Y-m-d H:i')`) ao completar os campos ausentes numa atualização; e a resource passa a devolvê-los serializados pelo Laravel (ISO 8601), não mais como texto cru do banco.
+Os casts ficam no `casts()` da model (Laravel 11+) ou no `$casts` (Laravel 10). Como `date` e `datetime` viram `Carbon` na leitura, o `prepareForValidation` da request devolve esses campos ao formato da regra (`->format('Y-m-d')` / `->format('Y-m-d H:i')`) ao completar os campos ausentes numa atualização; e a resource passa a devolvê-los serializados pelo Laravel (ISO 8601), não mais como texto cru do banco.
 
 ### Opções de campo: `hidden`, `rules` e `default`
 
@@ -425,6 +447,8 @@ O comando sai com código 1 e nenhum arquivo é escrito.
 | `tipo "x" desconhecido (use um de: ...)` | `type` do campo fora da lista de tipos (na forma curta o caminho é o próprio campo) |
 | `valor "x" inválido (use um de: ...)` | `relationship` de um item com tipo de relacionamento desconhecido |
 | `campo enum precisa de enumItems` / `... de ao menos um item` | campo `enum` sem `enumItems` ou com lista vazia (na forma curta, use a forma completa) |
+| `o item "x" não vira um nome de case válido ...` / `gera o mesmo case "X" que "y"` | item de enum que não vira identificador PHP (começa com número, só símbolos, `class`) ou colide com outro depois do PascalCase. Caminho `...enumItems[i]` |
+| `gera o PHP enum X, o mesmo de ...` | duas entidades/campos com o mesmo nome de enum gerado |
 | `entidade "x" não existe em pkg.entities (entidades: ...)` | relacionamento de qualquer tipo de lista (`owned`/`morphed` não contam) apontando para entidade inexistente. Nome e lista de entidades já normalizados; o caminho é o do arquivo |
 | `o nome vira "x", o mesmo de ...` | duas entidades (ou dois campos da mesma entidade) com o mesmo nome depois da normalização |
 | `a entidade "x" não tem o campo "id"; declare "id": "uuid" ...` | entidade sem campo `id` (pela chave ou pelo `name`). O caminho é `pkg.entities.x.fields` (ou a própria entidade, se não tem `fields`) |

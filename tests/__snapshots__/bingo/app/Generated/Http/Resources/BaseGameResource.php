@@ -30,7 +30,7 @@ abstract class BaseGameResource extends JsonResource
 			'description' => $this->description,
 			'max_players' => $this->max_players,
 			'document' => $this->document,
-			'status' => $this->status,
+			'status' => $this->status?->value,
 			'created_at' => array(
 				'timestamp' => $createdAt->timestamp,
 				'description' => $createdAt->diffForHumans(),

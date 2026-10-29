@@ -141,6 +141,43 @@ describe("generate (order-item)", () => {
     expect([...migrations].sort().map((p) => path.basename(p).replace(/^[\d_]+_create_|_table\.php$/g, ""))).toEqual(["users", "orders", "order_items"]);
   });
 
+  it("gera o PHP enum do campo, com cases em PascalCase e o valor string", () => {
+    const text = content("app/Generated/Enums/OrderItemStatus.php");
+
+    expect(text).toContain("namespace App\\Generated\\Enums;");
+    expect(text).toContain("enum OrderItemStatus: string");
+    expect(text).toContain("\tcase Pending = 'pending';");
+    expect(text).toContain("\tcase Shipped = 'shipped';");
+    expect(files.find((file) => file.path === "app/Generated/Enums/OrderItemStatus.php")!.policy).toBe("overwrite");
+    // Enum é dado puro: não tem classe final.
+    expect(files.some((file) => file.path.startsWith("app/Enums/"))).toBe(false);
+  });
+
+  it("a model importa o enum e a request usa Rule::enum, Rule::exists na tabela certa e o valor no prepareForValidation", () => {
+    expect(content("app/Generated/Models/BaseOrderItem.php")).toContain("use App\\Generated\\Enums\\OrderItemStatus;");
+    const request = content("app/Generated/Http/Requests/BaseOrderItemRequest.php");
+
+    expect(request).toContain("use App\\Generated\\Enums\\OrderItemStatus;");
+    expect(request).toContain("use Illuminate\\Validation\\Rule;");
+    expect(request).not.toContain("Rule::in(");
+    // O cast devolve o objeto enum; o merge precisa do valor.
+    expect(request).toContain("$this->merge(['status' => $orderItem->status?->value]);");
+    // Uma FK só entra com `exists` se o belongsTo existe: `order.user_id` -> users.
+    expect(content("app/Generated/Http/Requests/BaseOrderRequest.php")).toContain("Rule::exists('users', 'id')");
+    expect(content("app/Generated/Http/Requests/BaseUserRequest.php")).not.toContain("exists");
+  });
+
+  it("a resource devolve o valor string do enum", () => {
+    const resource = content("app/Generated/Http/Resources/BaseOrderItemResource.php");
+
+    expect(resource).toContain("'status' => $this->status?->value,");
+    expect(resource).toContain("'sku' => $this->sku,");
+  });
+
+  it("a migration continua com enum(...) de strings", () => {
+    expect(content("database/migrations/2025_01_02_030407_create_order_items_table.php")).toContain("$table->enum('status', ['pending','shipped'])");
+  });
+
   it("a regra unique ignora o registro da rota, não o id do corpo", () => {
     const request = content("app/Generated/Http/Requests/BaseOrderItemRequest.php");
 
@@ -179,9 +216,9 @@ describe("generate (order-item)", () => {
       options: ["'bail'", "'nullable'", "'array'"],
       shipped_on: ["'bail'", "'nullable'", "'date_format:Y-m-d'"],
       packed_at: ["'bail'", "'nullable'", "'date_format:Y-m-d H:i'"],
-      status: ["'bail'", "'required'", "Rule::in(array('pending','shipped'))"],
-      order_id: ["'bail'", "'required'", "'uuid'"],
-      author_id: ["'bail'", "'required'", "'uuid'"],
+      status: ["'bail'", "'required'", "Rule::enum(OrderItemStatus::class)"],
+      order_id: ["'bail'", "'required'", "'uuid'", "Rule::exists('orders', 'id')"],
+      author_id: ["'bail'", "'required'", "'uuid'", "Rule::exists('users', 'id')"],
     };
 
     const rules = allRules(request);
@@ -234,11 +271,12 @@ describe("generate (order-item)", () => {
       "'options' => 'array',",
       "'shipped_on' => 'date',",
       "'packed_at' => 'datetime',",
+      "'status' => OrderItemStatus::class,",
     ]) {
       expect(model).toContain(cast);
     }
-    // uuid, string e enum não têm cast
-    for (const name of ["id", "sku", "status", "author_id"]) {
+    // uuid e string não têm cast (enum tem o do PHP enum, acima)
+    for (const name of ["id", "sku", "author_id"]) {
       expect(model).not.toContain(`'${name}' =>`);
     }
   });

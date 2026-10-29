@@ -266,3 +266,38 @@ describe("campo id, nomes reservados do PHP e ciclos de FK (ticket 09)", () => {
     expect(() => validateManifest(m)).not.toThrow();
   });
 });
+
+describe("itens de enum (nomes de case do PHP enum)", () => {
+  const withItems = (items: string[], extra: any = {}): any => {
+    const manifest = base();
+    manifest.pkg.entities.client.fields.status = { type: "enum", enumItems: items };
+    Object.assign(manifest.pkg.entities, extra);
+    return manifest;
+  };
+
+  it("aceita itens que viram identificador (hífen, espaço, underscore, acento)", () => {
+    expect(() => validateManifest(withItems(["in-progress", "on hold", "done_ok", "em análise", "A1"]))).not.toThrow();
+  });
+
+  it.each([["2fa"], ["***"], ["class"], [""]])("recusa o item %j", (item) => {
+    const problems = problemsOf(withItems(["ok", item]));
+    expect(problems).toHaveLength(1);
+    expect(problems[0].path).toBe("pkg.entities.client.fields.status.enumItems[1]");
+    expect(problems[0].message).toContain("não vira um nome de case válido");
+  });
+
+  it("recusa itens que colidem depois da conversão", () => {
+    const problems = problemsOf(withItems(["in-progress", "in_progress"]));
+    expect(problems[0].path).toBe("pkg.entities.client.fields.status.enumItems[1]");
+    expect(problems[0].message).toContain('mesmo case "InProgress"');
+  });
+
+  it("recusa duas entidades/campos com o mesmo nome de PHP enum", () => {
+    const manifest = withItems(["a"], { clientStatus: { fields: { id: "uuid" } } });
+    manifest.pkg.entities.client.fields.statusKind = { type: "enum", enumItems: ["b"] };
+    manifest.pkg.entities.clientStatus.fields.kind = { type: "enum", enumItems: ["c"] };
+    // client.statusKind -> ClientStatusKind; clientStatus.kind -> ClientStatusKind
+    const problems = problemsOf(manifest);
+    expect(problems.some((p) => p.message.includes("PHP enum ClientStatusKind"))).toBe(true);
+  });
+});

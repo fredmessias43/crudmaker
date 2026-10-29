@@ -97,6 +97,7 @@ abstract class BaseOrderRequest extends FormRequest
 					'bail',
 					'required',
 					'uuid',
+					Rule::exists('users', 'id'),
 				),
 			];
 	}

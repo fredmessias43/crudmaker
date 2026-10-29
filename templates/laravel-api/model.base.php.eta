@@ -29,7 +29,7 @@ abstract class <%~ it.className %> extends <%~ it.extends %>
 	{
 		return [
 <% for (const cast of it.casts) { -%>
-			'<%~ cast.name %>' => '<%~ cast.cast %>',
+			'<%~ cast.name %>' => <%~ cast.cast %>,
 <% } -%>
 		];
 	}
@@ -41,7 +41,7 @@ abstract class <%~ it.className %> extends <%~ it.extends %>
 	 */
 	protected $casts = [
 <% for (const cast of it.casts) { -%>
-		'<%~ cast.name %>' => '<%~ cast.cast %>',
+		'<%~ cast.name %>' => <%~ cast.cast %>,
 <% } -%>
 	];
 <% } -%>

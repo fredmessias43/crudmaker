@@ -234,3 +234,18 @@ describe("validação", () => {
     expect(field).toMatchObject({ hidden: true, rules: ["Max:5"], default: "Aa Bb" });
   });
 });
+
+describe("enum (ticket 16)", () => {
+  it("gera o enum, o cast, Rule::enum e o valor na resource, sem Rule::in", () => {
+    expect(content("app/Generated/Enums/AccountStatus.php")).toContain("case Pending = 'pending';");
+    expect(content("app/Generated/Enums/AccountPlan.php")).toContain("case Pro = 'pro';");
+    expect(model).toContain("'status' => AccountStatus::class,");
+    expect(request).toContain("Rule::enum(AccountPlan::class),");
+    expect(request).not.toContain("Rule::in(");
+    expect(resource).toContain("'status' => $this->status?->value,");
+  });
+
+  it("o default continua string na migration", () => {
+    expect(migration).toContain("$table->enum('status', ['pending','active','blocked'])->default('active');");
+  });
+});

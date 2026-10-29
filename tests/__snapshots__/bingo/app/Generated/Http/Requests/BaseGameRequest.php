@@ -7,6 +7,7 @@ namespace App\Generated\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use App\Models\Game;
+use App\Generated\Enums\GameStatus;
 use Illuminate\Validation\Rule;
 
 
@@ -63,7 +64,7 @@ abstract class BaseGameRequest extends FormRequest
 	
 					if ( ! $this->has('status'))
 					{
-							$this->merge(['status' => $game->status]);
+							$this->merge(['status' => $game->status?->value]);
 					}
 	
 			}
@@ -125,7 +126,7 @@ abstract class BaseGameRequest extends FormRequest
 				'status' => array(
 					'bail',
 					'required',
-					Rule::in(array('active','inactive','archived','completed')),
+					Rule::enum(GameStatus::class),
 				),
 			];
 	}

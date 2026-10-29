@@ -7,6 +7,7 @@ namespace App\Generated\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use App\Models\Cards;
+use Illuminate\Validation\Rule;
 
 
 abstract class BaseCardsRequest extends FormRequest
@@ -95,11 +96,13 @@ abstract class BaseCardsRequest extends FormRequest
 					'bail',
 					'required',
 					'uuid',
+					Rule::exists('games', 'id'),
 				),
 				'player_id' => array(
 					'bail',
 					'required',
 					'uuid',
+					Rule::exists('players', 'id'),
 				),
 				'numbers' => array(
 					'bail',

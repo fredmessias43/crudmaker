@@ -7,6 +7,7 @@ namespace App\Generated\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use App\Models\DrawnNumber;
+use Illuminate\Validation\Rule;
 
 
 abstract class BaseDrawnNumberRequest extends FormRequest
@@ -90,6 +91,7 @@ abstract class BaseDrawnNumberRequest extends FormRequest
 					'bail',
 					'required',
 					'uuid',
+					Rule::exists('games', 'id'),
 				),
 				'number' => array(
 					'bail',

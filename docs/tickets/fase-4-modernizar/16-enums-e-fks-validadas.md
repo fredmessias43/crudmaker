@@ -9,11 +9,11 @@
 - [09 — Corrigir schema, migrations e validação](../fase-2-bugs/09-corrigir-schema-e-validacao.md)
 - [15 — Versão alvo do Laravel/PHP](../fase-4-modernizar/15-versao-alvo.md)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Critérios de aceite
 
-- [ ] Snapshot com o arquivo de enum, o cast e a regra.
-- [ ] A regra `exists` aponta para a tabela certa em entidades camelCase.
-- [ ] O TODO de enum do README sai.
-- [ ] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.
+- [x] Snapshot com o arquivo de enum, o cast e a regra.
+- [x] A regra `exists` aponta para a tabela certa em entidades camelCase.
+- [x] O TODO de enum do README sai.
+- [x] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.

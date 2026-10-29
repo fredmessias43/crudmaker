@@ -1,13 +1,16 @@
+import { Entity } from "../../../models/Entity";
 import { Field } from "../../../types";
 import { phpString } from "../entityApi";
 import { EntityFileType } from "../fileType";
 import { BASE_NAMESPACE, entityNames } from "../names";
+import { enumClass } from "./enum";
+import { foreignKeyTable } from "./migration";
 import { classHeader, classPair, finalClassFile } from "./classHeader";
 
 const namespace = `${BASE_NAMESPACE}\\Http\\Requests`;
 
 /** Regras de validação de um campo, cada item já como expressão PHP (`'bail'`, `Rule::in(...)`...). */
-function ruleItems(field: Field, table: string, routeParam: string): string[] {
+function ruleItems(entity: Entity, field: Field, table: string, routeParam: string): string[] {
   const items = ["'bail'", `'${field.required ? "required" : "nullable"}'`];
 
   if (["uuid", "string", "integer", "boolean"].includes(field.type)) {
@@ -26,8 +29,12 @@ function ruleItems(field: Field, table: string, routeParam: string): string[] {
   } else if (field.type === "datetime") {
     items.push("'date_format:Y-m-d H:i'");
   } else if (field.type === "enum") {
-    items.push(`Rule::in(array(${field.enumItems.map(phpString).join()}))`);
+    items.push(`Rule::enum(${enumClass(entity, field).className}::class)`);
   }
+
+  // FK de belongsTo: o registro referenciado precisa existir (na tabela de `foreignKeyTable`, a mesma da migration).
+  const parent = (entity.relationships?.belongsTo ?? []).find((relationship) => relationship.field === field.name);
+  if (parent !== undefined) items.push(`Rule::exists('${foreignKeyTable(parent)}', 'id')`);
 
   if (field.unique) {
     // `ignore` recebe o parâmetro da rota, não o `id` do corpo: o corpo é do cliente (um `id` de outro
@@ -54,6 +61,8 @@ function currentValue(field: Field, variable: string): string {
   const access = `${variable}->${field.name}`;
   if (field.type === "date") return `${access}?->format('Y-m-d')`;
   if (field.type === "datetime") return `${access}?->format('Y-m-d H:i')`;
+  // O cast devolve o objeto enum; a validação (`Rule::enum`) espera o valor.
+  if (field.type === "enum") return `${access}?->value`;
   return access;
 }
 
@@ -74,8 +83,12 @@ export const requestBaseFile: EntityFileType = {
     const fields = Object.entries(entity.fields);
     const rules = fields
       .filter(([, field]) => field.name !== "id")
-      .map(([, field]) => ({ name: field.name, items: ruleItems(field, table, snake) }));
-    const usesRule = fields.some(([, field]) => field.name !== "id" && (field.type === "enum" || field.unique));
+      .map(([, field]) => ({ name: field.name, items: ruleItems(entity, field, table, snake) }));
+    const belongsTo = entity.relationships?.belongsTo ?? [];
+    const usesRule = fields.some(
+      ([, field]) => field.name !== "id" && (field.type === "enum" || field.unique || belongsTo.some((relationship) => relationship.field === field.name)),
+    );
+    const enumImports = fields.filter(([, field]) => field.name !== "id" && field.type === "enum").map(([, field]) => enumClass(entity, field).fqcn);
 
     return {
       path: pair.base.path,
@@ -84,6 +97,7 @@ export const requestBaseFile: EntityFileType = {
           imports: [
             "Illuminate\\Foundation\\Http\\FormRequest",
             modelClass,
+            ...enumImports,
             ...(usesRule ? ["Illuminate\\Validation\\Rule"] : []),
           ],
           extends: "FormRequest",
