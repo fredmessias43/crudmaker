@@ -2,7 +2,7 @@
 
 O manifest descreve as entidades da API. Pode ser escrito em **YAML** (`.yaml`/`.yml`, formato recomendado: aceita comentários) ou em **JSON** (`.json`); o formato é detectado pela extensão e os dois são equivalentes (o mesmo conteúdo gera exatamente a mesma saída). Qualquer outra extensão é recusada com um erro. `crudmaker init` cria um exemplo comentado.
 
-O manifest O crudmaker o valida, normaliza (formas curtas viram formas completas, campos de FK são derivados dos relacionamentos) e gera o PHP a partir do resultado.
+O crudmaker valida o manifest, normaliza (formas curtas viram formas completas, campos de FK são derivados dos relacionamentos, nomes fora da convenção são corrigidos) e gera o PHP a partir do resultado.
 
 ## Estrutura
 
@@ -44,12 +44,13 @@ Os demais exemplos deste documento estão em JSON; a tradução para YAML é dir
 | `$schema` | não | Caminho do JSON Schema, para autocomplete no editor. Ignorado pelo crudmaker. |
 | `pkg.code` | sim | Nome da pasta de saída: os arquivos vão para `generated/<pkg.code>/`. |
 | `pkg.entities` | sim | Mapa `nomeDaEntidade → definição`. |
+| `pkg.normalizeNames` | não | `true` (padrão) ou `false`. Liga/desliga a [normalização de nomes](#normalização-de-nomes). |
 
 Antes de gerar, o manifest é validado (veja [Validação](#validação-e-json-schema)). Se houver qualquer problema, nada é gerado.
 
 ### Nome da entidade
 
-A chave em `pkg.entities` é o nome da entidade no singular, de preferência em camelCase (`client`, `orderItem`). Dele saem:
+A chave em `pkg.entities` é o nome da entidade no singular, em camelCase (`client`, `orderItem`). Nomes fora disso (`awards`, `drawn_numbers`, `PlayerInvite`) são corrigidos pela [normalização de nomes](#normalização-de-nomes). Dele saem:
 
 | Derivado | Exemplo para `orderItem` |
 |---|---|
@@ -121,7 +122,7 @@ Cada item pode ser só o nome da entidade ou um objeto:
 | Propriedade | Padrão | Efeito |
 |---|---|---|
 | `entity` | — | Entidade relacionada. |
-| `field` | `<entity>_id` | Nome da coluna de FK. |
+| `field` | `<entity>_id` em snake_case (`orderItem` → `order_item_id`) | Nome da coluna de FK. |
 | `required` | `true` | `false` deixa a FK `nullable`. |
 | `relationship` | o tipo da lista | Sobrescreve o tipo do relacionamento. |
 
@@ -139,10 +140,56 @@ Quando `field` é diferente de `<entidade>_id`, o método da model recebe o nome
 
 ### Limitações conhecidas
 
-- Na forma curta (string), a FK é `<nome>_id` **sem** converter para snake_case: `"belongsTo": ["orderItem"]` gera `orderItem_id`. Use a forma de objeto com `field` para entidades em camelCase.
-- A FK da migration aponta para o plural do nome da entidade sem snake_case (`orderItems` em vez de `order_items`). Para entidades de uma palavra só funciona.
+- Com a [normalização de nomes](#normalização-de-nomes) **desligada**, na forma curta (string) a FK é `<nome>_id` **sem** converter para snake_case: `"belongsTo": ["orderItem"]` gera `orderItem_id`. Ligada (o padrão), vira `order_item_id`. A FK da migration (`->on('order_items')`) usa o snake_case plural nos dois casos.
 - `owned` e `morphed` adicionam os campos `owner_id` e `owner_class`, mas `ownOne`, `ownMany`, `morphOne`, `morphMany` e `morphTo` ainda **não** geram métodos válidos na model. Não use.
 - `indexes` (por entidade) e `pkg.enums` são aceitos no manifest, mas ignorados.
+
+## Normalização de nomes
+
+Por padrão o crudmaker corrige sozinho nomes fora da convenção, para gerar `Award`/`awards` em vez de `Awards`/`awards` sem reescrever o manifest. Cada nome alterado gera um aviso.
+
+| O que | Regra | Exemplos |
+|---|---|---|
+| Chave de `pkg.entities` | singular + camelCase | `awards` → `award`, `drawn_numbers` → `drawnNumber`, `player_invite` → `playerInvite`, `PlayerInvite` → `playerInvite`, `client` → `client` (sem aviso) |
+| Referência a entidade nos relacionamentos (string ou `entity`) | a mesma regra | `hasMany: [awards]` → `award` |
+| Chave de `fields`, `name` explícito do campo e `field` explícito do relacionamento | snake_case | `alertDate` → `alert_date` |
+| FK derivada de um `belongsTo` | `<entidade em snake_case>_id` | `belongsTo: [course_content]` → entidade `courseContent`, FK `course_content_id`, tabela `course_contents` |
+
+A regra de entidade usa o mesmo `pluralize`/`change-case` que define a classe e a tabela. Palavras que o `pluralize` considera plurais irregulares também mudam (ex.: `data` → `datum`); se não for o que você quer, desligue a normalização.
+
+### Avisos
+
+Um aviso por nome alterado, com o caminho original no manifest. Os avisos aparecem no resumo da CLI e no `--dry-run`, e não bloqueiam a geração:
+
+```
+Avisos (3):
+  pkg.entities.awards → award
+  pkg.entities.alert.fields.alertDate → alert_date
+  pkg.entities.game.relationships.hasMany[0]: awards → award
+```
+
+Nomes de entidade e de campo mostram `caminho → novo nome`; referências mostram `caminho: antigo → novo`. O `manifest-lock.json` registra os nomes já normalizados.
+
+### FK declarada à mão e derivada
+
+Um campo declarado com o mesmo nome da FK de um `belongsTo` (ex.: `game_id: uuid` com `belongsTo: [game]`) é **unificado** num campo só, sem aviso: vale a declaração explícita (posição, `required`, `unique`...), completada com `relationship: true`. Com a normalização desligada, o campo derivado sobrescreve o declarado (`required: true`, `unique: false`).
+
+### Colisões
+
+Se dois nomes viram o mesmo depois de normalizados, é erro de validação (nada é gerado), com o caminho dos dois:
+
+```
+Erro: manifest inválido (2 problemas):
+  pkg.entities.cards: o nome vira "card", o mesmo de pkg.entities.card; renomeie uma das entidades
+  pkg.entities.alert.fields.alert_date: o nome vira "alert_date", o mesmo de pkg.entities.alert.fields.alertDate; renomeie um dos campos
+```
+
+### Desligar
+
+- No manifest: `pkg.normalizeNames: false`. Todos que geram a partir do mesmo manifest obtêm a mesma saída.
+- Na CLI: `--normalize-names` ou `--no-normalize-names`, com prioridade sobre o manifest nos dois sentidos (as duas juntas são erro).
+
+Desligada, os nomes passam como estão (a saída é a de antes da normalização) e os avisos de convenção continuam aparecendo, no formato `pkg.entities.awards: fora da convenção (normalização desligada), viraria award`.
 
 ## Escrevendo em YAML
 
@@ -180,7 +227,7 @@ Depois do parse, o YAML passa pela mesma validação do JSON, com as mesmas mens
 
 ## Validação e JSON Schema
 
-O manifest passa por três etapas antes de gerar qualquer arquivo: **estrutura** (schema zod: chaves obrigatórias, tipos de valor, tipo de campo conhecido), **consistência entre entidades** e **normalização**. Todos os problemas de uma etapa são reportados de uma vez, com o caminho real no arquivo. Se a estrutura estiver errada, a consistência entre entidades só é checada depois que ela for corrigida.
+O manifest passa por quatro etapas antes de gerar qualquer arquivo: **estrutura** (schema zod: chaves obrigatórias, tipos de valor, tipo de campo conhecido), **normalização de nomes** (e as colisões que ela detecta), **consistência entre entidades** (já com os nomes normalizados) e **normalização** das formas curtas. Todos os problemas de uma etapa são reportados de uma vez, com o caminho real no arquivo. Se a estrutura estiver errada, a consistência entre entidades só é checada depois que ela for corrigida.
 
 ```
 $ crudmaker generate manifest.json --out ../api
@@ -203,7 +250,8 @@ O comando sai com código 1 e nenhum arquivo é escrito.
 | `tipo "x" desconhecido (use um de: ...)` | `type` do campo fora da lista de tipos (na forma curta o caminho é o próprio campo) |
 | `valor "x" inválido (use um de: ...)` | `relationship` de um item com tipo de relacionamento desconhecido |
 | `campo enum precisa de enumItems` / `... de ao menos um item` | campo `enum` sem `enumItems` ou com lista vazia (na forma curta, use a forma completa) |
-| `entidade "x" não existe em pkg.entities (entidades: ...)` | relacionamento de qualquer tipo de lista (`owned`/`morphed` não contam) apontando para entidade inexistente |
+| `entidade "x" não existe em pkg.entities (entidades: ...)` | relacionamento de qualquer tipo de lista (`owned`/`morphed` não contam) apontando para entidade inexistente. Nome e lista de entidades já normalizados; o caminho é o do arquivo |
+| `o nome vira "x", o mesmo de ...` | duas entidades (ou dois campos da mesma entidade) com o mesmo nome depois da normalização |
 
 O caminho usa `.` para chaves e `[n]` para posições de lista, por exemplo `pkg.entities.alert.relationships.belongsTo[0]`. A ausência do campo `id` ainda não é validada.
 
@@ -265,7 +313,7 @@ pkg:
       fields:
         id: uuid
         message: string
-        alertDate: datetime
+        alertDate: datetime   # vira alert_date (com aviso)
       relationships:
         belongsTo: [client]
     address:

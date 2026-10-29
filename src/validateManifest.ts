@@ -1,4 +1,5 @@
 import { INPUT_FIELD_TYPES, manifestSchema, ManifestInput, RelationItemInput } from "./manifestSchema";
+import { normalizeNames } from "./normalizeNames";
 import { UserError } from "./readManifest";
 
 export type ManifestProblem = {
@@ -99,13 +100,11 @@ function relationTarget(item: RelationItemInput): string {
   return typeof item === "string" ? item : item.entity;
 }
 
-/** Validações que precisam enxergar mais de uma parte do manifest. Só roda com a estrutura válida. */
-function crossValidate(manifest: ManifestInput): ManifestProblem[] {
+/** Campos enum sem `enumItems`. Roda com os nomes originais, para os caminhos baterem com o arquivo. */
+function validateEnums(manifest: ManifestInput): ManifestProblem[] {
   const problems: ManifestProblem[] = [];
-  const entities = manifest.pkg.entities;
-  const entityNames = Object.keys(entities);
 
-  for (const [entityName, entity] of Object.entries(entities)) {
+  for (const [entityName, entity] of Object.entries(manifest.pkg.entities)) {
     const base = `pkg.entities.${entityName}`;
 
     for (const [fieldKey, field] of Object.entries(entity.fields ?? {})) {
@@ -121,6 +120,22 @@ function crossValidate(manifest: ManifestInput): ManifestProblem[] {
           : { path: `${base}.fields.${fieldKey}.enumItems`, message: items ? "campo enum precisa de ao menos um item" : "campo enum precisa de enumItems" },
       );
     }
+  }
+
+  return problems;
+}
+
+/**
+ * Relacionamento apontando para entidade inexistente. Roda com os nomes já normalizados;
+ * `originalEntityKeys` devolve o caminho real da entidade no arquivo.
+ */
+function validateRelationshipTargets(manifest: ManifestInput, originalEntityKeys: { [normalized: string]: string }): ManifestProblem[] {
+  const problems: ManifestProblem[] = [];
+  const entities = manifest.pkg.entities;
+  const entityNames = Object.keys(entities);
+
+  for (const [entityName, entity] of Object.entries(entities)) {
+    const base = `pkg.entities.${originalEntityKeys[entityName] ?? entityName}`;
 
     // `owned` e `morphed` só marcam a entidade (não geram relacionamento).
     for (const [relation, list] of Object.entries(entity.relationships ?? {})) {
@@ -141,11 +156,24 @@ function crossValidate(manifest: ManifestInput): ManifestProblem[] {
   return problems;
 }
 
+export type ValidateOptions = {
+  /** Quando definida, vale mais que `pkg.normalizeNames` do manifest. */
+  normalizeNames?: boolean;
+};
+
+export type ValidatedManifest = {
+  /** Entrada validada, com os nomes já normalizados (se a normalização estiver ligada). */
+  input: ManifestInput;
+  warnings: string[];
+  /** Se a normalização de nomes valeu (opção > manifest > padrão `true`). */
+  normalizeNames: boolean;
+};
+
 /**
- * Valida o manifest cru (estrutura e depois consistência entre entidades) e devolve a entrada tipada.
+ * Pipeline de validação: estrutura (zod) → normalização de nomes → consistência entre entidades.
  * Lança `ManifestValidationError` com todos os problemas da etapa que falhou.
  */
-export function validateManifest(obj: unknown): ManifestInput {
+export function validateManifest(obj: unknown, options: ValidateOptions = {}): ValidatedManifest {
   const result = manifestSchema.safeParse(obj, { reportInput: true });
 
   if (!result.success) {
@@ -154,8 +182,16 @@ export function validateManifest(obj: unknown): ManifestInput {
     throw new ManifestValidationError(problems);
   }
 
-  const problems = crossValidate(result.data);
+  const enabled = options.normalizeNames ?? result.data.pkg.normalizeNames ?? true;
+  const problems = validateEnums(result.data);
+
+  const normalized = normalizeNames(result.data, enabled);
+  problems.push(...normalized.problems);
+  // Com colisão as entidades se misturam, então a checagem dos alvos só roda sem elas.
+  if (normalized.problems.length === 0) {
+    problems.push(...validateRelationshipTargets(normalized.manifest, normalized.originalEntityKeys));
+  }
   if (problems.length > 0) throw new ManifestValidationError(problems);
 
-  return result.data;
+  return { input: normalized.manifest, warnings: normalized.warnings, normalizeNames: enabled };
 }

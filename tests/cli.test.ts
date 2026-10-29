@@ -142,6 +142,106 @@ describe("crudmaker generate", () => {
   });
 });
 
+describe("normalização de nomes na CLI", () => {
+  const bingo2 = path.join(__dirname, "fixtures/bingo-2/manifest.json");
+  const writeManifest = (pkgExtra: object) => {
+    const manifest = JSON.parse(fs.readFileSync(bingo2, "utf8"));
+    Object.assign(manifest.pkg, pkgExtra);
+    const file = path.join(tmp, "manifest.json");
+    fs.writeFileSync(file, JSON.stringify(manifest));
+    return file;
+  };
+
+  it("imprime os avisos no resumo (stdout), um por nome alterado", () => {
+    expect(run(["generate", bingo2, "--out", out], io())).toBe(0);
+
+    expect(stdout).toContain("Avisos (10):");
+    expect(stdout).toContain("  pkg.entities.awards → award\n");
+    expect(stdout).toContain("  pkg.entities.game.relationships.hasMany[3]: drawn_numbers → drawnNumber\n");
+    expect(stderr).toBe("");
+    expect(fs.existsSync(path.join(out, "app/Models/DrawnNumber.php"))).toBe(true);
+  });
+
+  it("imprime os avisos também no --dry-run, sem escrever nada", () => {
+    expect(run(["generate", bingo2, "--out", out, "--dry-run"], io())).toBe(0);
+
+    expect(fs.existsSync(out)).toBe(false);
+    expect(stdout).toContain("nada foi escrito");
+    expect(stdout).toContain("Avisos (10):");
+    expect(stdout).toContain("  pkg.entities.cards → card\n");
+  });
+
+  it("os avisos do --dry-run são os mesmos da escrita real", () => {
+    run(["generate", bingo2, "--out", out, "--dry-run"], io());
+    const dry = stdout.replace(/^.*\n/, "");
+    stdout = "";
+    run(["generate", bingo2, "--out", out], io());
+
+    expect(stdout.replace(/^.*\n/, "")).toBe(dry);
+  });
+
+  it("não imprime a seção quando nada muda de nome", () => {
+    expect(run(["generate", path.join(__dirname, "fixtures/vende-que-vende-api/manifest.json"), "--out", out], io())).toBe(0);
+    expect(stdout).toContain("pkg.entities.alert.fields.alertDate → alert_date");
+
+    stdout = "";
+    const clean = path.join(tmp, "limpo.json");
+    fs.writeFileSync(clean, JSON.stringify({ system: { code: "s" }, pkg: { code: "p", entities: { client: { fields: { id: "uuid" } } } } }));
+    expect(run(["generate", clean, "--out", path.join(tmp, "limpo")], io())).toBe(0);
+    expect(stdout).not.toContain("Avisos");
+  });
+
+  it("--no-normalize-names mantém os nomes e avisa o que está fora da convenção", () => {
+    expect(run(["generate", bingo2, "--out", out, "--no-normalize-names"], io())).toBe(0);
+
+    expect(fs.existsSync(path.join(out, "app/Models/DrawnNumbers.php"))).toBe(true);
+    expect(fs.existsSync(path.join(out, "app/Models/DrawnNumber.php"))).toBe(false);
+    expect(stdout).toContain("Avisos (10):");
+    expect(stdout).toContain("pkg.entities.awards: fora da convenção (normalização desligada), viraria award");
+  });
+
+  it("a flag vence o manifest nos dois sentidos", () => {
+    const off = writeManifest({ normalizeNames: false });
+    expect(run(["generate", off, "--out", out], io())).toBe(0);
+    expect(fs.existsSync(path.join(out, "app/Models/Awards.php"))).toBe(true);
+
+    const outOn = path.join(tmp, "on");
+    expect(run(["generate", off, "--out", outOn, "--normalize-names"], io())).toBe(0);
+    expect(fs.existsSync(path.join(outOn, "app/Models/Award.php"))).toBe(true);
+    expect(fs.existsSync(path.join(outOn, "app/Models/Awards.php"))).toBe(false);
+
+    const on = writeManifest({ normalizeNames: true });
+    const outOff = path.join(tmp, "off");
+    expect(run(["generate", on, "--out", outOff, "--no-normalize-names"], io())).toBe(0);
+    expect(fs.existsSync(path.join(outOff, "app/Models/Awards.php"))).toBe(true);
+  });
+
+  it("recusa as duas flags juntas", () => {
+    expect(run(["generate", bingo2, "--out", out, "--normalize-names", "--no-normalize-names"], io())).toBe(1);
+    expect(stderr).toContain("só uma das flags");
+    expect(fs.existsSync(out)).toBe(false);
+  });
+
+  it("colisão é erro de validação e não escreve nada", () => {
+    const file = path.join(tmp, "colisao.json");
+    fs.writeFileSync(file, JSON.stringify({
+      system: { code: "s" },
+      pkg: { code: "p", entities: { card: { fields: { id: "uuid" } }, cards: { fields: { id: "uuid" } } } },
+    }));
+
+    expect(run(["generate", file, "--out", out], io())).toBe(1);
+    expect(stderr).toContain("pkg.entities.cards");
+    expect(stderr).toContain("pkg.entities.card");
+    expect(fs.existsSync(out)).toBe(false);
+  });
+
+  it("a ajuda documenta as flags", () => {
+    run(["generate", "--help"], io());
+    expect(stdout).toContain("--normalize-names");
+    expect(stdout).toContain("--no-normalize-names");
+  });
+});
+
 describe("rotas e routes/api.php", () => {
   const apiRoutes = `<?php
 
@@ -168,7 +268,7 @@ Route::get('/user', function (Request $request) {
     expect(api.match(/crudmaker\.php/g)?.length).toBe(2); // comentário + require
     expect(stdout).toMatch(/sobrescritos \(1\):\n {2}routes\/api\.php/);
     expect(stdout).toMatch(/criados \(\d+\):[\s\S]*routes\/crudmaker\.php/);
-    expect(stdout).not.toContain("Aviso");
+    expect(stdout).not.toContain("install:api");
   });
 
   it("regerar não duplica o include e classifica o api.php como sem mudança", () => {

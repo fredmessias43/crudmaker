@@ -643,6 +643,10 @@
           },
           "description": "Mapa nomeDaEntidade → definição. O nome fica no singular, de preferência em camelCase (client, orderItem)."
         },
+        "normalizeNames": {
+          "type": "boolean",
+          "description": "Normaliza nomes fora da convenção: entidades viram singular camelCase (awards → award, drawn_numbers → drawnNumber) e campos viram snake_case (alertDate → alert_date), com um aviso por nome alterado. Padrão: true. false mantém os nomes como estão (só avisa). A flag --normalize-names / --no-normalize-names da CLI tem prioridade."
+        },
         "enums": {
           "description": "Reservado; aceito, mas ignorado."
         }

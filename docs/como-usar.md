@@ -55,7 +55,7 @@ Não escreve nada. Lista cada arquivo com o que aconteceria:
 crudmaker generate manifest.yaml --out ../minha-api
 ```
 
-`--out` é a raiz do projeto Laravel e, se omitido, vale o diretório atual. No fim a CLI imprime o resumo: a lista de arquivos por classificação e as contagens (`Total: 13 arquivos (13 criados, 0 sobrescritos, 0 sem mudança, 0 preservados)`). Erros (manifest inexistente, extensão não suportada, JSON ou YAML inválido, manifest inválido) vão para o stderr com exit code 1.
+`--out` é a raiz do projeto Laravel e, se omitido, vale o diretório atual. No fim a CLI imprime o resumo: a lista de arquivos por classificação e as contagens (`Total: 13 arquivos (13 criados, 0 sobrescritos, 0 sem mudança, 0 preservados)`). Se algum nome do manifest estiver fora da convenção (`awards`, `drawn_numbers`, `alertDate`), o resumo termina com a seção `Avisos (N)`, uma linha por nome alterado (também no `--dry-run`; vão para o stdout e não bloqueiam a geração). Veja [Normalização de nomes](manifest.md#normalização-de-nomes). Para ligar ou desligar a normalização sem editar o manifest, use `--normalize-names` / `--no-normalize-names` (a flag vence `pkg.normalizeNames`). Se dois nomes colidirem depois de normalizados, nada é gerado e o erro mostra o caminho dos dois. Erros (manifest inexistente, extensão não suportada, JSON ou YAML inválido, manifest inválido) vão para o stderr com exit code 1.
 
 Para cada entidade são escritos:
 

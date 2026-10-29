@@ -8,16 +8,16 @@
 
 - [04 — Schema e validação do manifest](../fase-1-usavel/04-schema-e-validacao.md)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Critérios de aceite
 
-- [ ] Fixture de teste com o manifest do `bingo-2` (entidades no plural e FKs declaradas à mão): gera `Award`, `Card`, `DrawnNumber` etc., com as tabelas e FKs corretas, e um snapshot.
-- [ ] Referências em relacionamentos são normalizadas junto, e a validação de entidade inexistente usa os nomes normalizados.
-- [ ] Os avisos aparecem no resumo da CLI e no `--dry-run`, um por nome alterado, com o caminho original.
-- [ ] Colisões (`card` + `cards`, `alertDate` + `alert_date`) dão erro com o caminho dos dois nomes.
-- [ ] `pkg.normalizeNames: false` gera exatamente a saída de hoje (os snapshots atuais continuam valendo com a normalização desligada).
-- [ ] A flag da CLI tem prioridade sobre o manifest, nos dois sentidos.
-- [ ] As mudanças intencionais nos snapshots das fixtures existentes (ex.: `alertDate` → `alert_date` no `vende-que-vende-api`) foram revisadas.
-- [ ] `pkg.normalizeNames` aparece no JSON Schema (`npm run schema`) e no `docs/manifest.md`, com a tabela de regras.
-- [ ] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.
+- [x] Fixture de teste com o manifest do `bingo-2` (entidades no plural e FKs declaradas à mão): gera `Award`, `Card`, `DrawnNumber` etc., com as tabelas e FKs corretas, e um snapshot.
+- [x] Referências em relacionamentos são normalizadas junto, e a validação de entidade inexistente usa os nomes normalizados.
+- [x] Os avisos aparecem no resumo da CLI e no `--dry-run`, um por nome alterado, com o caminho original.
+- [x] Colisões (`card` + `cards`, `alertDate` + `alert_date`) dão erro com o caminho dos dois nomes.
+- [x] `pkg.normalizeNames: false` gera exatamente a saída de hoje (os snapshots atuais continuam valendo com a normalização desligada).
+- [x] A flag da CLI tem prioridade sobre o manifest, nos dois sentidos.
+- [x] As mudanças intencionais nos snapshots das fixtures existentes (ex.: `alertDate` → `alert_date` no `vende-que-vende-api`) foram revisadas.
+- [x] `pkg.normalizeNames` aparece no JSON Schema (`npm run schema`) e no `docs/manifest.md`, com a tabela de regras.
+- [x] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.

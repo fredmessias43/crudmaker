@@ -79,6 +79,9 @@ export const manifestSchema = z.object({
   pkg: z.object({
     code: z.string().min(1).describe("Código do pacote (nome do projeto)."),
     entities: z.record(z.string(), entitySchema).describe("Mapa nomeDaEntidade → definição. O nome fica no singular, de preferência em camelCase (client, orderItem)."),
+    normalizeNames: z.boolean().describe(
+      "Normaliza nomes fora da convenção: entidades viram singular camelCase (awards → award, drawn_numbers → drawnNumber) e campos viram snake_case (alertDate → alert_date), com um aviso por nome alterado. Padrão: true. false mantém os nomes como estão (só avisa). A flag --normalize-names / --no-normalize-names da CLI tem prioridade.",
+    ).optional(),
     enums: z.unknown().describe("Reservado; aceito, mas ignorado.").optional(),
   }).describe("Pacote a gerar."),
 }).describe("Manifest do crudmaker: descreve as entidades de uma API Laravel.");

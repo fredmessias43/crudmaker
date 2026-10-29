@@ -1,0 +1,332 @@
+{
+  "code": "bingo",
+  "version": "0.1.0",
+  "entities": {
+    "game": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "name": {
+          "type": "string",
+          "name": "name",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "description": {
+          "type": "string",
+          "name": "description",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "max_players": {
+          "type": "integer",
+          "name": "max_players",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "document": {
+          "type": "string",
+          "name": "document",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "status": {
+          "type": "enum",
+          "name": "status",
+          "required": true,
+          "unique": false,
+          "enumItems": [
+            "active",
+            "inactive",
+            "archived",
+            "completed"
+          ]
+        }
+      },
+      "relationships": {
+        "hasMany": [
+          {
+            "entity": "award",
+            "field": "award_id",
+            "required": true,
+            "relationship": "hasMany"
+          },
+          {
+            "entity": "playerInvite",
+            "field": "player_invite_id",
+            "required": true,
+            "relationship": "hasMany"
+          },
+          {
+            "entity": "card",
+            "field": "card_id",
+            "required": true,
+            "relationship": "hasMany"
+          },
+          {
+            "entity": "drawnNumber",
+            "field": "drawn_number_id",
+            "required": true,
+            "relationship": "hasMany"
+          }
+        ]
+      }
+    },
+    "award": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "game_id": {
+          "type": "uuid",
+          "name": "game_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        },
+        "name": {
+          "type": "string",
+          "name": "name",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "description": {
+          "type": "string",
+          "name": "description",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "image_url": {
+          "type": "string",
+          "name": "image_url",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        }
+      },
+      "relationships": {
+        "belongsTo": [
+          {
+            "entity": "game",
+            "field": "game_id",
+            "required": true,
+            "relationship": "belongsTo"
+          }
+        ]
+      }
+    },
+    "player": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "name": {
+          "type": "string",
+          "name": "name",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "email": {
+          "type": "string",
+          "name": "email",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "game_id": {
+          "type": "uuid",
+          "name": "game_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        }
+      },
+      "relationships": {
+        "hasMany": [
+          {
+            "entity": "playerInvite",
+            "field": "player_invite_id",
+            "required": true,
+            "relationship": "hasMany"
+          },
+          {
+            "entity": "card",
+            "field": "card_id",
+            "required": true,
+            "relationship": "hasMany"
+          }
+        ],
+        "belongsTo": [
+          {
+            "entity": "game",
+            "field": "game_id",
+            "required": true,
+            "relationship": "belongsTo"
+          }
+        ]
+      }
+    },
+    "playerInvite": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "player_id": {
+          "type": "uuid",
+          "name": "player_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        },
+        "game_id": {
+          "type": "uuid",
+          "name": "game_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        },
+        "status": {
+          "type": "enum",
+          "name": "status",
+          "required": true,
+          "unique": false,
+          "enumItems": [
+            "pending",
+            "accepted",
+            "declined"
+          ]
+        }
+      },
+      "relationships": {
+        "belongsTo": [
+          {
+            "entity": "player",
+            "field": "player_id",
+            "required": true,
+            "relationship": "belongsTo"
+          },
+          {
+            "entity": "game",
+            "field": "game_id",
+            "required": true,
+            "relationship": "belongsTo"
+          }
+        ]
+      }
+    },
+    "card": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "game_id": {
+          "type": "uuid",
+          "name": "game_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        },
+        "player_id": {
+          "type": "uuid",
+          "name": "player_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        },
+        "numbers": {
+          "type": "json",
+          "name": "numbers",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        }
+      },
+      "relationships": {
+        "belongsTo": [
+          {
+            "entity": "game",
+            "field": "game_id",
+            "required": true,
+            "relationship": "belongsTo"
+          },
+          {
+            "entity": "player",
+            "field": "player_id",
+            "required": true,
+            "relationship": "belongsTo"
+          }
+        ]
+      }
+    },
+    "drawnNumber": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "game_id": {
+          "type": "uuid",
+          "name": "game_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        },
+        "number": {
+          "type": "integer",
+          "name": "number",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        }
+      },
+      "relationships": {
+        "belongsTo": [
+          {
+            "entity": "game",
+            "field": "game_id",
+            "required": true,
+            "relationship": "belongsTo"
+          }
+        ]
+      }
+    }
+  }
+}

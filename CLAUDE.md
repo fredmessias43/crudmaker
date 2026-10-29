@@ -21,10 +21,11 @@ Gerador de API Laravel a partir de um manifest YAML ou JSON: lê entidades, camp
 - `src/readManifest.ts`: único ponto de leitura do manifest (caminho → objeto; YAML ou JSON pela extensão) e `UserError`.
 - `src/writeFiles.ts`: `planWrites` classifica cada arquivo (criado/sobrescrito/sem mudança/preservado) sem escrever; `applyPlan` grava. O `--dry-run` e a escrita real usam o mesmo plano.
 - `src/initTemplate.ts`: manifest de exemplo do `init` (YAML comentado e JSON; devem gerar o mesmo objeto).
-- `src/generate.ts`: `generate(manifest, { now, existingMigrations })`, função pura (sem disco) que devolve a lista de arquivos `{ path, content, policy }`, com `path` relativo à raiz do projeto Laravel.
+- `src/generate.ts`: `generate(manifest, { now, existingMigrations, ... })`, função pura (sem disco) que devolve `{ files, warnings }`: `files` é a lista `{ path, content, policy }` (`path` relativo à raiz do projeto Laravel) e `warnings` os avisos de nomes alterados. A opção `normalizeNames` vence `pkg.normalizeNames`.
 - `src/manifestSchema.ts`: schema zod do manifest (fonte do JSON Schema em `schema/manifest.schema.json`, publicado no pacote).
-- `src/validateManifest.ts`: validação (schema + entre entidades) e `ManifestValidationError` com `{ path, message }` por problema.
-- `src/models/Manifest.ts`: valida via `validateManifest` e normaliza (formas curtas, aliases, campos de FK).
+- `src/normalizeNames.ts`: normalização de nomes (entidade singular camelCase, campo snake_case), avisos e colisões; roda entre a validação estrutural e a validação entre entidades.
+- `src/validateManifest.ts`: pipeline de validação (schema → normalização de nomes → entre entidades) e `ManifestValidationError` com `{ path, message }` por problema.
+- `src/models/Manifest.ts`: valida via `validateManifest` e normaliza (formas curtas, aliases, campos de FK, unificação de FK declarada + derivada).
 - `src/models/Entity.ts`: nome da entidade em vários casings e nome da tabela.
 - `src/fileCreators/PhpFile.ts`: classe base dos geradores (casca do arquivo PHP e caminho relativo; não escreve no disco).
 - `src/fileCreators/*File.ts`: um gerador por tipo de arquivo PHP. `RoutesFile.ts` gera `routes/crudmaker.php` e o include no `routes/api.php` (não estende `PhpFile`).

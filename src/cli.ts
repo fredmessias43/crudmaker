@@ -36,7 +36,7 @@ Opções:
   -v, --version         mostra a versão
 `;
 
-const generateHelp = `Uso: crudmaker generate <manifest> [--out <dir>] [--dry-run]
+const generateHelp = `Uso: crudmaker generate <manifest> [--out <dir>] [--dry-run] [--normalize-names | --no-normalize-names]
 
 Gera Model, Migration, Controller, Request, Resource e Collection de cada entidade,
 mais o arquivo de rotas (routes/crudmaker.php), incluído uma única vez no routes/api.php.
@@ -44,6 +44,9 @@ mais o arquivo de rotas (routes/crudmaker.php), incluído uma única vez no rout
 Opções:
   -o, --out <dir>   raiz do projeto Laravel de destino (padrão: diretório atual)
   -n, --dry-run     não escreve nada; lista o que seria criado, sobrescrito ou preservado
+  --normalize-names     liga a normalização de nomes (entidade singular camelCase, campo snake_case)
+  --no-normalize-names  desliga a normalização: os nomes passam como estão (só avisa o que está fora da convenção)
+                        As duas flags têm prioridade sobre pkg.normalizeNames do manifest (padrão: ligada).
   -h, --help        mostra esta ajuda
 
 Atenção: arquivos existentes são sobrescritos, inclusive edições feitas à mão.
@@ -84,7 +87,7 @@ function missingApiRoutesWarning(outDir: string): string {
   ].join("\n");
 }
 
-function printPlan(plan: PlannedWrite[], io: CliIo, baseDir: string, dryRun: boolean): void {
+function printPlan(plan: PlannedWrite[], warnings: string[], io: CliIo, baseDir: string, dryRun: boolean): void {
   const lines: string[] = [];
   const verb = dryRun ? "Seria" : "Resumo";
 
@@ -102,6 +105,12 @@ function printPlan(plan: PlannedWrite[], io: CliIo, baseDir: string, dryRun: boo
   const counts = actionOrder.map((action) => `${plan.filter((i) => i.action === action).length} ${actionLabels[action]}`);
   lines.push(`Total: ${plan.length} arquivos (${counts.join(", ")})`);
 
+  // Avisos de nomes: no stdout, junto do resumo (e do --dry-run), como o aviso do routes/api.php.
+  if (warnings.length > 0) {
+    lines.push("", `Avisos (${warnings.length}):`);
+    for (const warning of warnings) lines.push(`  ${warning}`);
+  }
+
   io.stdout(lines.join("\n") + "\n");
 }
 
@@ -112,6 +121,8 @@ function runGenerate(args: string[], io: CliIo): number {
     options: {
       out: { type: "string", short: "o" },
       "dry-run": { type: "boolean", short: "n" },
+      "normalize-names": { type: "boolean" },
+      "no-normalize-names": { type: "boolean" },
       help: { type: "boolean", short: "h" },
     },
   });
@@ -124,6 +135,12 @@ function runGenerate(args: string[], io: CliIo): number {
     throw new UserError("Informe o caminho do manifest: crudmaker generate <manifest> [--out <dir>] [--dry-run]");
   }
 
+  if (values["normalize-names"] && values["no-normalize-names"]) {
+    throw new UserError("Use só uma das flags: --normalize-names ou --no-normalize-names.");
+  }
+  // Sem flag, `undefined`: vale o manifest (padrão: ligada).
+  const normalizeNames = values["normalize-names"] ? true : values["no-normalize-names"] ? false : undefined;
+
   const manifestPath = path.resolve(io.cwd, positionals[0]);
   const outDir = path.resolve(io.cwd, values.out ?? ".");
   const manifestObj = readManifest(manifestPath);
@@ -134,12 +151,12 @@ function runGenerate(args: string[], io: CliIo): number {
   const apiRoutesPath = path.join(outDir, "routes/api.php");
   const existingApiRoutes = fs.existsSync(apiRoutesPath) ? fs.readFileSync(apiRoutesPath, "utf8") : null;
 
-  const files = generate(manifestObj, { now: io.now(), existingMigrations, existingApiRoutes });
+  const { files, warnings } = generate(manifestObj, { now: io.now(), existingMigrations, existingApiRoutes, normalizeNames });
   const plan = planWrites(files, outDir);
 
   if (!values["dry-run"]) applyPlan(plan);
 
-  printPlan(plan, io, outDir, Boolean(values["dry-run"]));
+  printPlan(plan, warnings, io, outDir, Boolean(values["dry-run"]));
   if (existingApiRoutes === null) io.stdout(missingApiRoutesWarning(outDir));
   return 0;
 }

@@ -71,7 +71,7 @@ export function writeFixtureOutputs(outDir: string): void {
     const manifestPath = path.join(fixturesDir, name, "manifest.json");
     if (!fs.existsSync(manifestPath)) continue;
     const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-    for (const file of generate(manifest, { now, existingMigrations: [] })) {
+    for (const file of generate(manifest, { now, existingMigrations: [] }).files) {
       const target = path.join(outDir, name, file.path);
       fs.mkdirSync(path.dirname(target), { recursive: true });
       fs.writeFileSync(target, file.content);

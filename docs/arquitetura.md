@@ -5,22 +5,22 @@ O crudmaker é uma CLI TypeScript (`crudmaker`, compilada para `dist/` ou rodada
 ## Fluxo
 
 ```
-crudmaker generate <manifest> --out <dir> [--dry-run]     src/bin.ts → src/cli.ts
+crudmaker generate <manifest> --out <dir> [--dry-run] [--[no-]normalize-names]     src/bin.ts → src/cli.ts
     │  readManifest(caminho)      lê e faz o parse (YAML ou JSON, pela extensão)
     ▼
-generate(manifest, { now, existingMigrations })     função pura, sem acesso ao disco
-    │  Manifest        schema (zod) → validação entre entidades → normalização
+generate(manifest, { now, existingMigrations, ... })     função pura, sem acesso ao disco
+    │  Manifest        schema (zod) → normalização de nomes → validação entre entidades → normalização
     │  Entity          (uma por entidade) nome + casings + nome da tabela
     │  geradores       (PhpFile) Model, Resource, Collection, Controller, Request, Migration
     ▼
-lista de arquivos { path, content, policy }         path relativo à raiz do projeto Laravel
+{ files, warnings }      files: { path, content, policy }, path relativo à raiz do projeto Laravel
     │  planWrites(files, out)     classifica: criado / sobrescrito / sem mudança / preservado
     │  applyPlan(plan)            só sem --dry-run
     ▼
 <out>/manifest-lock.json, <out>/app/...  e  <out>/database/migrations/...
     │
     ▼
-resumo no stdout
+resumo e avisos de nomes no stdout
 ```
 
 ### CLI
@@ -28,7 +28,7 @@ resumo no stdout
 A CLI é uma casca fina em volta de `generate` (sem lógica de geração):
 
 - `src/bin.ts`: entrada do binário (shebang `#!/usr/bin/env node`); passa `process.argv` para `run` e usa o retorno como exit code.
-- `src/cli.ts`: `run(argv, io)` interpreta os argumentos (`node:util` `parseArgs`, sem dependência externa), executa `generate` ou `init` e devolve o exit code. `io` (stdout, stderr, cwd, relógio) é injetável, o que permite testar sem subprocesso. Para `generate`, lê os nomes em `<out>/database/migrations` (lista vazia se a pasta não existe), chama `generate` com a data atual, monta o plano de escrita e, sem `--dry-run`, o aplica; depois imprime o resumo.
+- `src/cli.ts`: `run(argv, io)` interpreta os argumentos (`node:util` `parseArgs`, sem dependência externa), executa `generate` ou `init` e devolve o exit code. `io` (stdout, stderr, cwd, relógio) é injetável, o que permite testar sem subprocesso. Para `generate`, lê os nomes em `<out>/database/migrations` (lista vazia se a pasta não existe), resolve `--normalize-names` / `--no-normalize-names` (sem flag, `undefined`: vale o manifest), chama `generate` com a data atual, monta o plano de escrita e, sem `--dry-run`, o aplica; depois imprime o resumo e, se houver, a seção `Avisos` (no stdout, como o aviso do `routes/api.php`; o stderr fica para erros).
 - `src/readManifest.ts`: único ponto de leitura do manifest: escolhe o parser pela extensão (`.yaml`/`.yml` → YAML 1.2 via lib `yaml`, um documento só e mapa na raiz; `.json` → `JSON.parse`; outra extensão é erro). Erros esperados viram `UserError`; a CLI imprime `Erro: <mensagem>` no stderr e sai com código 1, sem stack trace (defina `CRUDMAKER_DEBUG=1` para vê-lo).
 - `src/initTemplate.ts`: conteúdo do manifest criado por `crudmaker init`.
 
@@ -39,9 +39,13 @@ O `npx`/`npm link` usam o campo `bin` do `package.json` (`dist/bin.js`), gerado 
 `generate` (`src/generate.ts`) não lê nem escreve em disco. Tudo o que seria "ambiente" entra por `options`:
 
 - `now`: data/hora do prefixo das migrations novas (`yyyy_MM_dd_HHmmss`);
-- `existingMigrations`: nomes de arquivo das migrations que já existem no destino. Se algum termina com `_create_<tabela>_table.php`, o nome é reaproveitado em vez de gerar um novo.
+- `existingMigrations`: nomes de arquivo das migrations que já existem no destino. Se algum termina com `_create_<tabela>_table.php`, o nome é reaproveitado em vez de gerar um novo;
+- `existingApiRoutes`: conteúdo do `routes/api.php` do destino (ou `null`);
+- `normalizeNames` (opcional): liga/desliga a normalização de nomes; quando definida, vale mais que `pkg.normalizeNames` do manifest.
 
-Cada arquivo devolvido tem `path`, `content` e `policy` (`overwrite` ou `create-once`). Hoje tudo sai como `overwrite`; `create-once` ainda não é usado pelos geradores. O primeiro item da lista é sempre o `manifest-lock.json`.
+O retorno é `{ files, warnings }`. Os avisos (`string[]`, um por nome alterado ou fora da convenção) vêm junto com os arquivos, em vez de serem impressos, para `generate` continuar pura e quem chama (CLI, scripts, testes) decidir o que mostrar.
+
+Cada arquivo de `files` tem `path`, `content` e `policy` (`overwrite` ou `create-once`). Hoje tudo sai como `overwrite`; `create-once` ainda não é usado pelos geradores. O primeiro item da lista é sempre o `manifest-lock.json`.
 
 `src/writeFiles.ts` tem a camada de escrita, em dois passos:
 
@@ -53,15 +57,16 @@ O `--dry-run` e a escrita real usam o mesmo plano, então nunca divergem. `write
 ## Módulos
 
 ### `models/Manifest`
-Recebe o objeto cru do manifest e produz `entities` normalizadas, em três etapas:
+Recebe o objeto cru do manifest (e a opção `normalizeNames`) e produz `entities` normalizadas e `warnings`, em quatro etapas:
 
 1. **Schema** (`src/manifestSchema.ts`, zod): estrutura do manifest de entrada (formas curta e longa, aliases `int`/`displayName`, tipos conhecidos, chaves obrigatórias). É a fonte do JSON Schema publicado em `schema/manifest.schema.json` (`npm run schema`, via `z.toJSONSchema` do zod 4 com `io: "input"`, que descreve o que se escreve no manifest e não o resultado das transformações). Chaves desconhecidas são toleradas e descartadas.
-2. **Validação entre entidades** (`src/validateManifest.ts`): relacionamento para entidade inexistente e `enum` sem itens. As issues do zod são convertidas em `{ path, message }` em português, com o caminho real no arquivo; qualquer falha lança `ManifestValidationError` (subclasse de `UserError`) com todos os problemas da etapa. A CLI a imprime com um problema por linha.
-3. **Normalização** (`normalizeEntity` em `src/models/Manifest.ts`), só com a entrada já válida:
+2. **Normalização de nomes** (`src/normalizeNames.ts`), só com a estrutura válida e antes da validação entre entidades. Entidades (chaves de `pkg.entities` e referências nos relacionamentos) viram singular camelCase; campos (chaves, `name` explícito e `field` explícito de relacionamento) viram snake_case. Devolve um aviso por nome alterado e as colisões como problemas de validação. Desligada (`pkg.normalizeNames: false` ou a opção/flag), não altera nada, mas ainda avisa o que está fora da convenção. Não altera a entrada (função pura).
+3. **Validação entre entidades** (`src/validateManifest.ts`): relacionamento para entidade inexistente (com os nomes já normalizados e o caminho original no arquivo) e `enum` sem itens (checado antes, com os nomes originais). `validateManifest` orquestra as etapas 1 a 3 e devolve `{ input, warnings, normalizeNames }`. As issues do zod são convertidas em `{ path, message }` em português, com o caminho real no arquivo; qualquer falha lança `ManifestValidationError` (subclasse de `UserError`) com todos os problemas da etapa. A CLI a imprime com um problema por linha.
+4. **Normalização** (`normalizeEntity` em `src/models/Manifest.ts`), só com a entrada já válida:
    - campo na forma curta (`"name": "string"`) vira `{ type, name, required: true, unique: false, enumItems: [] }`;
    - aliases são resolvidos (`int` → `integer`, `displayName` → campo `display_name` do tipo `string`);
    - cada relacionamento vira `{ entity, field, required, relationship }`;
-   - `belongsTo` adiciona o campo de FK (`uuid`, com `relationship: true`) aos `fields`;
+   - `belongsTo` adiciona o campo de FK (`uuid`, com `relationship: true`) aos `fields`; com a normalização de nomes ligada, a FK da forma curta passa por snake_case (`courseContent` → `course_content_id`) e uma FK já declarada à mão com o mesmo nome é unificada (vale a declaração explícita, completada com `relationship: true`);
    - `owned`/`morphed` adicionam `owner_id` e `owner_class`.
 
 `manifestToString()` serializa o resultado normalizado; `generate` o devolve como o arquivo `manifest-lock.json`. Os tipos do modelo normalizado continuam em `src/types.ts`.
@@ -111,13 +116,15 @@ O `generate` continua puro: a CLI lê o `routes/api.php` do destino (ou `null` s
 
 `tests/validate.test.ts` cobre a validação (fixtures válidos, manifests inválidos com caminho e mensagem, vários erros de uma vez) e confere que `schema/manifest.schema.json` está em dia com o schema zod.
 
+`tests/normalizeNames.test.ts` cobre a normalização de nomes (regras, avisos, colisões, FK declarada + derivada, precedência opção × manifest, as fixtures antigas ligadas × desligadas e o JSON Schema).
+
 `tests/yaml.test.ts` cobre o YAML: cada fixture tem um `manifest.yaml` que precisa ler o mesmo objeto e gerar a mesma saída do JSON, os erros de sintaxe/vazio/multi-documento/extensão, e o `init` em cada formato (o exemplo YAML tem de ser igual ao JSON).
 
-`tests/generate.test.ts` também cobre as rotas (nome do recurso, include, idempotência, detecção por variações de espaço e aspas). Ele chama `generate` para os três manifests de `tests/fixtures/` com data fixa e sem migrations existentes. O conteúdo de cada arquivo é comparado com um snapshot em `tests/__snapshots__/<fixture>/<path>`, e a lista de caminhos com `_paths.txt`. Os snapshots registram a saída atual, inclusive bugs conhecidos.
+`tests/generate.test.ts` também cobre as rotas (nome do recurso, include, idempotência, detecção por variações de espaço e aspas). Ele chama `generate` para os manifests de `tests/fixtures/` com data fixa e sem migrations existentes. Os snapshots de `bingo`, `curso` e `vende-que-vende-api` são a saída de antes da normalização de nomes e valem com ela **desligada** (`normalizeNames: false`); `bingo-2` (entidades no plural, FKs declaradas à mão) tem snapshot com a normalização ligada, o padrão. O conteúdo de cada arquivo é comparado com um snapshot em `tests/__snapshots__/<fixture>/<path>`, e a lista de caminhos com `_paths.txt`. Os snapshots registram a saída atual, inclusive bugs conhecidos.
 
 ### Sintaxe do PHP gerado
 
-`npm run lint:php` (`scripts/checkPhpSyntax.ts`) valida que o PHP gerado é sintaticamente válido. Ele chama `generate` para as fixtures de `tests/fixtures/` com data fixa, grava a saída num diretório temporário do sistema (nunca em `generated/` nem no repositório) e monta esse diretório como volume somente leitura num único `docker run --rm` da imagem oficial `php:8.1-cli`, com o UID/GID do usuário, que roda `php -l` em cada `.php`. O script lista os arquivos com erro, sai com código diferente de zero se houver falha inesperada (ou 2 se o Docker não estiver disponível) e apaga o diretório temporário no fim. A versão 8.1 é a mínima prometida pela spec: se parseia nela, parseia nas mais novas.
+`npm run lint:php` (`scripts/checkPhpSyntax.ts`) valida que o PHP gerado é sintaticamente válido. Ele chama `generate` (normalização no padrão, ligada) para as fixtures de `tests/fixtures/` com data fixa, grava a saída num diretório temporário do sistema (nunca em `generated/` nem no repositório) e monta esse diretório como volume somente leitura num único `docker run --rm` da imagem oficial `php:8.1-cli`, com o UID/GID do usuário, que roda `php -l` em cada `.php`. O script lista os arquivos com erro, sai com código diferente de zero se houver falha inesperada (ou 2 se o Docker não estiver disponível) e apaga o diretório temporário no fim. A versão 8.1 é a mínima prometida pela spec: se parseia nela, parseia nas mais novas.
 
 A checagem olha a saída de `generate`, e não os snapshots, para não depender deles: um snapshot pode ser atualizado com `-u` sem que ninguém perceba que o PHP ficou inválido, e a checagem continua valendo mesmo que a forma de guardar os snapshots mude.
 

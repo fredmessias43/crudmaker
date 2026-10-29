@@ -38,14 +38,25 @@ export type GenerateOptions = {
    * (o `php artisan install:api` faz as duas coisas).
    */
   existingApiRoutes?: string | null;
+  /**
+   * Liga ou desliga a normalização de nomes. Quando definida, vale mais que `pkg.normalizeNames`
+   * do manifest; omitida, vale o manifest (padrão: ligada).
+   */
+  normalizeNames?: boolean;
+};
+
+export type GenerateResult = {
+  files: GeneratedFile[];
+  /** Um aviso por nome alterado (ou fora da convenção, com a normalização desligada). Não bloqueiam a geração. */
+  warnings: string[];
 };
 
 /**
  * Função pura: não lê nem escreve em disco.
- * Recebe o manifest cru (já parseado) e devolve os arquivos a gravar.
+ * Recebe o manifest cru (já parseado) e devolve os arquivos a gravar e os avisos.
  */
-export function generate(manifestObj: { [key: string]: any }, options: GenerateOptions): GeneratedFile[] {
-  const manifest = new Manifest(manifestObj);
+export function generate(manifestObj: { [key: string]: any }, options: GenerateOptions): GenerateResult {
+  const manifest = new Manifest(manifestObj, { normalizeNames: options.normalizeNames });
   const files: GeneratedFile[] = [];
   const entities: Entity[] = [];
 
@@ -94,5 +105,5 @@ export function generate(manifestObj: { [key: string]: any }, options: GenerateO
     });
   }
 
-  return files;
+  return { files, warnings: manifest.warnings };
 }

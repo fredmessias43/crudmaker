@@ -1,7 +1,7 @@
 import { snakeCase } from "lodash";
 import { FieldInput, ManifestInput, RELATION_KEYS, OWNER_KEYS } from "../manifestSchema";
 import { Field, ManifestEntities, ManifestEntity, RelationshipValue, Relationships } from "../types";
-import { validateManifest } from "../validateManifest";
+import { validateManifest, ValidateOptions } from "../validateManifest";
 
 function normalizeField(fieldKey: string, fieldValue: FieldInput): [string, Field] {
   const newField = typeof fieldValue === "string"
@@ -26,7 +26,7 @@ function normalizeField(fieldKey: string, fieldValue: FieldInput): [string, Fiel
   return [fieldKey, newField as Field];
 }
 
-function normalizeEntity(entityValue: ManifestInput["pkg"]["entities"][string]): ManifestEntity {
+function normalizeEntity(entityValue: ManifestInput["pkg"]["entities"][string], normalizeNames: boolean): ManifestEntity {
   const newEntity: ManifestEntity = {
     fields: {},
     relationships: {},
@@ -59,9 +59,11 @@ function normalizeEntity(entityValue: ManifestInput["pkg"]["entities"][string]):
 
     // Mesmo com a lista vazia a chave aparece no lock.
     newRelationships[relation] = list.map((element): RelationshipValue => {
-      // Forma curta: a FK é `<nome>_id` sem snake_case (comportamento atual, a corrigir em outro ticket).
+      // Forma curta: com a normalização de nomes a FK passa pelo snake_case (`courseContent` → `course_content_id`).
+      // Desligada, vale o comportamento antigo: `<nome>_id` sem snake_case.
       if (typeof element === "string") {
-        return { entity: element, field: element + "_id", required: true, relationship: relation };
+        const field = (normalizeNames ? snakeCase(element) : element) + "_id";
+        return { entity: element, field, required: true, relationship: relation };
       }
       return {
         entity: element.entity,
@@ -74,6 +76,15 @@ function normalizeEntity(entityValue: ManifestInput["pkg"]["entities"][string]):
 
   // Campos de FK dos belongsTo
   newRelationships.belongsTo?.forEach((relation) => {
+    const declared = newEntity.fields[relation.field];
+
+    // FK declarada à mão e também derivada: com a normalização ligada vale a declaração explícita
+    // (posição, required, unique...), completada com `relationship: true`. Desligada, o derivado sobrescreve.
+    if (normalizeNames && declared !== undefined) {
+      newEntity.fields[relation.field] = { ...declared, relationship: true };
+      return;
+    }
+
     newEntity.fields[relation.field] = {
       type: "uuid",
       name: relation.field,
@@ -96,15 +107,18 @@ export class Manifest {
   public systemCode: string;
   public pkgCode: string;
   public entities: ManifestEntities = {};
+  /** Avisos de nomes alterados (ou fora da convenção, se a normalização estiver desligada). */
+  public warnings: string[];
 
-  constructor(obj: unknown) {
-    const input = validateManifest(obj);
+  constructor(obj: unknown, options: ValidateOptions = {}) {
+    const { input, warnings, normalizeNames } = validateManifest(obj, options);
 
+    this.warnings = warnings;
     this.systemCode = input.system.code;
     this.pkgCode = input.pkg.code;
 
     for (const [entityKey, entityValue] of Object.entries(input.pkg.entities)) {
-      this.entities[entityKey] = normalizeEntity(entityValue);
+      this.entities[entityKey] = normalizeEntity(entityValue, normalizeNames);
     }
   }
 
