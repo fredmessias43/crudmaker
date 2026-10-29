@@ -1,0 +1,27 @@
+{
+  "system": { "title": "Loja", "code": "loja" },
+  "pkg": {
+    "code": "alter",
+    "entities": {
+      "client": {
+        "fields": {
+          "id": "uuid",
+          "name": "string",
+          "nickname": "string",
+          "email": { "type": "string", "unique": true },
+          "age": "integer",
+          "status": { "type": "enum", "enumItems": ["active", "blocked"] }
+        }
+      },
+      "order": {
+        "fields": {
+          "id": "uuid",
+          "total": "double"
+        },
+        "relationships": {
+          "belongsTo": ["client"]
+        }
+      }
+    }
+  }
+}

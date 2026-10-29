@@ -1,0 +1,61 @@
+<?php
+
+// ARQUIVO GERADO PELO CRUDMAKER. NÃO EDITE: ele é sobrescrito a cada `crudmaker generate`.
+// Seu código fica em <%~ it.final.fqcn %> (<%~ it.final.path %>), que estende esta classe e nunca é sobrescrita.
+
+namespace <%~ it.namespace %>;
+
+<% for (const use of it.imports) { -%>
+use <%~ use %>;
+<% } -%>
+
+
+abstract class <%~ it.className %> extends <%~ it.extends %>
+{
+
+	/**
+	 * Transform the resource into an array.
+	 *
+	 * @param  \Illuminate\Http\Request  $request
+	 * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
+	 */
+	public function toArray($request)
+	{
+		$createdAt = $this->created_at->locale(App::getLocale());
+		$updatedAt = $this->updated_at->locale(App::getLocale());
+	
+		return array_merge([
+<% for (const field of it.fields) { -%>
+			'<%~ field.key %>' => $this-><%~ field.key %><%~ field.enum ? '?->value' : '' %>,
+<% } -%>
+			'created_at' => array(
+				'timestamp' => $createdAt->timestamp,
+				'description' => $createdAt->diffForHumans(),
+			),
+			'updated_at' => array(
+				'timestamp' => $updatedAt->timestamp,
+				'description' => $updatedAt->diffForHumans(),
+			),
+<% for (const relation of it.relations) { -%>
+<% if (relation.many) { -%>
+			'<%~ relation.name %>' => <%~ relation.resourceClass %>::collection($this->whenLoaded('<%~ relation.name %>')),
+<% } else { -%>
+			'<%~ relation.name %>' => new <%~ relation.resourceClass %>($this->whenLoaded('<%~ relation.name %>')),
+<% } -%>
+<% } -%>
+		], $this->extra($request));
+	}
+
+	/**
+	 * Hook: campos calculados que entram na resposta (junto dos gerados; a mesma chave substitui o campo gerado).
+	 * Sobrescreva na classe final.
+	 *
+	 * @param  \Illuminate\Http\Request  $request
+	 * @return array
+	 */
+	protected function extra(Request $request): array
+	{
+		return [];
+	}
+
+}

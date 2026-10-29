@@ -1,4 +1,5 @@
 {
+  "$schema": "./schema/manifest.schema.json",
   "system": {
     "title": "Crudmaker",
     "code": "crudmaker"
@@ -9,13 +10,24 @@
       "entityCamelCase": {
         "fields": {
           "id": "uuid",
-          "field_2": "string",
+          "field_2": {
+            "type": "string",
+            "required": false,
+            "unique": true,
+            "hidden": true,
+            "rules": [
+              "max:120"
+            ]
+          },
           "field_3": "text",
           "field_4": "date",
           "field_5": "datetime",
           "field_6": "double",
           "field_7": "integer",
-          "field_8": "boolean",
+          "field_8": {
+            "type": "boolean",
+            "default": false
+          },
           "field_9": "json",
           "field_10": {
             "type": "enum",
@@ -23,7 +35,8 @@
               "itemOne",
               "itemTwo",
               "itemThree"
-            ]
+            ],
+            "default": "itemTwo"
           }
         },
         "relationships": {
@@ -45,7 +58,56 @@
           "owned": [
             "entity"
           ]
+        },
+        "api": {
+          "actions": [
+            "index",
+            "show",
+            "store",
+            "update",
+            "destroy"
+          ],
+          "middleware": [
+            "auth:sanctum",
+            "verified"
+          ],
+          "perPage": 20,
+          "filters": [
+            "field_10"
+          ],
+          "search": [
+            "field_3"
+          ],
+          "sort": [
+            "field_4"
+          ],
+          "defaultSort": "-created_at",
+          "with": [
+            "entity"
+          ],
+          "nested": true,
+          "tests": true
         }
+      },
+      "entity": {
+        "fields": {
+          "id": "uuid",
+          "name": "string"
+        }
+      }
+    },
+    "target": {
+      "laravel": 12,
+      "php": "8.2"
+    },
+    "defaults": {
+      "api": {
+        "middleware": [
+          "auth:sanctum"
+        ],
+        "perPage": 15,
+        "nested": true,
+        "tests": true
       }
     }
   }

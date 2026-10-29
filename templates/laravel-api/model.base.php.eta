@@ -1,0 +1,83 @@
+<?php
+
+// ARQUIVO GERADO PELO CRUDMAKER. NÃO EDITE: ele é sobrescrito a cada `crudmaker generate`.
+// Seu código fica em <%~ it.final.fqcn %> (<%~ it.final.path %>), que estende esta classe e nunca é sobrescrita.
+
+namespace <%~ it.namespace %>;
+
+<% for (const use of it.imports) { -%>
+use <%~ use %>;
+<% } -%>
+
+
+abstract class <%~ it.className %> extends <%~ it.extends %>
+{
+<% for (const trait of it.traits) { -%>
+	use <%~ trait %>;
+<% } -%>
+
+<% if (it.uuidKey) { -%>
+	protected $keyType = "string";
+	public $incrementing = false;
+	
+<% } -%>
+<% if (it.capabilities.castsMethod) { -%>
+	/**
+	 * Get the attributes that should be cast.
+	 *
+	 * @return array<string, string>
+	 */
+	protected function casts(): array
+	{
+		return [
+<% for (const cast of it.casts) { -%>
+			'<%~ cast.name %>' => <%~ cast.cast %>,
+<% } -%>
+		];
+	}
+<% } else { -%>
+	/**
+	 * The attributes that should be cast.
+	 *
+	 * @var array
+	 */
+	protected $casts = [
+<% for (const cast of it.casts) { -%>
+		'<%~ cast.name %>' => <%~ cast.cast %>,
+<% } -%>
+	];
+<% } -%>
+	
+	/**
+	 * The attributes that are mass assignable.
+	 *
+	 * @var array
+	 */
+	protected $fillable = [
+<% for (const name of it.fillable) { -%>
+		'<%~ name %>',
+<% } -%>
+	];
+
+<% if (it.hidden.length > 0) { -%>
+	/**
+	 * The attributes that should be hidden for serialization.
+	 *
+	 * @var array
+	 */
+	protected $hidden = [
+<% for (const name of it.hidden) { -%>
+		'<%~ name %>',
+<% } -%>
+	];
+
+<% } -%>
+<% for (const relation of it.relations) { -%>
+	public function <%~ relation.name %>(): <%~ relation.returnType %>
+	{
+		return $this-><%~ relation.method %>(<%~ relation.arguments %>);
+	}
+	
+<% } -%>
+
+}

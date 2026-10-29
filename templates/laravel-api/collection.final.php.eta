@@ -1,0 +1,21 @@
+<?php
+
+namespace <%~ it.namespace %>;
+
+<% for (const use of it.imports) { -%>
+use <%~ use %>;
+<% } -%>
+
+/**
+ * Camada de customização da collection de <%~ it.entity.pascal %>.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * O código gerado fica em <%~ it.base.fqcn %> (<%~ it.base.path %>), que não deve ser editada.
+ */
+class <%~ it.className %> extends <%~ it.extends %>
+{
+	/*
+	 * A collection não tem hooks: cada item sai pela resource, então campos extras vão em
+	 * <%~ it.entity.pascal %>Resource::extra(). Aqui só ajustes da própria coleção (with(), paginationInformation()...).
+	 */
+}

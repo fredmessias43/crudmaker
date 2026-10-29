@@ -1,0 +1,23 @@
+<?php
+
+namespace <%~ it.namespace %>;
+
+<% for (const use of it.imports) { -%>
+use <%~ use %>;
+<% } -%>
+
+/**
+ * Camada de customização da request de <%~ it.entity.pascal %>.
+ *
+ * Este arquivo é seu: o crudmaker o criou uma única vez e nunca o sobrescreve.
+ * As regras geradas ficam em <%~ it.base.fqcn %> (<%~ it.base.path %>), que não deve ser editada.
+ */
+class <%~ it.className %> extends <%~ it.extends %>
+{
+	/*
+	 * Hook e método que você pode sobrescrever aqui:
+	 *
+	 *   protected function extraRules(): array; // regras somadas às geradas (a mesma chave de campo substitui a gerada)
+	 *   public function authorize(): bool; // a base libera tudo (return true)
+	 */
+}

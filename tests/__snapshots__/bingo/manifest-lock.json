@@ -1,0 +1,369 @@
+{
+  "lockVersion": 2,
+  "code": "bingo",
+  "version": "0.1.0",
+  "target": {
+    "laravel": 12,
+    "php": "8.2"
+  },
+  "entities": {
+    "game": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "name": {
+          "type": "string",
+          "name": "name",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "description": {
+          "type": "string",
+          "name": "description",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "max_players": {
+          "type": "integer",
+          "name": "max_players",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "document": {
+          "type": "string",
+          "name": "document",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "status": {
+          "type": "enum",
+          "name": "status",
+          "required": true,
+          "unique": false,
+          "enumItems": [
+            "active",
+            "inactive",
+            "archived",
+            "completed"
+          ]
+        }
+      },
+      "relationships": {
+        "hasMany": [
+          {
+            "entity": "awards",
+            "field": "awards_id",
+            "required": true,
+            "relationship": "hasMany"
+          },
+          {
+            "entity": "player_invite",
+            "field": "player_invite_id",
+            "required": true,
+            "relationship": "hasMany"
+          },
+          {
+            "entity": "cards",
+            "field": "cards_id",
+            "required": true,
+            "relationship": "hasMany"
+          },
+          {
+            "entity": "drawn_numbers",
+            "field": "drawn_numbers_id",
+            "required": true,
+            "relationship": "hasMany"
+          }
+        ]
+      }
+    },
+    "awards": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "game_id": {
+          "type": "uuid",
+          "name": "game_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        },
+        "name": {
+          "type": "string",
+          "name": "name",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "description": {
+          "type": "string",
+          "name": "description",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "image_url": {
+          "type": "string",
+          "name": "image_url",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        }
+      },
+      "relationships": {
+        "belongsTo": [
+          {
+            "entity": "game",
+            "field": "game_id",
+            "required": true,
+            "relationship": "belongsTo"
+          }
+        ]
+      }
+    },
+    "player": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "name": {
+          "type": "string",
+          "name": "name",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "email": {
+          "type": "string",
+          "name": "email",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "game_id": {
+          "type": "uuid",
+          "name": "game_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        }
+      },
+      "relationships": {
+        "hasMany": [
+          {
+            "entity": "player_invite",
+            "field": "player_invite_id",
+            "required": true,
+            "relationship": "hasMany"
+          },
+          {
+            "entity": "cards",
+            "field": "cards_id",
+            "required": true,
+            "relationship": "hasMany"
+          }
+        ],
+        "belongsTo": [
+          {
+            "entity": "game",
+            "field": "game_id",
+            "required": true,
+            "relationship": "belongsTo"
+          }
+        ]
+      }
+    },
+    "player_invite": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "player_id": {
+          "type": "uuid",
+          "name": "player_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        },
+        "game_id": {
+          "type": "uuid",
+          "name": "game_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        },
+        "status": {
+          "type": "enum",
+          "name": "status",
+          "required": true,
+          "unique": false,
+          "enumItems": [
+            "pending",
+            "accepted",
+            "declined"
+          ]
+        }
+      },
+      "relationships": {
+        "belongsTo": [
+          {
+            "entity": "player",
+            "field": "player_id",
+            "required": true,
+            "relationship": "belongsTo"
+          },
+          {
+            "entity": "game",
+            "field": "game_id",
+            "required": true,
+            "relationship": "belongsTo"
+          }
+        ]
+      }
+    },
+    "cards": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "game_id": {
+          "type": "uuid",
+          "name": "game_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        },
+        "player_id": {
+          "type": "uuid",
+          "name": "player_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        },
+        "numbers": {
+          "type": "json",
+          "name": "numbers",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        }
+      },
+      "relationships": {
+        "belongsTo": [
+          {
+            "entity": "game",
+            "field": "game_id",
+            "required": true,
+            "relationship": "belongsTo"
+          },
+          {
+            "entity": "player",
+            "field": "player_id",
+            "required": true,
+            "relationship": "belongsTo"
+          }
+        ]
+      }
+    },
+    "drawn_numbers": {
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "name": "id",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        },
+        "game_id": {
+          "type": "uuid",
+          "name": "game_id",
+          "required": true,
+          "unique": false,
+          "enumItems": [],
+          "relationship": true
+        },
+        "number": {
+          "type": "integer",
+          "name": "number",
+          "required": true,
+          "unique": false,
+          "enumItems": []
+        }
+      },
+      "relationships": {
+        "belongsTo": [
+          {
+            "entity": "game",
+            "field": "game_id",
+            "required": true,
+            "relationship": "belongsTo"
+          }
+        ]
+      }
+    }
+  },
+  "migrations": [
+    {
+      "file": "2025_01_02_030405_create_games_table.php",
+      "table": "games",
+      "type": "create"
+    },
+    {
+      "file": "2025_01_02_030406_create_awards_table.php",
+      "table": "awards",
+      "type": "create"
+    },
+    {
+      "file": "2025_01_02_030407_create_players_table.php",
+      "table": "players",
+      "type": "create"
+    },
+    {
+      "file": "2025_01_02_030408_create_player_invites_table.php",
+      "table": "player_invites",
+      "type": "create"
+    },
+    {
+      "file": "2025_01_02_030409_create_cards_table.php",
+      "table": "cards",
+      "type": "create"
+    },
+    {
+      "file": "2025_01_02_030410_create_drawn_numbers_table.php",
+      "table": "drawn_numbers",
+      "type": "create"
+    }
+  ]
+}

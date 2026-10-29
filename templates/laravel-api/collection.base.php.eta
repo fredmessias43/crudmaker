@@ -1,0 +1,23 @@
+<?php
+
+// ARQUIVO GERADO PELO CRUDMAKER. NÃO EDITE: ele é sobrescrito a cada `crudmaker generate`.
+// Seu código fica em <%~ it.final.fqcn %> (<%~ it.final.path %>), que estende esta classe e nunca é sobrescrita.
+
+namespace <%~ it.namespace %>;
+
+<% for (const use of it.imports) { -%>
+use <%~ use %>;
+<% } -%>
+
+
+abstract class <%~ it.className %> extends <%~ it.extends %>
+{
+
+	/**
+	 * Cada item sai pela resource final, então os campos extras de `extra()` valem na listagem também.
+	 *
+	 * @var string
+	 */
+	public $collects = <%~ it.resourceClass %>::class;
+
+}

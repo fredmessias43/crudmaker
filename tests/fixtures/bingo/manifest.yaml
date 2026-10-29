@@ -1,0 +1,82 @@
+system:
+  title: Crudmaker
+  code: crudmaker
+pkg:
+  code: bingo
+  entities:
+    game:
+      fields:
+        id: uuid
+        name: string
+        description: string
+        max_players: int
+        document: string
+        status:
+          type: enum
+          enumItems:
+            - active
+            - inactive
+            - archived
+            - completed
+      relationships:
+        hasMany:
+          - awards
+          - player_invite
+          - cards
+          - drawn_numbers
+    awards:
+      fields:
+        id: uuid
+        game_id: uuid
+        name: string
+        description: string
+        image_url: string
+      relationships:
+        belongsTo:
+          - game
+    player:
+      fields:
+        id: uuid
+        name: string
+        email: string
+        game_id: uuid
+      relationships:
+        belongsTo:
+          - game
+        hasMany:
+          - player_invite
+          - cards
+    player_invite:
+      fields:
+        id: uuid
+        player_id: uuid
+        game_id: uuid
+        status:
+          type: enum
+          enumItems:
+            - pending
+            - accepted
+            - declined
+      relationships:
+        belongsTo:
+          - player
+          - game
+    cards:
+      fields:
+        id: uuid
+        game_id: uuid
+        player_id: uuid
+        numbers: json
+      relationships:
+        belongsTo:
+          - game
+          - player
+    drawn_numbers:
+      fields:
+        id: uuid
+        game_id: uuid
+        number: int
+      relationships:
+        belongsTo:
+          - game
+  enums: {}

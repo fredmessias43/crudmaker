@@ -1,0 +1,49 @@
+<?php
+
+// ARQUIVO GERADO PELO CRUDMAKER. Depois de registrada no manifest-lock.json, a migration não é mais sobrescrita.
+// Sem este cabeçalho (e fora do lock), o crudmaker trata a migration como de terceiros e nunca a reescreve.
+
+<% for (const use of it.imports) { -%>
+use <%~ use %>;
+<% } -%>
+
+
+return new class extends Migration
+{
+
+	/**
+	 * Run the migrations.
+	 *
+	 * @return void
+	 */
+	public function up()
+	{
+		Schema::table('<%~ it.table %>', function (Blueprint $table) {
+<% for (const note of it.notes) { -%>
+			// <%~ note %>
+<% } -%>
+<% for (const line of it.up) { -%>
+			<%~ line %>
+<% } -%>
+		});
+	}
+
+
+	/**
+	 * Reverse the migrations.
+	 *
+	 * @return void
+	 */
+	public function down(): void
+	{
+		Schema::table('<%~ it.table %>', function (Blueprint $table) {
+<% for (const note of it.downNotes) { -%>
+			// <%~ note %>
+<% } -%>
+<% for (const line of it.down) { -%>
+			<%~ line %>
+<% } -%>
+		});
+	}
+
+};

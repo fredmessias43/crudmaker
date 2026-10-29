@@ -1,0 +1,124 @@
+<?php
+
+// ARQUIVO GERADO PELO CRUDMAKER. NÃO EDITE: ele é sobrescrito a cada `crudmaker generate`.
+// Seu código fica em App\Http\Requests\StudentRequest (app/Http/Requests/StudentRequest.php), que estende esta classe e nunca é sobrescrita.
+
+namespace App\Generated\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+use App\Models\Student;
+use App\Models\Classroom;
+use Illuminate\Validation\Rule;
+
+
+abstract class BaseStudentRequest extends FormRequest
+{
+
+	/**
+	 * Determine if the user is authorized to make this request.
+	 *
+	 * @return bool
+	 */
+	public function authorize()
+	{
+		return true;
+	}
+
+	/**
+	 * Prepare the data for validation.
+	 *
+	 * @return void
+	 */
+	protected function prepareForValidation()
+	{
+			// Rota aninhada: a chave estrangeira vem do Classroom da URL e vale mais que o corpo.
+			$classroom = $this->route('classroom');
+
+			if ($classroom instanceof Classroom)
+			{
+					$this->merge(['classroom_id' => $classroom->getKey()]);
+			}
+
+			$student = $this->route('student');
+	
+			if ($student instanceof Student)
+			{
+					$this->merge(['id' => $student->id]);
+	
+					if ( ! $this->has('id'))
+					{
+							$this->merge(['id' => $student->id]);
+					}
+	
+					if ( ! $this->has('status'))
+					{
+							$this->merge(['status' => $student->status]);
+					}
+	
+					if ( ! $this->has('classroom_id'))
+					{
+							$this->merge(['classroom_id' => $student->classroom_id]);
+					}
+	
+					if ( ! $this->has('user_id'))
+					{
+							$this->merge(['user_id' => $student->user_id]);
+					}
+	
+			}
+			else
+			{
+					//
+			}
+	}
+
+	/**
+	 * Get the validation rules that apply to the request: as geradas mais as de `extraRules()`.
+	 *
+	 * @return array
+	*/
+	public function rules()
+	{
+			return array_merge($this->generatedRules(), $this->extraRules());
+	}
+
+	/**
+	 * Hook: regras de validação que se somam às geradas (a mesma chave de campo substitui a regra gerada).
+	 * Sobrescreva na classe final. Para mudar a autorização, sobrescreva também `authorize()` lá.
+	 *
+	 * @return array
+	 */
+	protected function extraRules(): array
+	{
+		return [];
+	}
+
+	/**
+	 * Regras geradas a partir do manifest.
+	 *
+	 * @return array
+	 */
+	private function generatedRules(): array
+	{
+			return [
+				'status' => array(
+					'bail',
+					'required',
+					'string',
+				),
+				'classroom_id' => array(
+					'bail',
+					'required',
+					'uuid',
+					Rule::exists('classrooms', 'id'),
+				),
+				'user_id' => array(
+					'bail',
+					'required',
+					'uuid',
+					Rule::exists('users', 'id'),
+				),
+			];
+	}
+
+}

@@ -1,0 +1,27 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state"
+    ],
+    "content-hash": "00000000000000000000000000000000",
+    "packages": [
+        {
+            "name": "laravel/framework",
+            "version": "v11.38.1",
+            "type": "library"
+        },
+        {
+            "name": "laravel/tinker",
+            "version": "v2.10.0",
+            "type": "library"
+        }
+    ],
+    "packages-dev": [],
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "prefer-lowest": false,
+    "platform": {
+        "php": "^8.2"
+    },
+    "platform-dev": [],
+    "plugin-api-version": "2.6.0"
+}

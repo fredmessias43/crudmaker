@@ -1,0 +1,47 @@
+{
+  "system": { "title": "Shop", "code": "shop" },
+  "pkg": {
+    "code": "shop",
+    "entities": {
+      "user": {
+        "fields": {
+          "id": "uuid",
+          "name": "string",
+          "email": { "type": "string", "unique": true },
+          "password": { "type": "string", "hidden": true },
+          "phone": { "type": "string", "required": false }
+        },
+        "relationships": { "hasMany": ["product"] },
+        "api": { "middleware": ["auth:sanctum"], "perPage": 5 }
+      },
+      "product": {
+        "fields": {
+          "id": "uuid",
+          "user_id": "uuid",
+          "name": "string",
+          "sku": { "type": "string", "unique": true },
+          "price": "double",
+          "stock": "integer",
+          "kind": { "type": "enum", "enumItems": ["physical", "digital"] },
+          "active": "boolean",
+          "released_on": "date",
+          "expires_at": { "type": "datetime", "required": false },
+          "metadata": "json",
+          "internal_notes": { "type": "text", "hidden": true }
+        },
+        "relationships": { "belongsTo": ["user"], "hasMany": ["review"] },
+        "api": { "middleware": ["auth:sanctum", "verified"], "actions": ["index", "show", "store", "update"], "perPage": 10 }
+      },
+      "review": {
+        "fields": {
+          "id": "uuid",
+          "product_id": "uuid",
+          "rating": "integer",
+          "comment": { "type": "text", "required": false }
+        },
+        "relationships": { "belongsTo": ["product"] },
+        "api": { "middleware": ["auth:sanctum"] }
+      }
+    }
+  }
+}

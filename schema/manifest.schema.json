@@ -1,0 +1,854 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Caminho ou URL do JSON Schema, para autocomplete no editor. Ignorado pelo crudmaker."
+    },
+    "system": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Código do sistema. Lido e guardado, mas não afeta a saída."
+        },
+        "title": {
+          "type": "string",
+          "description": "Título do sistema. Não usado."
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "description": "Dados do sistema."
+    },
+    "pkg": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Código do pacote (nome do projeto)."
+        },
+        "entities": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "fields": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "uuid",
+                        "string",
+                        "text",
+                        "date",
+                        "datetime",
+                        "double",
+                        "integer",
+                        "boolean",
+                        "json",
+                        "enum",
+                        "int",
+                        "displayName"
+                      ],
+                      "description": "Tipo do campo. Aliases: \"int\" vira \"integer\"; \"displayName\" vira um campo string chamado display_name."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "uuid",
+                            "string",
+                            "text",
+                            "date",
+                            "datetime",
+                            "double",
+                            "integer",
+                            "boolean",
+                            "json",
+                            "enum",
+                            "int",
+                            "displayName"
+                          ],
+                          "description": "Tipo do campo. Aliases: \"int\" vira \"integer\"; \"displayName\" vira um campo string chamado display_name."
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "Nome da coluna. Padrão: a chave do campo."
+                        },
+                        "required": {
+                          "type": "boolean",
+                          "description": "false deixa a coluna nullable. Padrão: true."
+                        },
+                        "unique": {
+                          "type": "boolean",
+                          "description": "true cria índice único e a regra Rule::unique. Padrão: false."
+                        },
+                        "enumItems": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Valores permitidos quando type é \"enum\" (ao menos um). Padrão: []."
+                        },
+                        "hidden": {
+                          "type": "boolean",
+                          "description": "true tira o campo da resource (e o põe em $hidden da model); continua no $fillable e na validação. Padrão: false."
+                        },
+                        "rules": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "description": "Regras extras de validação do Laravel (ex.: [\"max:120\", \"email\"]), somadas às derivadas do tipo, depois delas e sem repetir. O crudmaker não confere se a regra existe; o hook extraRules() da request final pode substituir tudo."
+                        },
+                        "default": {
+                          "description": "Valor padrão da coluna (->default(...) na migration). Deve combinar com o tipo: texto para string, text, uuid, date (\"Y-m-d\"), datetime (\"Y-m-d H:i:s\") e enum (um dos enumItems; substitui o padrão, que é o primeiro item); inteiro para integer; número para double; true/false para boolean. Não vale para json.",
+                          "type": [
+                            "string",
+                            "number",
+                            "boolean"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ]
+                    }
+                  ],
+                  "description": "Campo: forma curta (só o tipo, ex.: \"string\") ou objeto com type, name, required, unique, enumItems, hidden, rules e default."
+                },
+                "description": "Campos da entidade (chave = nome do campo). Declare sempre \"id\": \"uuid\"."
+              },
+              "relationships": {
+                "type": "object",
+                "properties": {
+                  "belongsTo": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "entity": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "Nome da entidade relacionada (chave em pkg.entities)."
+                            },
+                            "field": {
+                              "type": "string",
+                              "description": "Nome da coluna de FK. Padrão: <entity>_id."
+                            },
+                            "required": {
+                              "type": "boolean",
+                              "description": "false deixa a FK nullable. Padrão: true."
+                            },
+                            "relationship": {
+                              "type": "string",
+                              "enum": [
+                                "hasOne",
+                                "hasMany",
+                                "ownOne",
+                                "ownMany",
+                                "morphOne",
+                                "morphMany",
+                                "belongsTo",
+                                "morphTo",
+                                "owned",
+                                "morphed"
+                              ],
+                              "description": "Sobrescreve o tipo do relacionamento. Padrão: o tipo da lista em que o item está."
+                            }
+                          },
+                          "required": [
+                            "entity"
+                          ]
+                        }
+                      ],
+                      "description": "Relacionamento: nome da entidade (ex.: \"client\") ou objeto com entity, field, required e relationship."
+                    },
+                    "description": "Esta entidade pertence a outra: cria o campo uuid de FK (<entity>_id) e o método belongsTo."
+                  },
+                  "hasOne": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "entity": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "Nome da entidade relacionada (chave em pkg.entities)."
+                            },
+                            "field": {
+                              "type": "string",
+                              "description": "Nome da coluna de FK. Padrão: <entity>_id."
+                            },
+                            "required": {
+                              "type": "boolean",
+                              "description": "false deixa a FK nullable. Padrão: true."
+                            },
+                            "relationship": {
+                              "type": "string",
+                              "enum": [
+                                "hasOne",
+                                "hasMany",
+                                "ownOne",
+                                "ownMany",
+                                "morphOne",
+                                "morphMany",
+                                "belongsTo",
+                                "morphTo",
+                                "owned",
+                                "morphed"
+                              ],
+                              "description": "Sobrescreve o tipo do relacionamento. Padrão: o tipo da lista em que o item está."
+                            }
+                          },
+                          "required": [
+                            "entity"
+                          ]
+                        }
+                      ],
+                      "description": "Relacionamento: nome da entidade (ex.: \"client\") ou objeto com entity, field, required e relationship."
+                    },
+                    "description": "Esta entidade tem um registro relacionado (a FK fica do outro lado, em belongsTo)."
+                  },
+                  "hasMany": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "entity": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "Nome da entidade relacionada (chave em pkg.entities)."
+                            },
+                            "field": {
+                              "type": "string",
+                              "description": "Nome da coluna de FK. Padrão: <entity>_id."
+                            },
+                            "required": {
+                              "type": "boolean",
+                              "description": "false deixa a FK nullable. Padrão: true."
+                            },
+                            "relationship": {
+                              "type": "string",
+                              "enum": [
+                                "hasOne",
+                                "hasMany",
+                                "ownOne",
+                                "ownMany",
+                                "morphOne",
+                                "morphMany",
+                                "belongsTo",
+                                "morphTo",
+                                "owned",
+                                "morphed"
+                              ],
+                              "description": "Sobrescreve o tipo do relacionamento. Padrão: o tipo da lista em que o item está."
+                            }
+                          },
+                          "required": [
+                            "entity"
+                          ]
+                        }
+                      ],
+                      "description": "Relacionamento: nome da entidade (ex.: \"client\") ou objeto com entity, field, required e relationship."
+                    },
+                    "description": "Esta entidade tem vários registros relacionados (a FK fica do outro lado, em belongsTo)."
+                  },
+                  "ownOne": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "entity": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "Nome da entidade relacionada (chave em pkg.entities)."
+                            },
+                            "field": {
+                              "type": "string",
+                              "description": "Nome da coluna de FK. Padrão: <entity>_id."
+                            },
+                            "required": {
+                              "type": "boolean",
+                              "description": "false deixa a FK nullable. Padrão: true."
+                            },
+                            "relationship": {
+                              "type": "string",
+                              "enum": [
+                                "hasOne",
+                                "hasMany",
+                                "ownOne",
+                                "ownMany",
+                                "morphOne",
+                                "morphMany",
+                                "belongsTo",
+                                "morphTo",
+                                "owned",
+                                "morphed"
+                              ],
+                              "description": "Sobrescreve o tipo do relacionamento. Padrão: o tipo da lista em que o item está."
+                            }
+                          },
+                          "required": [
+                            "entity"
+                          ]
+                        }
+                      ],
+                      "description": "Relacionamento: nome da entidade (ex.: \"client\") ou objeto com entity, field, required e relationship."
+                    },
+                    "description": "Ainda não gera código válido na model."
+                  },
+                  "ownMany": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "entity": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "Nome da entidade relacionada (chave em pkg.entities)."
+                            },
+                            "field": {
+                              "type": "string",
+                              "description": "Nome da coluna de FK. Padrão: <entity>_id."
+                            },
+                            "required": {
+                              "type": "boolean",
+                              "description": "false deixa a FK nullable. Padrão: true."
+                            },
+                            "relationship": {
+                              "type": "string",
+                              "enum": [
+                                "hasOne",
+                                "hasMany",
+                                "ownOne",
+                                "ownMany",
+                                "morphOne",
+                                "morphMany",
+                                "belongsTo",
+                                "morphTo",
+                                "owned",
+                                "morphed"
+                              ],
+                              "description": "Sobrescreve o tipo do relacionamento. Padrão: o tipo da lista em que o item está."
+                            }
+                          },
+                          "required": [
+                            "entity"
+                          ]
+                        }
+                      ],
+                      "description": "Relacionamento: nome da entidade (ex.: \"client\") ou objeto com entity, field, required e relationship."
+                    },
+                    "description": "Ainda não gera código válido na model."
+                  },
+                  "morphOne": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "entity": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "Nome da entidade relacionada (chave em pkg.entities)."
+                            },
+                            "field": {
+                              "type": "string",
+                              "description": "Nome da coluna de FK. Padrão: <entity>_id."
+                            },
+                            "required": {
+                              "type": "boolean",
+                              "description": "false deixa a FK nullable. Padrão: true."
+                            },
+                            "relationship": {
+                              "type": "string",
+                              "enum": [
+                                "hasOne",
+                                "hasMany",
+                                "ownOne",
+                                "ownMany",
+                                "morphOne",
+                                "morphMany",
+                                "belongsTo",
+                                "morphTo",
+                                "owned",
+                                "morphed"
+                              ],
+                              "description": "Sobrescreve o tipo do relacionamento. Padrão: o tipo da lista em que o item está."
+                            }
+                          },
+                          "required": [
+                            "entity"
+                          ]
+                        }
+                      ],
+                      "description": "Relacionamento: nome da entidade (ex.: \"client\") ou objeto com entity, field, required e relationship."
+                    },
+                    "description": "Ainda não gera código válido na model."
+                  },
+                  "morphMany": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "entity": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "Nome da entidade relacionada (chave em pkg.entities)."
+                            },
+                            "field": {
+                              "type": "string",
+                              "description": "Nome da coluna de FK. Padrão: <entity>_id."
+                            },
+                            "required": {
+                              "type": "boolean",
+                              "description": "false deixa a FK nullable. Padrão: true."
+                            },
+                            "relationship": {
+                              "type": "string",
+                              "enum": [
+                                "hasOne",
+                                "hasMany",
+                                "ownOne",
+                                "ownMany",
+                                "morphOne",
+                                "morphMany",
+                                "belongsTo",
+                                "morphTo",
+                                "owned",
+                                "morphed"
+                              ],
+                              "description": "Sobrescreve o tipo do relacionamento. Padrão: o tipo da lista em que o item está."
+                            }
+                          },
+                          "required": [
+                            "entity"
+                          ]
+                        }
+                      ],
+                      "description": "Relacionamento: nome da entidade (ex.: \"client\") ou objeto com entity, field, required e relationship."
+                    },
+                    "description": "Ainda não gera código válido na model."
+                  },
+                  "morphTo": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "entity": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "Nome da entidade relacionada (chave em pkg.entities)."
+                            },
+                            "field": {
+                              "type": "string",
+                              "description": "Nome da coluna de FK. Padrão: <entity>_id."
+                            },
+                            "required": {
+                              "type": "boolean",
+                              "description": "false deixa a FK nullable. Padrão: true."
+                            },
+                            "relationship": {
+                              "type": "string",
+                              "enum": [
+                                "hasOne",
+                                "hasMany",
+                                "ownOne",
+                                "ownMany",
+                                "morphOne",
+                                "morphMany",
+                                "belongsTo",
+                                "morphTo",
+                                "owned",
+                                "morphed"
+                              ],
+                              "description": "Sobrescreve o tipo do relacionamento. Padrão: o tipo da lista em que o item está."
+                            }
+                          },
+                          "required": [
+                            "entity"
+                          ]
+                        }
+                      ],
+                      "description": "Relacionamento: nome da entidade (ex.: \"client\") ou objeto com entity, field, required e relationship."
+                    },
+                    "description": "Ainda não gera código válido na model."
+                  },
+                  "owned": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "entity": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "description": "Nome da entidade relacionada (chave em pkg.entities)."
+                                },
+                                "field": {
+                                  "type": "string",
+                                  "description": "Nome da coluna de FK. Padrão: <entity>_id."
+                                },
+                                "required": {
+                                  "type": "boolean",
+                                  "description": "false deixa a FK nullable. Padrão: true."
+                                },
+                                "relationship": {
+                                  "type": "string",
+                                  "enum": [
+                                    "hasOne",
+                                    "hasMany",
+                                    "ownOne",
+                                    "ownMany",
+                                    "morphOne",
+                                    "morphMany",
+                                    "belongsTo",
+                                    "morphTo",
+                                    "owned",
+                                    "morphed"
+                                  ],
+                                  "description": "Sobrescreve o tipo do relacionamento. Padrão: o tipo da lista em que o item está."
+                                }
+                              },
+                              "required": [
+                                "entity"
+                              ]
+                            }
+                          ],
+                          "description": "Relacionamento: nome da entidade (ex.: \"client\") ou objeto com entity, field, required e relationship."
+                        }
+                      }
+                    ],
+                    "description": "Se presente e verdadeiro, adiciona os campos owner_id e owner_class."
+                  },
+                  "morphed": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "entity": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "description": "Nome da entidade relacionada (chave em pkg.entities)."
+                                },
+                                "field": {
+                                  "type": "string",
+                                  "description": "Nome da coluna de FK. Padrão: <entity>_id."
+                                },
+                                "required": {
+                                  "type": "boolean",
+                                  "description": "false deixa a FK nullable. Padrão: true."
+                                },
+                                "relationship": {
+                                  "type": "string",
+                                  "enum": [
+                                    "hasOne",
+                                    "hasMany",
+                                    "ownOne",
+                                    "ownMany",
+                                    "morphOne",
+                                    "morphMany",
+                                    "belongsTo",
+                                    "morphTo",
+                                    "owned",
+                                    "morphed"
+                                  ],
+                                  "description": "Sobrescreve o tipo do relacionamento. Padrão: o tipo da lista em que o item está."
+                                }
+                              },
+                              "required": [
+                                "entity"
+                              ]
+                            }
+                          ],
+                          "description": "Relacionamento: nome da entidade (ex.: \"client\") ou objeto com entity, field, required e relationship."
+                        }
+                      }
+                    ],
+                    "description": "Se presente e verdadeiro, adiciona os campos owner_id e owner_class."
+                  }
+                },
+                "description": "Relacionamentos com outras entidades, agrupados por tipo."
+              },
+              "indexes": {
+                "description": "Aceito, mas ignorado."
+              },
+              "api": {
+                "type": "object",
+                "properties": {
+                  "actions": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "index",
+                        "show",
+                        "store",
+                        "update",
+                        "destroy"
+                      ]
+                    },
+                    "description": "Actions mantidas (subconjunto de index, show, store, update, destroy). Padrão: todas. Restringe as rotas (->only) e remove do controller base as actions e os hooks que não são usados."
+                  },
+                  "middleware": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "description": "Middlewares aplicados às rotas da entidade (ex.: [\"auth:sanctum\"]). Na entidade, SUBSTITUI a lista de pkg.defaults.api (não soma). Padrão: nenhum."
+                  },
+                  "perPage": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991,
+                    "description": "Itens por página no index (inteiro positivo). Padrão: 15."
+                  },
+                  "tests": {
+                    "type": "boolean",
+                    "description": "false não gera o arquivo de testes Pest da entidade (tests/Feature/Crudmaker/<Entidade>Test.php); em pkg.defaults.api vale para todas as entidades. O arquivo é regravado a cada geração, então esta é a forma de desligá-lo (apagar o arquivo não adianta). Padrão: true."
+                  },
+                  "filters": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "description": "Campos com filtro por igualdade na query string (?status=active). Use o nome da coluna. Campo enum só filtra se o valor for um dos enumItems; campo boolean lê ?ativo=true/false/1/0."
+                  },
+                  "search": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "description": "Campos da busca textual (?search=ana): where agrupado com like %termo% e OR entre os campos. Os curingas % e _ do termo não são escapados."
+                  },
+                  "sort": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "description": "Campos ordenáveis (?sort=name ou ?sort=-name para decrescente). Valores fora da lista são ignorados. id, created_at e updated_at sempre podem ser usados, mesmo sem estar em fields."
+                  },
+                  "defaultSort": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Ordenação quando ?sort não vem ou não é válido. Um campo, com \"-\" na frente para decrescente (ex.: \"-created_at\"). Pode ser id, created_at, updated_at ou um campo da entidade."
+                  },
+                  "nested": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "description": "Nomes dos relacionamentos hasMany/hasOne que geram rota aninhada."
+                      }
+                    ],
+                    "description": "Rotas aninhadas dos relacionamentos hasMany/hasOne desta entidade (GET e POST /clients/{client}/alerts; hasOne: /clients/{client}/address). true (padrão) gera para todo hasMany/hasOne cujo filho declara o belongsTo de volta; false desliga; uma lista (nomes de método da model, como em with: \"alerts\", \"postsByAuthor\") gera só para os listados, e um nome sem o belongsTo de volta é erro. Usa as actions do filho (index/show e store) e o middleware do filho."
+                  },
+                  "with": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "description": "Relacionamentos (pelo nome do método da model, ex.: \"address\", \"alerts\", \"postsByAuthor\") carregados no index e no show; a resource inclui cada um aninhado, com whenLoaded, usando a resource da entidade relacionada e o nome do método como chave. Só belongsTo, hasOne e hasMany."
+                  }
+                },
+                "description": "Opções da API da entidade (rotas, middleware, paginação, filtros, busca, ordenação e eager loading). Cada chave declarada aqui substitui a de pkg.defaults.api. Filtros, busca e ordenação são aplicados antes do hook indexQuery."
+              }
+            },
+            "description": "Definição de uma entidade."
+          },
+          "description": "Mapa nomeDaEntidade → definição. O nome fica no singular, de preferência em camelCase (client, orderItem)."
+        },
+        "normalizeNames": {
+          "type": "boolean",
+          "description": "Normaliza nomes fora da convenção: entidades viram singular camelCase (awards → award, drawn_numbers → drawnNumber) e campos viram snake_case (alertDate → alert_date), com um aviso por nome alterado. Padrão: true. false mantém os nomes como estão (só avisa). A flag --normalize-names / --no-normalize-names da CLI tem prioridade."
+        },
+        "defaults": {
+          "type": "object",
+          "properties": {
+            "api": {
+              "type": "object",
+              "properties": {
+                "actions": {
+                  "minItems": 1,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "index",
+                      "show",
+                      "store",
+                      "update",
+                      "destroy"
+                    ]
+                  },
+                  "description": "Actions mantidas (subconjunto de index, show, store, update, destroy). Padrão: todas. Restringe as rotas (->only) e remove do controller base as actions e os hooks que não são usados."
+                },
+                "middleware": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "description": "Middlewares aplicados às rotas da entidade (ex.: [\"auth:sanctum\"]). Na entidade, SUBSTITUI a lista de pkg.defaults.api (não soma). Padrão: nenhum."
+                },
+                "perPage": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Itens por página no index (inteiro positivo). Padrão: 15."
+                },
+                "nested": {
+                  "type": "boolean",
+                  "description": "false desliga as rotas aninhadas (GET/POST /clients/{client}/alerts) de todas as entidades. Padrão: true."
+                },
+                "tests": {
+                  "type": "boolean",
+                  "description": "false não gera o arquivo de testes Pest da entidade (tests/Feature/Crudmaker/<Entidade>Test.php); em pkg.defaults.api vale para todas as entidades. O arquivo é regravado a cada geração, então esta é a forma de desligá-lo (apagar o arquivo não adianta). Padrão: true."
+                }
+              },
+              "description": "Valores padrão do bloco api de todas as entidades. A entidade substitui cada chave que declarar (chave a chave). Só aceita actions, middleware, perPage, nested (booleano) e tests: filters, search, sort, defaultSort e with dependem dos campos de cada entidade e ficam no bloco api dela."
+            }
+          },
+          "description": "Valores padrão para todas as entidades."
+        },
+        "target": {
+          "type": "object",
+          "properties": {
+            "laravel": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "description": "Major do Laravel de destino: 10, 11 ou 12."
+            },
+            "php": {
+              "description": "Versão do PHP de destino no formato major.minor (8.1 ou superior; mínimo de cada Laravel: 10 → 8.1, 11 e 12 → 8.2). Em YAML, escreva entre aspas se a minor tiver dois dígitos.",
+              "type": [
+                "number",
+                "string"
+              ]
+            }
+          },
+          "description": "Versão alvo do código gerado. Cada parte é independente e, se omitida, é detectada no composer.lock/composer.json do destino (--out) ou cai no padrão (Laravel 12, PHP 8.2). As flags --laravel e --php da CLI têm prioridade."
+        },
+        "enums": {
+          "description": "Reservado; aceito, mas ignorado."
+        }
+      },
+      "required": [
+        "code",
+        "entities"
+      ],
+      "description": "Pacote a gerar."
+    }
+  },
+  "required": [
+    "system",
+    "pkg"
+  ],
+  "description": "Manifest do crudmaker: descreve as entidades de uma API Laravel.",
+  "title": "Manifest do crudmaker"
+}

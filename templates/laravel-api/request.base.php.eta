@@ -1,0 +1,102 @@
+<?php
+
+// ARQUIVO GERADO PELO CRUDMAKER. NÃO EDITE: ele é sobrescrito a cada `crudmaker generate`.
+// Seu código fica em <%~ it.final.fqcn %> (<%~ it.final.path %>), que estende esta classe e nunca é sobrescrita.
+
+namespace <%~ it.namespace %>;
+
+<% for (const use of it.imports) { -%>
+use <%~ use %>;
+<% } -%>
+
+
+abstract class <%~ it.className %> extends <%~ it.extends %>
+{
+
+	/**
+	 * Determine if the user is authorized to make this request.
+	 *
+	 * @return bool
+	 */
+	public function authorize()
+	{
+		return true;
+	}
+
+	/**
+	 * Prepare the data for validation.
+	 *
+	 * @return void
+	 */
+	protected function prepareForValidation()
+	{
+<% for (const parent of it.fromRoute) { -%>
+			// Rota aninhada: a chave estrangeira vem do <%~ parent.model %> da URL e vale mais que o corpo.
+			$<%~ parent.variable %> = $this->route('<%~ parent.param %>');
+
+			if ($<%~ parent.variable %> instanceof <%~ parent.model %>)
+			{
+					$this->merge(['<%~ parent.foreignKey %>' => $<%~ parent.variable %>->getKey()]);
+			}
+
+<% } -%>
+			$<%~ it.entity.camel %> = $this->route('<%~ it.entity.snake %>');
+	
+			if ($<%~ it.entity.camel %> instanceof <%~ it.entity.pascal %>)
+			{
+					$this->merge(['id' => $<%~ it.entity.camel %>->id]);
+	
+<% for (const field of it.fields) { -%>
+					if ( ! $this->has('<%~ field.key %>'))
+					{
+							$this->merge(['<%~ field.key %>' => <%~ field.value %>]);
+					}
+	
+<% } -%>
+			}
+			else
+			{
+					//
+			}
+	}
+
+	/**
+	 * Get the validation rules that apply to the request: as geradas mais as de `extraRules()`.
+	 *
+	 * @return array
+	*/
+	public function rules()
+	{
+			return array_merge($this->generatedRules(), $this->extraRules());
+	}
+
+	/**
+	 * Hook: regras de validação que se somam às geradas (a mesma chave de campo substitui a regra gerada).
+	 * Sobrescreva na classe final. Para mudar a autorização, sobrescreva também `authorize()` lá.
+	 *
+	 * @return array
+	 */
+	protected function extraRules(): array
+	{
+		return [];
+	}
+
+	/**
+	 * Regras geradas a partir do manifest.
+	 *
+	 * @return array
+	 */
+	private function generatedRules(): array
+	{
+			return [
+<% for (const rule of it.rules) { -%>
+				'<%~ rule.name %>' => array(
+<% for (const item of rule.items) { -%>
+					<%~ item %>,
+<% } -%>
+				),
+<% } -%>
+			];
+	}
+
+}

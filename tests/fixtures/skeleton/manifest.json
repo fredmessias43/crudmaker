@@ -1,0 +1,27 @@
+{
+  "system": { "title": "Blog", "code": "blog" },
+  "pkg": {
+    "code": "blog",
+    "entities": {
+      "user": {
+        "fields": {
+          "id": "uuid",
+          "name": "string",
+          "email": { "type": "string", "unique": true },
+          "password": { "type": "string", "hidden": true },
+          "phone": { "type": "string", "required": false },
+          "email_verified_at": { "type": "datetime", "required": false }
+        },
+        "relationships": { "hasMany": ["post"] }
+      },
+      "post": {
+        "fields": {
+          "id": "uuid",
+          "user_id": "uuid",
+          "title": "string"
+        },
+        "relationships": { "belongsTo": ["user"] }
+      }
+    }
+  }
+}
