@@ -10,12 +10,12 @@
 - [06 — Gerar as rotas](../fase-1-usavel/06-gerar-rotas.md)
 - [10 — Camada gerada × customizada com hooks](../fase-3-arquitetura/10-camada-gerada-e-hooks.md)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Critérios de aceite
 
-- [ ] Fixture com todas as opções, com snapshot.
-- [ ] Actions restritas também restringem as rotas.
-- [ ] Validação: nomes em `filters`/`search`/`sort`/`with` que não existem falham com caminho claro.
-- [ ] As opções aparecem no JSON Schema e no `docs/manifest.md`.
-- [ ] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.
+- [x] Fixture com todas as opções, com snapshot.
+- [x] Actions restritas também restringem as rotas.
+- [x] Validação: nomes em `filters`/`search`/`sort`/`with` que não existem falham com caminho claro.
+- [x] As opções aparecem no JSON Schema e no `docs/manifest.md`.
+- [x] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.

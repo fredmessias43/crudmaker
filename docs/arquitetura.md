@@ -70,12 +70,13 @@ Mais três funções, também em `src/writeFiles.ts`:
 Recebe o objeto cru do manifest (e a opção `normalizeNames`) e produz `entities` normalizadas e `warnings`, em quatro etapas:
 
 1. **Schema** (`src/manifestSchema.ts`, zod): estrutura do manifest de entrada (formas curta e longa, aliases `int`/`displayName`, tipos conhecidos, chaves obrigatórias). É a fonte do JSON Schema publicado em `schema/manifest.schema.json` (`npm run schema`, via `z.toJSONSchema` do zod 4 com `io: "input"`, que descreve o que se escreve no manifest e não o resultado das transformações). Chaves desconhecidas são toleradas e descartadas.
-2. **Normalização de nomes** (`src/normalizeNames.ts`), só com a estrutura válida e antes da validação entre entidades. Entidades (chaves de `pkg.entities` e referências nos relacionamentos) viram singular camelCase; campos (chaves, `name` explícito e `field` explícito de relacionamento) viram snake_case. Devolve um aviso por nome alterado e as colisões como problemas de validação. Desligada (`pkg.normalizeNames: false` ou a opção/flag), não altera nada, mas ainda avisa o que está fora da convenção. Não altera a entrada (função pura).
-3. **Validação entre entidades** (`src/validateManifest.ts`): relacionamento para entidade inexistente, entidade sem campo `id`, nome de entidade que gera classe com palavra reservada do PHP e ciclo de FK entre `belongsTo` (tudo com os nomes já normalizados e o caminho original no arquivo; o ciclo só é checado se os alvos existem), e `enum` sem itens (checado antes, com os nomes originais). A detecção de ciclos usa `src/dependencyOrder.ts`, o mesmo módulo que ordena as migrations. `validateManifest` orquestra as etapas 1 a 3 e devolve `{ input, warnings, normalizeNames }`. As issues do zod são convertidas em `{ path, message }` em português, com o caminho real no arquivo; qualquer falha lança `ManifestValidationError` (subclasse de `UserError`) com todos os problemas da etapa. A CLI a imprime com um problema por linha.
+2. **Normalização de nomes** (`src/normalizeNames.ts`), só com a estrutura válida e antes da validação entre entidades. Entidades (chaves de `pkg.entities` e referências nos relacionamentos) viram singular camelCase; campos (chaves, `name` explícito e `field` explícito de relacionamento) viram snake_case; no bloco `api`, os campos de `filters`/`search`/`sort`/`defaultSort` (o `-` da frente é preservado) viram snake_case e os de `with`, camelCase. Devolve um aviso por nome alterado e as colisões como problemas de validação. Desligada (`pkg.normalizeNames: false` ou a opção/flag), não altera nada, mas ainda avisa o que está fora da convenção. Não altera a entrada (função pura).
+3. **Validação entre entidades** (`src/validateManifest.ts`): relacionamento para entidade inexistente, entidade sem campo `id`, nome de entidade que gera classe com palavra reservada do PHP e ciclo de FK entre `belongsTo` (tudo com os nomes já normalizados e o caminho original no arquivo; o ciclo só é checado se os alvos existem), e `enum` sem itens (checado antes, com os nomes originais). Também confere os nomes do bloco `api` (campos em `filters`/`search`/`sort`/`defaultSort`, relacionamentos em `with`) contra a entidade, usando `src/apiOptions.ts` (colunas da entidade, inclusive FKs derivadas, e os nomes de método dos relacionamentos) e `src/relationNames.ts` (a regra do nome do método, partilhada com a model), e recusa `filters`/`search`/`sort`/`defaultSort`/`with` em `pkg.defaults.api`. A detecção de ciclos usa `src/dependencyOrder.ts`, o mesmo módulo que ordena as migrations. `validateManifest` orquestra as etapas 1 a 3 e devolve `{ input, warnings, normalizeNames }`. As issues do zod são convertidas em `{ path, message }` em português, com o caminho real no arquivo; qualquer falha lança `ManifestValidationError` (subclasse de `UserError`) com todos os problemas da etapa. A CLI a imprime com um problema por linha.
 4. **Normalização** (`normalizeEntity` em `src/models/Manifest.ts`), só com a entrada já válida:
    - campo na forma curta (`"name": "string"`) vira `{ type, name, required: true, unique: false, enumItems: [] }`;
    - aliases são resolvidos (`int` → `integer`, `displayName` → campo `display_name` do tipo `string`);
    - cada relacionamento vira `{ entity, field, required, relationship }`;
+   - `pkg.defaults.api` e o `api` da entidade são mesclados chave a chave (`resolveApi` em `src/apiOptions.ts`; a lista da entidade substitui a do padrão) e guardados em `entity.api`, só se algum dos dois declara algo (sem eles o lock não muda);
    - `belongsTo` adiciona o campo de FK (`uuid`, com `relationship: true`) aos `fields`; a FK da forma curta é sempre `<entidade em snake_case>_id` (`courseContent` → `course_content_id`), com ou sem normalização de nomes; com a normalização ligada, uma FK já declarada à mão com o mesmo nome é unificada (vale a declaração explícita, completada com `relationship: true`);
    - `owned`/`morphed` adicionam `owner_id` e `owner_class`.
 
@@ -135,17 +136,18 @@ Módulos do target:
 | `render.ts` | motor Eta e `renderTemplate(nome, dados)`; ponto único de resolução de template |
 | `names.ts` | `BASE_NAMESPACE` (`App`), `generatedNamespace` (`App\Models` → `App\Generated\Models`), nomes da entidade em cada casing e `namespaceToFolder` (`App\Http\Requests` → `app/Http/Requests`) |
 | `viewModels/classHeader.ts` | parte comum dos templates de classe (namespace, `use`s deduplicados na ordem de declaração, classe e `extends`), `classPair` (base × final), `finalClassFile` (tipo das finais) e `classPath` |
+| `entityApi.ts` | `entityApi(entity)`: o `entity.api` com os padrões do gerador aplicados (todas as actions, 15 por página, `with` resolvido para método, tipo e resource relacionada). Usado pelos view models do controller, da resource e das rotas; também tem `phpString` (literal PHP entre aspas simples) |
 | `viewModels/{model,resource,collection,controller,request}.ts` | os view models da base e da final de cada classe |
 | `viewModels/migration.ts` | view model da migration por entidade |
-| `viewModels/routes.ts` | view model de `routes/crudmaker.php` (uma `apiResource` por entidade, recurso = tabela em kebab-case) e `ensureRoutesInclude`, que acrescenta o `require` ao `routes/api.php` se faltar |
+| `viewModels/routes.ts` | view model de `routes/crudmaker.php` (uma `apiResource` por entidade, recurso = tabela em kebab-case, com `->only(...)` e `->middleware(...)` vindos de `api`) e `ensureRoutesInclude`, que acrescenta o `require` ao `routes/api.php` se faltar |
 
 | Tipo | Gera |
 |---|---|
 | `model` | Base: Model com UUID, SoftDeletes, `$casts`, `$fillable` e métodos de relacionamento. Final: vazia |
 | `migration` | Migration anônima de criação da tabela, com FKs, timestamps, soft deletes e índices únicos. Reaproveita o nome de uma migration já existente |
 | `request` | Base: FormRequest com `prepareForValidation` (completa campos ausentes a partir da model da rota), `rules` e o hook `extraRules`. Final: vazia |
-| `resource` / `collection` | Base: JsonResource (campos, datas formatadas e o hook `extra`) e ResourceCollection (usa a resource final). Finais: vazias |
-| `controller` | Base: controller de API com `index`, `store`, `show`, `update`, `destroy` e os 7 hooks. Final: vazia |
+| `resource` / `collection` | Base: JsonResource (campos, datas formatadas, os relacionamentos de `api.with` com `whenLoaded` e o hook `extra`) e ResourceCollection (usa a resource final). Finais: vazias |
+| `controller` | Base: controller de API com `index`, `store`, `show`, `update`, `destroy` e os 7 hooks (só as actions e os hooks mantidos em `api.actions`; o `index` aplica `with`, filtros, busca e ordenação de `api` antes do `indexQuery`). Final: vazia |
 | `routes` | `routes/crudmaker.php`, gerado uma vez por projeto (não por entidade) |
 
 #### Como adicionar um tipo de arquivo
@@ -182,6 +184,8 @@ Ainda não existem stubs do projeto (prioridade arquivo a arquivo sobre os templ
 `tests/validate.test.ts` cobre a validação (fixtures válidos, manifests inválidos com caminho e mensagem, vários erros de uma vez) e confere que `schema/manifest.schema.json` está em dia com o schema zod.
 
 `tests/normalizeNames.test.ts` cobre a normalização de nomes (regras, avisos, colisões, FK declarada + derivada, precedência opção × manifest, as fixtures antigas ligadas × desligadas e o JSON Schema).
+
+`tests/apiOptions.test.ts` cobre o ticket 11: a fixture `api-options` (snapshot completo, com `pkg.defaults.api` e entidades que herdam, sobrescrevem e restringem actions), asserções explícitas das rotas (`only`, `middleware`), das actions e hooks removidos, de `perPage`, da ordem `with` → filtros → busca → ordenação → `indexQuery` → `paginate`, do `with` no `index`/`show`, da resource com `whenLoaded`, a validação de cada erro e a normalização de nomes no bloco `api`.
 
 `tests/yaml.test.ts` cobre o YAML: cada fixture tem um `manifest.yaml` que precisa ler o mesmo objeto e gerar a mesma saída do JSON, os erros de sintaxe/vazio/multi-documento/extensão, e o `init` em cada formato (o exemplo YAML tem de ser igual ao JSON).
 

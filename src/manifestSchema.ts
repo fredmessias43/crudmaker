@@ -64,10 +64,64 @@ const relationshipsSchema = z.object({
   morphed: z.union([z.boolean(), z.array(relationItemSchema)]).describe("Se presente e verdadeiro, adiciona os campos owner_id e owner_class."),
 }).partial();
 
+/** Actions do controller que o bloco `api` pode manter (padrão: todas). */
+export const API_ACTIONS = ["index", "show", "store", "update", "destroy"] as const;
+
+const nameListSchema = (description: string) => z.array(z.string().min(1)).describe(description);
+
+const actionsSchema = z.array(z.enum(API_ACTIONS))
+  .min(1, `a lista de actions não pode ser vazia (use um ou mais de: ${API_ACTIONS.join(", ")}); para não expor a entidade, tire-a do manifest`)
+  .describe(`Actions mantidas (subconjunto de ${API_ACTIONS.join(", ")}). Padrão: todas. Restringe as rotas (->only) e remove do controller base as actions e os hooks que não são usados.`);
+
+const middlewareSchema = z.array(z.string().min(1)).describe(
+  `Middlewares aplicados às rotas da entidade (ex.: ["auth:sanctum"]). Na entidade, SUBSTITUI a lista de pkg.defaults.api (não soma). Padrão: nenhum.`,
+);
+
+const perPageSchema = z.number()
+  .int()
+  .positive("deve ser maior que zero")
+  .describe("Itens por página no index (inteiro positivo). Padrão: 15.");
+
+/** Valores que valem para todas as entidades; só as opções que não dependem dos campos de cada uma. */
+const defaultsApiSchema = z.object({
+  actions: actionsSchema,
+  middleware: middlewareSchema,
+  perPage: perPageSchema,
+}).partial().describe(
+  "Valores padrão do bloco api de todas as entidades. A entidade substitui cada chave que declarar (chave a chave). Só aceita actions, middleware e perPage: filters, search, sort, defaultSort e with dependem dos campos de cada entidade e ficam no bloco api dela.",
+);
+
+/** Chaves do bloco `api` que dependem dos campos/relacionamentos da entidade (não valem em `pkg.defaults.api`). */
+export const ENTITY_ONLY_API_KEYS = ["filters", "search", "sort", "defaultSort", "with"] as const;
+
+const apiSchema = z.object({
+  actions: actionsSchema,
+  middleware: middlewareSchema,
+  perPage: perPageSchema,
+  filters: nameListSchema(
+    `Campos com filtro por igualdade na query string (?status=active). Use o nome da coluna. Campo enum só filtra se o valor for um dos enumItems; campo boolean lê ?ativo=true/false/1/0.`,
+  ),
+  search: nameListSchema(
+    `Campos da busca textual (?search=ana): where agrupado com like %termo% e OR entre os campos. Os curingas % e _ do termo não são escapados.`,
+  ),
+  sort: nameListSchema(
+    `Campos ordenáveis (?sort=name ou ?sort=-name para decrescente). Valores fora da lista são ignorados. id, created_at e updated_at sempre podem ser usados, mesmo sem estar em fields.`,
+  ),
+  defaultSort: z.string().min(1).describe(
+    `Ordenação quando ?sort não vem ou não é válido. Um campo, com "-" na frente para decrescente (ex.: "-created_at"). Pode ser id, created_at, updated_at ou um campo da entidade.`,
+  ),
+  with: nameListSchema(
+    `Relacionamentos (pelo nome do método da model, ex.: "address", "alerts", "postsByAuthor") carregados no index e no show; a resource inclui cada um aninhado, com whenLoaded, usando a resource da entidade relacionada e o nome do método como chave. Só belongsTo, hasOne e hasMany.`,
+  ),
+}).partial().describe(
+  "Opções da API da entidade (rotas, middleware, paginação, filtros, busca, ordenação e eager loading). Cada chave declarada aqui substitui a de pkg.defaults.api. Filtros, busca e ordenação são aplicados antes do hook indexQuery.",
+);
+
 const entitySchema = z.object({
   fields: z.record(z.string(), fieldSchema).describe(`Campos da entidade (chave = nome do campo). Declare sempre "id": "uuid".`),
   relationships: relationshipsSchema.describe("Relacionamentos com outras entidades, agrupados por tipo."),
   indexes: z.unknown().describe("Aceito, mas ignorado."),
+  api: apiSchema,
 }).partial().describe("Definição de uma entidade.");
 
 export const manifestSchema = z.object({
@@ -82,6 +136,7 @@ export const manifestSchema = z.object({
     normalizeNames: z.boolean().describe(
       "Normaliza nomes fora da convenção: entidades viram singular camelCase (awards → award, drawn_numbers → drawnNumber) e campos viram snake_case (alertDate → alert_date), com um aviso por nome alterado. Padrão: true. false mantém os nomes como estão (só avisa). A flag --normalize-names / --no-normalize-names da CLI tem prioridade.",
     ).optional(),
+    defaults: z.object({ api: defaultsApiSchema }).partial().describe("Valores padrão para todas as entidades.").optional(),
     enums: z.unknown().describe("Reservado; aceito, mas ignorado.").optional(),
   }).describe("Pacote a gerar."),
 }).describe("Manifest do crudmaker: descreve as entidades de uma API Laravel.");
@@ -89,6 +144,7 @@ export const manifestSchema = z.object({
 /** Entrada já validada estruturalmente (formas curtas e aliases ainda não resolvidos). */
 export type ManifestInput = z.output<typeof manifestSchema>;
 export type FieldInput = z.output<typeof fieldSchema>;
+export type ApiInput = z.output<typeof apiSchema>;
 export type RelationItemInput = z.output<typeof relationItemSchema>;
 
 /** JSON Schema do formato de entrada (o que se escreve no manifest). */

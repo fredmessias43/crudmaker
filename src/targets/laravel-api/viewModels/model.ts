@@ -1,6 +1,6 @@
 import { camelCase, pascalCase } from "change-case";
+import { relationName } from "../../../relationNames";
 import { snakeCase } from "lodash";
-import { plural } from "pluralize";
 import { EntityFileType } from "../fileType";
 import { BASE_NAMESPACE, entityNames } from "../names";
 import { classHeader, classPair, finalClassFile } from "./classHeader";
@@ -50,25 +50,10 @@ export const modelBaseFile: EntityFileType = {
 
         imports.push(`${namespace}\\${pascalCase(relationship.entity)}`);
         const related = `${pascalCase(relationship.entity)}::class`;
-        // FK com o nome padrão (`<entidade>_id`): o método leva o nome da entidade (plural no hasMany)
-        // e o Eloquent deduz as chaves. Com outro nome, as chaves são explícitas.
+        // Com a FK no nome padrão (`<entidade>_id`) o Eloquent deduz as chaves; com outro nome, elas são explícitas.
+        // O nome do método segue `relationName` (a mesma regra de `api.with`).
         const defaultField = relationship.field === `${snakeCase(relationship.entity)}_id`;
-        const isBelongsTo = relationship.relationship === "belongsTo";
-        const fieldName = camelCase(relationship.field.replace(/_id$/, ""));
-        const pascalField = pascalCase(fieldName);
-
-        let name: string;
-        if (defaultField) {
-          name = camelCase(relationship.relationship === "hasMany" ? plural(relationship.entity) : relationship.entity);
-        } else if (isBelongsTo) {
-          // belongsTo: o método leva o nome da FK sem `_id` (`author_id` → `author()`).
-          name = fieldName;
-        } else {
-          // hasOne/hasMany: a FK está no filho, então o nome da FK descreve o pai, não o relacionado
-          // (`author_id` em user → `postsByAuthor()`, não `author()`).
-          const base = relationship.relationship === "hasMany" ? plural(relationship.entity) : relationship.entity;
-          name = `${camelCase(base)}By${pascalField}`;
-        }
+        const name = relationName(relationship);
 
         // Assinaturas: belongsTo($related, $foreignKey, $ownerKey); hasOne/hasMany($related, $foreignKey, $localKey).
         // Em todos a FK é a coluna do filho; a chave do pai é `id` (o padrão), então basta o segundo argumento.

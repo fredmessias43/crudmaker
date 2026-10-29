@@ -13,6 +13,11 @@ export function normalizeFieldName(name: string): string {
   return snakeCase(name);
 }
 
+/** Relacionamento em `api.with`: camelCase, como o nome do método na model (`posts_by_author` → `postsByAuthor`). */
+export function normalizeRelationName(name: string): string {
+  return camelCase(name);
+}
+
 export type NameNormalization = {
   manifest: ManifestInput;
   /** Um aviso por nome alterado (ligada) ou fora da convenção (desligada). */
@@ -128,6 +133,40 @@ export function normalizeNames(input: ManifestInput, enabled: boolean): NameNorm
         });
       }
       newEntity.relationships = relationships;
+    }
+
+    /**
+     * Bloco `api`: campos citados em filters/search/sort/defaultSort (snake_case, como os campos) e
+     * relacionamentos de `with` (camelCase, como o nome do método na model).
+     */
+    if (entity.api !== undefined) {
+      const api = { ...entity.api };
+      const apiPath = `${base}.api`;
+
+      const normalizeList = (key: "filters" | "search" | "sort" | "with", normalize: (name: string) => string) => {
+        const list = entity.api![key];
+        if (list === undefined) return;
+
+        api[key] = list.map((name, index) => {
+          const target = normalize(name);
+          if (target !== name) warnValue(`${apiPath}.${key}[${index}]`, name, target);
+          return enabled ? target : name;
+        });
+      };
+      normalizeList("filters", normalizeFieldName);
+      normalizeList("search", normalizeFieldName);
+      normalizeList("sort", normalizeFieldName);
+      normalizeList("with", normalizeRelationName);
+
+      if (entity.api.defaultSort !== undefined) {
+        // O `-` da frente (decrescente) não faz parte do nome.
+        const descending = entity.api.defaultSort.startsWith("-");
+        const name = descending ? entity.api.defaultSort.slice(1) : entity.api.defaultSort;
+        const target = (descending ? "-" : "") + normalizeFieldName(name);
+        if (target !== entity.api.defaultSort) warnValue(`${apiPath}.defaultSort`, entity.api.defaultSort, target);
+        if (enabled) api.defaultSort = target;
+      }
+      newEntity.api = api;
     }
 
     // Em colisão a primeira entidade permanece; a segunda só gera o problema acima.

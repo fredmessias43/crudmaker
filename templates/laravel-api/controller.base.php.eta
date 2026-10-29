@@ -13,6 +13,7 @@ use <%~ use %>;
 abstract class <%~ it.className %> extends <%~ it.extends %>
 {
 
+<% if (it.has.index) { -%>
 	/**
 	 * Display a paginated listing of the resource.
 	 *
@@ -22,12 +23,60 @@ abstract class <%~ it.className %> extends <%~ it.extends %>
 	 */
 	public function index(Request $request): JsonResponse
 	{
+<% if (!it.index.declarative) { -%>
 		$query = $this->indexQuery(<%~ it.entity.pascal %>::query(), $request);
+<% } else { -%>
+		$query = <%~ it.entity.pascal %>::query();
+<% if (it.index.with !== '') { -%>
 
-		return (new <%~ it.entity.pascal %>Collection($query->paginate(15)))->response();
+		$query->with([<%~ it.index.with %>]);
+<% } -%>
+<% for (const filter of it.index.filters) { -%>
+
+		$query->when(
+			<%~ filter.condition %>,
+			fn ($query) => $query->where(<%~ filter.column %>, <%~ filter.value %>),
+		);
+<% } -%>
+<% if (it.index.search !== '') { -%>
+
+		$query->when($request->filled('search') && is_string($request->query('search')), function ($query) use ($request) {
+			$term = '%' . $request->query('search') . '%';
+
+			$query->where(function ($query) use ($term) {
+				foreach ([<%~ it.index.search %>] as $column) {
+					$query->orWhere($column, 'like', $term);
+				}
+			});
+		});
+<% } -%>
+<% if (it.index.sort !== '') { -%>
+
+		$sort = $request->query('sort');
+		$sortColumn = is_string($sort) ? ltrim($sort, '-') : null;
+
+		if (in_array($sortColumn, [<%~ it.index.sort %>], true)) {
+			$query->orderBy($sortColumn, str_starts_with($sort, '-') ? 'desc' : 'asc');
+<% if (it.index.defaultSort) { -%>
+		} else {
+			$query->orderBy(<%~ it.index.defaultSort.column %>, <%~ it.index.defaultSort.direction %>);
+<% } -%>
+		}
+<% } else if (it.index.defaultSort) { -%>
+
+		$query->orderBy(<%~ it.index.defaultSort.column %>, <%~ it.index.defaultSort.direction %>);
+<% } -%>
+
+		// Hook do usuário: roda depois dos filtros, da busca e da ordenação declarados no manifest.
+		$query = $this->indexQuery($query, $request);
+<% } -%>
+
+		return (new <%~ it.entity.pascal %>Collection($query->paginate(<%~ it.index.perPage %>)))->response();
 	}
 
 
+<% } -%>
+<% if (it.has.store) { -%>
 	/**
 	 * Store a newly created resource in storage.
 	 *
@@ -55,6 +104,8 @@ abstract class <%~ it.className %> extends <%~ it.extends %>
 	}
 
 
+<% } -%>
+<% if (it.has.show) { -%>
 	/**
 	 * Display the specified resource.
 	 *
@@ -64,6 +115,10 @@ abstract class <%~ it.className %> extends <%~ it.extends %>
 	 */
 	public function show(<%~ it.entity.pascal %> $<%~ it.entity.camel %>): JsonResponse
 	{
+<% if (it.withShow !== '') { -%>
+		$<%~ it.entity.camel %>->load([<%~ it.withShow %>]);
+
+<% } -%>
 		return response()->json([
 			'status' => 200,
 			'data' => new <%~ it.entity.pascal %>Resource($<%~ it.entity.camel %>),
@@ -71,6 +126,8 @@ abstract class <%~ it.className %> extends <%~ it.extends %>
 	}
 
 
+<% } -%>
+<% if (it.has.update) { -%>
 	/**
 	 * Update the specified resource in storage.
 	 *
@@ -97,6 +154,8 @@ abstract class <%~ it.className %> extends <%~ it.extends %>
 	}
 
 
+<% } -%>
+<% if (it.has.destroy) { -%>
 	/**
 	 * Remove the specified resource from storage.
 	 *
@@ -118,11 +177,14 @@ abstract class <%~ it.className %> extends <%~ it.extends %>
 	}
 
 
+<% } -%>
+<% if (it.hooks) { -%>
 	/*
 	 * Hooks. Todos protected e sem efeito por aqui; sobrescreva só os que precisar na classe final.
 	 * Para barrar a operação, lance uma exceção ou chame abort(): em store/update/destroy isso desfaz a gravação.
 	 */
 
+<% if (it.has.index) { -%>
 	/**
 	 * Ajusta a query do `index` antes de paginar (filtro por usuário, escopos, ordenação).
 	 */
@@ -131,6 +193,8 @@ abstract class <%~ it.className %> extends <%~ it.extends %>
 		return $query;
 	}
 
+<% } -%>
+<% if (it.has.store) { -%>
 	/**
 	 * Antes de criar: recebe os dados validados e devolve os dados a gravar.
 	 */
@@ -146,6 +210,8 @@ abstract class <%~ it.className %> extends <%~ it.extends %>
 	{
 	}
 
+<% } -%>
+<% if (it.has.update) { -%>
 	/**
 	 * Antes de atualizar: recebe o registro e os dados validados e devolve os dados a gravar.
 	 */
@@ -161,6 +227,8 @@ abstract class <%~ it.className %> extends <%~ it.extends %>
 	{
 	}
 
+<% } -%>
+<% if (it.has.destroy) { -%>
 	/**
 	 * Antes de remover: é o lugar de barrar a remoção (exceção ou abort()).
 	 */
@@ -175,4 +243,6 @@ abstract class <%~ it.className %> extends <%~ it.extends %>
 	{
 	}
 
+<% } -%>
+<% } -%>
 }

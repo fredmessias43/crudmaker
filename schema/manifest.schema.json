@@ -637,6 +637,78 @@
               },
               "indexes": {
                 "description": "Aceito, mas ignorado."
+              },
+              "api": {
+                "type": "object",
+                "properties": {
+                  "actions": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "index",
+                        "show",
+                        "store",
+                        "update",
+                        "destroy"
+                      ]
+                    },
+                    "description": "Actions mantidas (subconjunto de index, show, store, update, destroy). Padrão: todas. Restringe as rotas (->only) e remove do controller base as actions e os hooks que não são usados."
+                  },
+                  "middleware": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "description": "Middlewares aplicados às rotas da entidade (ex.: [\"auth:sanctum\"]). Na entidade, SUBSTITUI a lista de pkg.defaults.api (não soma). Padrão: nenhum."
+                  },
+                  "perPage": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991,
+                    "description": "Itens por página no index (inteiro positivo). Padrão: 15."
+                  },
+                  "filters": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "description": "Campos com filtro por igualdade na query string (?status=active). Use o nome da coluna. Campo enum só filtra se o valor for um dos enumItems; campo boolean lê ?ativo=true/false/1/0."
+                  },
+                  "search": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "description": "Campos da busca textual (?search=ana): where agrupado com like %termo% e OR entre os campos. Os curingas % e _ do termo não são escapados."
+                  },
+                  "sort": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "description": "Campos ordenáveis (?sort=name ou ?sort=-name para decrescente). Valores fora da lista são ignorados. id, created_at e updated_at sempre podem ser usados, mesmo sem estar em fields."
+                  },
+                  "defaultSort": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Ordenação quando ?sort não vem ou não é válido. Um campo, com \"-\" na frente para decrescente (ex.: \"-created_at\"). Pode ser id, created_at, updated_at ou um campo da entidade."
+                  },
+                  "with": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "description": "Relacionamentos (pelo nome do método da model, ex.: \"address\", \"alerts\", \"postsByAuthor\") carregados no index e no show; a resource inclui cada um aninhado, com whenLoaded, usando a resource da entidade relacionada e o nome do método como chave. Só belongsTo, hasOne e hasMany."
+                  }
+                },
+                "description": "Opções da API da entidade (rotas, middleware, paginação, filtros, busca, ordenação e eager loading). Cada chave declarada aqui substitui a de pkg.defaults.api. Filtros, busca e ordenação são aplicados antes do hook indexQuery."
               }
             },
             "description": "Definição de uma entidade."
@@ -646,6 +718,47 @@
         "normalizeNames": {
           "type": "boolean",
           "description": "Normaliza nomes fora da convenção: entidades viram singular camelCase (awards → award, drawn_numbers → drawnNumber) e campos viram snake_case (alertDate → alert_date), com um aviso por nome alterado. Padrão: true. false mantém os nomes como estão (só avisa). A flag --normalize-names / --no-normalize-names da CLI tem prioridade."
+        },
+        "defaults": {
+          "type": "object",
+          "properties": {
+            "api": {
+              "type": "object",
+              "properties": {
+                "actions": {
+                  "minItems": 1,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "index",
+                      "show",
+                      "store",
+                      "update",
+                      "destroy"
+                    ]
+                  },
+                  "description": "Actions mantidas (subconjunto de index, show, store, update, destroy). Padrão: todas. Restringe as rotas (->only) e remove do controller base as actions e os hooks que não são usados."
+                },
+                "middleware": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "description": "Middlewares aplicados às rotas da entidade (ex.: [\"auth:sanctum\"]). Na entidade, SUBSTITUI a lista de pkg.defaults.api (não soma). Padrão: nenhum."
+                },
+                "perPage": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Itens por página no index (inteiro positivo). Padrão: 15."
+                }
+              },
+              "description": "Valores padrão do bloco api de todas as entidades. A entidade substitui cada chave que declarar (chave a chave). Só aceita actions, middleware e perPage: filters, search, sort, defaultSort e with dependem dos campos de cada entidade e ficam no bloco api dela."
+            }
+          },
+          "description": "Valores padrão para todas as entidades."
         },
         "enums": {
           "description": "Reservado; aceito, mas ignorado."

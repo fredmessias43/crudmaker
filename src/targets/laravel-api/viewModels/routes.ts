@@ -1,4 +1,5 @@
 import { Entity } from "../../../models/Entity";
+import { entityApi, phpString } from "../entityApi";
 import { BASE_NAMESPACE, entityNames } from "../names";
 
 /** Caminho do arquivo de rotas gerado, relativo à raiz do projeto Laravel. */
@@ -19,6 +20,14 @@ function resourceName(entity: Entity): string {
   return entity.getTableName().replaceAll("_", "-");
 }
 
+/** Trechos encadeados na `apiResource`: `->only([...])` (só se restringe) e `->middleware([...])` (só se há). */
+function routeModifiers(entity: Entity): string {
+  const api = entityApi(entity);
+  const list = (items: string[]) => `[${items.map(phpString).join(", ")}]`;
+
+  return (api.allActions ? "" : `->only(${list(api.actions)})`) + (api.middleware.length > 0 ? `->middleware(${list(api.middleware)})` : "");
+}
+
 /** View model do `routes/crudmaker.php`: um `apiResource` por entidade. */
 export function routesView(entities: Entity[]) {
   const controllers = entities.map((entity) => `${controllerNamespace}\\${entityNames(entity).pascal}Controller`).sort();
@@ -28,6 +37,7 @@ export function routesView(entities: Entity[]) {
     routes: entities.map((entity) => ({
       resource: resourceName(entity),
       controller: `${entityNames(entity).pascal}Controller`,
+      modifiers: routeModifiers(entity),
     })),
   };
 }

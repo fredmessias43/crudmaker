@@ -93,7 +93,16 @@ O `generate` acrescenta ao fim do `routes/api.php` (só se ainda não houver um 
 require __DIR__ . '/crudmaker.php';
 ```
 
-Como o arquivo é carregado de dentro do `routes/api.php`, as rotas ganham o prefixo `/api` e os middlewares do grupo `api` do Laravel. Rotas próprias e middlewares (por exemplo `auth:sanctum`) ficam no `routes/api.php`, fora do arquivo gerado.
+Como o arquivo é carregado de dentro do `routes/api.php`, as rotas ganham o prefixo `/api` e os middlewares do grupo `api` do Laravel. Rotas próprias ficam no `routes/api.php`, fora do arquivo gerado.
+
+**Middleware e actions pelo manifest.** Não é preciso mais envolver o `require` à mão num grupo para proteger as rotas: o `api.middleware` (por entidade ou em `pkg.defaults.api`) vira `->middleware([...])` em cada `apiResource`, e o `api.actions` vira `->only([...])`. Por exemplo, com `middleware: [auth:sanctum]` no padrão e `actions: [index, show]` em `tag`:
+
+```php
+Route::apiResource('clients', ClientController::class)->middleware(['auth:sanctum']);
+Route::apiResource('tags', TagController::class)->only(['index', 'show'])->middleware(['auth:sanctum']);
+```
+
+Um grupo no `routes/api.php` em volta do `require` continua funcionando e soma com o middleware das rotas. Veja [Opções da API](manifest.md#opções-da-api-api).
 
 **Requisito:** o projeto Laravel (11+) precisa do `routes/api.php`, criado por `php artisan install:api`, que também o registra em `bootstrap/app.php`. Se o arquivo não existir, o `generate` não o cria (criar o arquivo sozinho não o faria ser carregado), grava `routes/crudmaker.php` e imprime um aviso. Rode `install:api` e gere de novo. O `--dry-run` mostra o `routes/api.php` como sobrescrito quando o include vai ser acrescentado.
 
@@ -118,13 +127,15 @@ Todos são `protected`, estão declarados na base sem efeito (devolvem a entrada
 
 | Hook | Quando roda | Entrada → saída |
 |---|---|---|
-| `indexQuery(Builder $query, Request $request): Builder` | no `index`, antes de paginar | query → query |
+| `indexQuery(Builder $query, Request $request): Builder` | no `index`, depois dos filtros, da busca e da ordenação declarados no manifest ([`api`](manifest.md#opções-da-api-api)), antes de paginar | query → query |
 | `beforeStore(array $data, Request $request): array` | antes de criar | dados validados → dados a gravar |
 | `afterStore(Client $model, Request $request): void` | depois de criar | registro gravado |
 | `beforeUpdate(Client $model, array $data, Request $request): array` | antes de atualizar | registro e dados validados → dados a gravar |
 | `afterUpdate(Client $model, Request $request): void` | depois de atualizar | registro |
 | `beforeDestroy(Client $model, Request $request): void` | antes de remover | registro |
 | `afterDestroy(Client $model, Request $request): void` | depois de remover | registro |
+
+Se o manifest restringe `api.actions`, a base só tem os hooks das actions mantidas (sem `destroy`, não existem `beforeDestroy` nem `afterDestroy`).
 
 `Builder` é `Illuminate\Database\Eloquent\Builder`, `Request` é `Illuminate\Http\Request` e o tipo do registro é a model final da entidade. `store`, `update` e `destroy` rodam a gravação e os hooks `before*`/`after*` **dentro da mesma `DB::transaction`**: se um hook lançar uma exceção (ou chamar `abort()`), nada é gravado e o Laravel responde com o status da exceção. A resposta só é montada depois do commit.
 
@@ -219,7 +230,7 @@ Migre as cinco classes da entidade (model, controller, request, resource, collec
 
 | Action | Rota | Resposta |
 |---|---|---|
-| `index` | `GET /api/clients` | 200, paginado (`paginate(15)`) |
+| `index` | `GET /api/clients` | 200, paginado (15 por página, ou o `api.perPage`) |
 | `store` | `POST /api/clients` | 201, registro criado |
 | `show` | `GET /api/clients/{client}` | 200 |
 | `update` | `PUT /api/clients/{client}` | 200, registro atualizado |
@@ -228,7 +239,7 @@ Migre as cinco classes da entidade (model, controller, request, resource, collec
 Formato das respostas com corpo:
 
 - `store`, `show` e `update`: `{ "status": 201|200, "message": ..., "data": { ... } }`. O `message` só existe nas escritas (`store` e `update`).
-- `index`: formato nativo de paginação do Laravel, `{ "data": [ ... ], "links": { ... }, "meta": { ... } }`. Não leva `status` nem `message`: o envelope `data` é o mesmo das demais respostas, e `links`/`meta` (página atual, total, URLs) são acrescentados pelo Laravel. A página vem de `?page=N`; o tamanho fixo é 15 (as opções do manifest virão no ticket 11).
+- `index`: formato nativo de paginação do Laravel, `{ "data": [ ... ], "links": { ... }, "meta": { ... } }`. Não leva `status` nem `message`: o envelope `data` é o mesmo das demais respostas, e `links`/`meta` (página atual, total, URLs) são acrescentados pelo Laravel. A página vem de `?page=N`; o tamanho é 15, ou o `api.perPage` do manifest. Com as opções `api.filters`, `api.search` e `api.sort`, o `index` aceita também `?status=active`, `?search=ana` e `?sort=-name`, por exemplo `GET /api/clients?status=active&search=ana&sort=-name&page=2` (veja [Opções da API](manifest.md#opções-da-api-api)). Com `api.with`, `index` e `show` carregam os relacionamentos e a resource os devolve aninhados, pelo nome do método (`"address": { ... }`, `"alerts": [ ... ]`).
 - `destroy`: corpo vazio.
 
 Os controllers não têm try/catch: erros chegam ao handler do Laravel e saem com o status certo. Registro inexistente na rota dá 404, validação falha com 422 (`{ "message": ..., "errors": { ... } }`), autorização negada dá 403, e só exceções não tratadas viram 500. Os registros usam soft delete, e a resource devolve `created_at`/`updated_at` como `{ timestamp, description }`.

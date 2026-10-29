@@ -45,6 +45,8 @@ Os demais exemplos deste documento estão em JSON; a tradução para YAML é dir
 | `pkg.code` | sim | Nome da pasta de saída: os arquivos vão para `generated/<pkg.code>/`. |
 | `pkg.entities` | sim | Mapa `nomeDaEntidade → definição`. |
 | `pkg.normalizeNames` | não | `true` (padrão) ou `false`. Liga/desliga a [normalização de nomes](#normalização-de-nomes). |
+| `pkg.defaults.api` | não | Valores padrão do bloco [`api`](#opções-da-api-api) de todas as entidades (só `actions`, `middleware` e `perPage`). |
+| `pkg.entities.<nome>.api` | não | [Opções da API](#opções-da-api-api) da entidade: actions, middleware, paginação, filtros, busca, ordenação e eager loading. |
 
 Antes de gerar, o manifest é validado (veja [Validação](#validação-e-json-schema)). Se houver qualquer problema, nada é gerado.
 
@@ -174,6 +176,88 @@ Regerar não renomeia migrations existentes: se já há um arquivo terminado em 
 - `owned` e `morphed` adicionam os campos `owner_id` e `owner_class`, mas `ownOne`, `ownMany`, `morphOne`, `morphMany` e `morphTo` ainda **não** geram métodos válidos na model. Não use.
 - `indexes` (por entidade) e `pkg.enums` são aceitos no manifest, mas ignorados.
 
+## Opções da API (`api`)
+
+Cada entidade pode ter um bloco `api`, e o pacote pode ter `pkg.defaults.api` com os valores que valem para todas. Tudo é opcional: **sem esses blocos a saída é a de sempre** (as cinco actions, sem middleware, 15 por página). As opções mexem só na camada gerada (a base do controller, a resource base e `routes/crudmaker.php`); a regra de negócio continua nos [hooks](como-usar.md#hooks-do-controller).
+
+```yaml
+pkg:
+  defaults:
+    api:
+      middleware: [auth:sanctum]
+      perPage: 15
+  entities:
+    client:
+      fields:
+        id: uuid
+        name: string
+        email: { type: string, unique: true }
+        status: { type: enum, enumItems: [active, blocked] }
+      relationships:
+        hasMany: [alert]
+        hasOne: [address]
+      api:
+        actions: [index, show, store, update]   # sem destroy
+        middleware: [auth:sanctum, verified]    # substitui o padrão
+        perPage: 20
+        filters: [status]                       # ?status=active
+        search: [name, email]                   # ?search=ana
+        sort: [name, created_at]                # ?sort=-name
+        defaultSort: -created_at
+        with: [address, alerts]                 # eager loading + resource aninhada
+```
+
+Com isso, `GET /api/clients?status=active&search=ana&sort=-name&page=2` lista os clientes ativos cujo nome ou e-mail contém "ana", do nome Z ao A, na segunda página de 20.
+
+| Opção | Tipo | Padrão | Efeito |
+|---|---|---|---|
+| `actions` | lista, subconjunto de `index`, `show`, `store`, `update`, `destroy` | todas | Restringe as rotas (`->only([...])`) e remove do controller base as actions que saem **e os hooks delas** (veja abaixo). Lista vazia é erro. |
+| `middleware` | lista de textos | nenhum | Vira `->middleware([...])` na `apiResource` da entidade em `routes/crudmaker.php`. |
+| `perPage` | inteiro positivo | `15` | Tamanho da página do `index` (`paginate(N)`). |
+| `filters` | lista de campos | nenhum | Filtro por igualdade pela query string, com o nome da coluna: `?status=active`. Só entra na query se o parâmetro vier preenchido. |
+| `search` | lista de campos | nenhum | Busca textual em `?search=termo`: um `where` agrupado com `like %termo%` em OR entre os campos. |
+| `sort` | lista de campos | nenhum | Campos ordenáveis por `?sort=name` (crescente) ou `?sort=-name` (decrescente). Valores fora da lista são ignorados. |
+| `defaultSort` | campo, com `-` na frente para decrescente | nenhum | Ordenação usada quando `?sort` não vem ou não vale (ex.: `-created_at`). |
+| `with` | lista de relacionamentos | nenhum | Eager loading no `index` (`with([...])`) e no `show` (`load([...])`); a resource inclui cada um aninhado. |
+
+### Precedência: padrão do pacote × entidade
+
+O bloco da entidade vale **chave a chave** sobre `pkg.defaults.api`: cada chave que a entidade declara substitui a do padrão, e as que ela não declara herdam o padrão. Listas **substituem por inteiro, não somam**: com `middleware: [auth:sanctum]` no padrão, uma entidade com `middleware: [verified]` fica só com `verified`, e `middleware: []` desliga o middleware do padrão para ela. No exemplo, `client` fica com `perPage: 20` e `middleware: [auth:sanctum, verified]`, e uma entidade sem bloco `api` herda `perPage: 15` e `auth:sanctum`.
+
+`pkg.defaults.api` só aceita `actions`, `middleware` e `perPage`. `filters`, `search`, `sort`, `defaultSort` e `with` dependem dos campos de cada entidade, então declará-los no padrão é erro de validação. O `manifest-lock.json` guarda o bloco já resolvido de cada entidade que tem algum valor (padrão ou próprio).
+
+### Consulta do `index`: filtros, busca, ordenação e `with`
+
+A ordem dos passos no `index` é fixa: `with`, filtros, busca, ordenação, o hook `indexQuery` e só então `paginate`. O hook sempre vê a query já filtrada e ordenada e pode refiná-la ou acrescentar mais `orderBy`.
+
+- **Nomes de campo.** Em `filters`, `search`, `sort` e `defaultSort` vale o nome da coluna (o `name` do campo, depois da [normalização](#normalização-de-nomes)). Também valem as colunas de FK criadas pelos `belongsTo` (`client_id`), úteis em filtros (`?client_id=...`).
+- **`sort` e `defaultSort` aceitam `id`, `created_at` e `updated_at`** mesmo sem estarem em `fields`, porque toda tabela gerada tem essas colunas. Em `filters` e `search` valem só os campos da entidade.
+- **Filtros** são `where coluna = valor`. Campos `enum` só filtram se o valor for um dos `enumItems` (valor desconhecido é ignorado, e a listagem sai sem o filtro); campos `boolean` leem `true`/`false`/`1`/`0`; parâmetros que chegam como lista (`?status[]=a`) são ignorados.
+- **Busca**: o termo vai entre `%` sem escapar os curingas (`%` e `_` do termo funcionam como curingas). Se o `like` diferencia maiúsculas ou não depende do banco (MySQL: não, PostgreSQL: sim).
+- **Ordenação**: `?sort=name` ordena por `name`; `?sort=-name`, decrescente. Um valor fora de `sort` é ignorado e, havendo `defaultSort`, vale a ordenação padrão. Sem `defaultSort`, não há `orderBy` (a ordem fica por conta do banco, como antes). Só uma coluna por vez.
+- **`with`** usa o **nome do método do relacionamento na model** (`address`, `alerts`, `postsByAuthor`; veja a tabela de [FK customizada](#fk-customizada-field)), não o nome da entidade: um `hasMany` de `alert` é `alerts`. Só valem `belongsTo`, `hasOne` e `hasMany`. A resource base da entidade ganha, depois de `updated_at`, uma chave por relacionamento com `whenLoaded`, usando a resource **final** da entidade relacionada e o nome do método como chave no JSON: `"address": new AddressResource($this->whenLoaded('address'))` (`hasMany`: `AlertResource::collection(...)`). Sem o relacionamento carregado a chave não aparece. Se a entidade relacionada também usa `with` para voltar (ex.: `client` ↔ `alert`), cada lado só inclui o outro quando ele foi carregado, então não há laço.
+
+### Actions removidas e hooks
+
+Quando `actions` não inclui uma action, a base do controller **não tem a action nem os hooks dela** (`store` → `beforeStore`/`afterStore`; `update` → `beforeUpdate`/`afterUpdate`; `destroy` → `beforeDestroy`/`afterDestroy`; `index` → `indexQuery`; `show` não tem hook), e os `use` que só elas precisavam também saem. A razão: um hook declarado sem a action que o chama seria código morto e daria a impressão de que sobrescrevê-lo faz algo. A classe final (`create-once`) lista no comentário só os hooks da base na primeira geração; se a final já existe e depois você remove uma action, o comentário antigo fica como está e um método que você tenha escrito para o hook removido continua compilando, mas nunca é chamado. As rotas também só existem para as actions mantidas (`->only(...)`).
+
+### Validação das opções
+
+Os erros usam o caminho exato (`pkg.entities.client.api.filters[1]`) e saem todos de uma vez junto com os demais da etapa:
+
+| Mensagem | Quando |
+|---|---|
+| `campo "x" não existe na entidade "client" (campos: ...)` | nome em `filters`, `search`, `sort` ou `defaultSort` que não é campo da entidade (em `sort`/`defaultSort` a lista inclui `created_at` etc.) |
+| `relacionamento "x" não existe na entidade "client" (use o nome do método na model: ...)` | item de `with` que não é o método de um `belongsTo`/`hasOne`/`hasMany` da entidade |
+| `valor "x" inválido (use um de: index, show, store, update, destroy)` | action desconhecida |
+| `a lista de actions não pode ser vazia ...` | `actions: []` |
+| `deve ser maior que zero` / `deve ser número inteiro, recebido número` | `perPage` zero, negativo ou fracionário |
+| `"filters" depende dos campos de cada entidade e não vale como padrão ...` | `filters`, `search`, `sort`, `defaultSort` ou `with` em `pkg.defaults.api` |
+
+Os nomes são conferidos **depois** da [normalização de nomes](#normalização-de-nomes): campos citados em `filters`, `search`, `sort` e `defaultSort` viram snake_case (`createdAt` → `created_at`; o `-` de `defaultSort` é preservado) e os de `with` viram camelCase (`Orders` → `orders`), cada um com seu aviso (`pkg.entities.client.api.sort[1]: createdAt → created_at`). Com a normalização desligada os nomes ficam como estão, o aviso diz o que viraria e a validação recusa o que não bate com os campos.
+
+Chaves desconhecidas dentro de `api` (como um `perpage` com erro de digitação) são ignoradas, como em qualquer outro lugar do manifest; o JSON Schema as aponta no editor.
+
 ## Normalização de nomes
 
 Por padrão o crudmaker corrige sozinho nomes fora da convenção, para gerar `Award`/`awards` em vez de `Awards`/`awards` sem reescrever o manifest. Cada nome alterado gera um aviso.
@@ -284,6 +368,7 @@ O comando sai com código 1 e nenhum arquivo é escrito.
 | `o nome vira "x", o mesmo de ...` | duas entidades (ou dois campos da mesma entidade) com o mesmo nome depois da normalização |
 | `a entidade "x" não tem o campo "id"; declare "id": "uuid" ...` | entidade sem campo `id` (pela chave ou pelo `name`). O caminho é `pkg.entities.x.fields` (ou a própria entidade, se não tem `fields`) |
 | `o nome gera a classe "X", que é palavra reservada do PHP; renomeie a entidade ...` | o nome da entidade (já normalizado) gera uma classe com palavra reservada do PHP, sem diferenciar maiúsculas: `class` → `Class`. Vale a lista oficial de palavras reservadas do PHP 8 mais os nomes de classe reservados (`self`, `parent`, `int`, `string`, `null`...). Nomes que só *contêm* a palavra (`classroom`, `listing`) são válidos |
+| (opções de `api`) | veja [Validação das opções](#validação-das-opções) |
 | `dependência circular entre FKs (a → b → a) ...` | ciclo de `belongsTo` entre entidades (veja [Ordem das migrations](#ordem-das-migrations)); o caminho aponta para o `belongsTo` que sai da primeira entidade do ciclo |
 
 O caminho usa `.` para chaves e `[n]` para posições de lista, por exemplo `pkg.entities.alert.relationships.belongsTo[0]`.

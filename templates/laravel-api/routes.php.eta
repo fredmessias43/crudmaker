@@ -8,5 +8,5 @@ use <%~ use %>;
 <% } -%>
 
 <% for (const route of it.routes) { -%>
-Route::apiResource('<%~ route.resource %>', <%~ route.controller %>::class);
+Route::apiResource('<%~ route.resource %>', <%~ route.controller %>::class)<%~ route.modifiers %>;
 <% } -%>

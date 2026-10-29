@@ -25,8 +25,29 @@ export type Fields = {
 export type ManifestEntity = {
   fields: Fields,
   relationships: Relationships,
+  /** Presente só se o manifest declara `api` na entidade ou em `pkg.defaults.api`. */
+  api?: ApiOptions,
 }
 
 export type ManifestEntities = {
   [key: string]: ManifestEntity
+}
+
+export type ApiAction = "index" | "show" | "store" | "update" | "destroy";
+
+/**
+ * Opções do bloco `api` já resolvidas (padrões do pacote + entidade, chave a chave) e com os nomes normalizados.
+ * Só tem as chaves declaradas; o que falta usa o padrão do gerador (todas as actions, sem middleware, 15 por página).
+ */
+export type ApiOptions = {
+  actions?: ApiAction[],
+  middleware?: string[],
+  perPage?: number,
+  filters?: string[],
+  search?: string[],
+  sort?: string[],
+  /** Coluna, com `-` na frente para decrescente. */
+  defaultSort?: string,
+  /** Nomes de método de relacionamento da model. */
+  with?: string[],
 }

@@ -1,6 +1,7 @@
 import { pascalCase } from "change-case";
 import { findCycles } from "./dependencyOrder";
-import { INPUT_FIELD_TYPES, manifestSchema, ManifestInput, RelationItemInput } from "./manifestSchema";
+import { entityColumns, IMPLICIT_SORT_COLUMNS, withableRelations } from "./apiOptions";
+import { ENTITY_ONLY_API_KEYS, INPUT_FIELD_TYPES, manifestSchema, ManifestInput, RelationItemInput } from "./manifestSchema";
 import { normalizeNames } from "./normalizeNames";
 import { UserError } from "./readManifest";
 
@@ -50,6 +51,7 @@ const expectedLabels: { [key: string]: string } = {
   object: "objeto",
   array: "lista",
   number: "número",
+  int: "número inteiro",
 };
 
 /** Mensagens do zod em português, com o valor recebido. */
@@ -122,6 +124,75 @@ function validateEnums(manifest: ManifestInput): ManifestProblem[] {
           : { path: `${base}.fields.${fieldKey}.enumItems`, message: items ? "campo enum precisa de ao menos um item" : "campo enum precisa de enumItems" },
       );
     }
+  }
+
+  return problems;
+}
+
+/**
+ * Opções de `api` que dependem dos campos de cada entidade não valem em `pkg.defaults.api`. Com o zod elas
+ * seriam descartadas em silêncio (chaves desconhecidas são toleradas), então o erro sai daqui, no objeto cru.
+ */
+function validateDefaultsApi(raw: unknown): ManifestProblem[] {
+  const api = (raw as any)?.pkg?.defaults?.api;
+  if (api === null || typeof api !== "object" || Array.isArray(api)) return [];
+
+  return ENTITY_ONLY_API_KEYS.filter((key) => key in api).map((key) => ({
+    path: `pkg.defaults.api.${key}`,
+    message: `"${key}" depende dos campos de cada entidade e não vale como padrão; declare no bloco api da entidade (em pkg.defaults.api só valem actions, middleware e perPage)`,
+  }));
+}
+
+/**
+ * Nomes do bloco `api` das entidades (`filters`, `search`, `sort`, `defaultSort`, `with`) contra os campos
+ * e relacionamentos da própria entidade. Roda com os nomes já normalizados; o caminho usa a chave original.
+ * `pkg.defaults.api` não tem nomes a conferir (só actions, middleware e perPage, já validados pelo schema).
+ */
+function validateApiNames(manifest: ManifestInput, originalEntityKeys: { [normalized: string]: string }): ManifestProblem[] {
+  const problems: ManifestProblem[] = [];
+
+  for (const [entityName, entity] of Object.entries(manifest.pkg.entities)) {
+    const api = entity.api;
+    if (api === undefined) continue;
+
+    const base = `pkg.entities.${originalEntityKeys[entityName] ?? entityName}.api`;
+    const columns = entityColumns(entity);
+    const sortable = [...columns, ...IMPLICIT_SORT_COLUMNS.filter((column) => !columns.includes(column))];
+
+    const unknownColumn = (path: string, name: string, allowed: string[]) => ({
+      path,
+      message: `campo ${JSON.stringify(name)} não existe na entidade ${JSON.stringify(entityName)} (campos: ${allowed.join(", ")})`,
+    });
+
+    for (const key of ["filters", "search"] as const) {
+      (api[key] ?? []).forEach((name, index) => {
+        if (!columns.includes(name)) problems.push(unknownColumn(`${base}.${key}[${index}]`, name, columns));
+      });
+    }
+
+    (api.sort ?? []).forEach((name, index) => {
+      if (!sortable.includes(name)) problems.push(unknownColumn(`${base}.sort[${index}]`, name, sortable));
+    });
+
+    if (api.defaultSort !== undefined) {
+      const name = api.defaultSort.startsWith("-") ? api.defaultSort.slice(1) : api.defaultSort;
+      if (!sortable.includes(name)) problems.push(unknownColumn(`${base}.defaultSort`, name, sortable));
+    }
+
+    const relations = withableRelations(entity);
+    (api.with ?? []).forEach((name, index) => {
+      if (relations.has(name)) return;
+
+      const available = [...relations.keys()];
+      problems.push({
+        path: `${base}.with[${index}]`,
+        message:
+          `relacionamento ${JSON.stringify(name)} não existe na entidade ${JSON.stringify(entityName)} ` +
+          (available.length > 0
+            ? `(use o nome do método na model: ${available.join(", ")})`
+            : `(a entidade não tem relacionamentos belongsTo, hasOne ou hasMany)`),
+      });
+    });
   }
 
   return problems;
@@ -262,7 +333,7 @@ export function validateManifest(obj: unknown, options: ValidateOptions = {}): V
   }
 
   const enabled = options.normalizeNames ?? result.data.pkg.normalizeNames ?? true;
-  const problems = validateEnums(result.data);
+  const problems = [...validateEnums(result.data), ...validateDefaultsApi(obj)];
 
   const normalized = normalizeNames(result.data, enabled);
   problems.push(...normalized.problems);
@@ -271,6 +342,7 @@ export function validateManifest(obj: unknown, options: ValidateOptions = {}): V
     const targetProblems = validateRelationshipTargets(normalized.manifest, normalized.originalEntityKeys);
     problems.push(...targetProblems);
     problems.push(...validateEntities(normalized.manifest, normalized.originalEntityKeys));
+    problems.push(...validateApiNames(normalized.manifest, normalized.originalEntityKeys));
     // Alvos inexistentes já são erro; o ciclo só faz sentido num grafo completo.
     if (targetProblems.length === 0) {
       problems.push(...validateForeignKeyCycles(normalized.manifest, normalized.originalEntityKeys));

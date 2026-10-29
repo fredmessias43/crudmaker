@@ -36,6 +36,13 @@ abstract class <%~ it.className %> extends <%~ it.extends %>
 				'timestamp' => $updatedAt->timestamp,
 				'description' => $updatedAt->diffForHumans(),
 			),
+<% for (const relation of it.relations) { -%>
+<% if (relation.many) { -%>
+			'<%~ relation.name %>' => <%~ relation.resourceClass %>::collection($this->whenLoaded('<%~ relation.name %>')),
+<% } else { -%>
+			'<%~ relation.name %>' => new <%~ relation.resourceClass %>($this->whenLoaded('<%~ relation.name %>')),
+<% } -%>
+<% } -%>
 		], $this->extra($request));
 	}
 

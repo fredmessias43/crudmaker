@@ -1,5 +1,6 @@
 import { snakeCase } from "lodash";
-import { FieldInput, ManifestInput, RELATION_KEYS, OWNER_KEYS } from "../manifestSchema";
+import { resolveApi } from "../apiOptions";
+import { ApiInput, FieldInput, ManifestInput, RELATION_KEYS, OWNER_KEYS } from "../manifestSchema";
 import { Field, ManifestEntities, ManifestEntity, RelationshipValue, Relationships } from "../types";
 import { validateManifest, ValidateOptions } from "../validateManifest";
 
@@ -26,11 +27,14 @@ function normalizeField(fieldKey: string, fieldValue: FieldInput): [string, Fiel
   return [fieldKey, newField as Field];
 }
 
-function normalizeEntity(entityValue: ManifestInput["pkg"]["entities"][string], normalizeNames: boolean): ManifestEntity {
+function normalizeEntity(entityValue: ManifestInput["pkg"]["entities"][string], normalizeNames: boolean, defaultsApi?: ApiInput): ManifestEntity {
   const newEntity: ManifestEntity = {
     fields: {},
     relationships: {},
   };
+
+  const api = resolveApi(defaultsApi, entityValue.api);
+  if (api !== undefined) newEntity.api = api;
 
   /**
    * Fields
@@ -118,7 +122,7 @@ export class Manifest {
     this.pkgCode = input.pkg.code;
 
     for (const [entityKey, entityValue] of Object.entries(input.pkg.entities)) {
-      this.entities[entityKey] = normalizeEntity(entityValue, normalizeNames);
+      this.entities[entityKey] = normalizeEntity(entityValue, normalizeNames, input.pkg.defaults?.api);
     }
   }
 

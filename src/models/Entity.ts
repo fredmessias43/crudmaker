@@ -1,11 +1,12 @@
 import * as changeCase from "change-case";
-import { Fields, Relationships, ManifestEntity } from "../types";
+import { ApiOptions, Fields, Relationships, ManifestEntity } from "../types";
 import plurarize from "pluralize";
 
 export class Entity {
   public entityName: string;
   public fields: Fields;
   public relationships: Relationships;
+  public api?: ApiOptions;
 
   constructor(entityName: string, manifestEntity: ManifestEntity)
   {
@@ -13,6 +14,7 @@ export class Entity {
 
     this.fields = manifestEntity.fields;
     this.relationships = manifestEntity.relationships;
+    this.api = manifestEntity.api;
   }
 
   public getEntityName(casing: keyof typeof changeCase, options?: changeCase.Options & number )
@@ -28,4 +30,4 @@ export class Entity {
   {
     return plurarize.plural(this.getEntityName("snakeCase"));
   }
-}
+}

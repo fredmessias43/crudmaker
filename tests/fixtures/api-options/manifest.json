@@ -1,0 +1,126 @@
+{
+  "$schema": "../../../schema/manifest.schema.json",
+  "system": {
+    "title": "Api Options",
+    "code": "api-options"
+  },
+  "pkg": {
+    "code": "api-options",
+    "defaults": {
+      "api": {
+        "middleware": [
+          "auth:sanctum"
+        ],
+        "perPage": 25
+      }
+    },
+    "entities": {
+      "client": {
+        "fields": {
+          "id": "uuid",
+          "name": "string",
+          "email": {
+            "type": "string",
+            "unique": true
+          },
+          "status": {
+            "type": "enum",
+            "enumItems": [
+              "active",
+              "blocked"
+            ]
+          },
+          "vip": "boolean"
+        },
+        "relationships": {
+          "hasMany": [
+            "alert"
+          ],
+          "hasOne": [
+            "address"
+          ]
+        },
+        "api": {
+          "actions": [
+            "index",
+            "show",
+            "store",
+            "update"
+          ],
+          "middleware": [
+            "auth:sanctum",
+            "verified"
+          ],
+          "perPage": 20,
+          "filters": [
+            "status",
+            "vip"
+          ],
+          "search": [
+            "name",
+            "email"
+          ],
+          "sort": [
+            "name",
+            "created_at"
+          ],
+          "defaultSort": "-created_at",
+          "with": [
+            "address",
+            "alerts"
+          ]
+        }
+      },
+      "address": {
+        "fields": {
+          "id": "uuid",
+          "city": "string"
+        },
+        "relationships": {
+          "belongsTo": [
+            "client"
+          ]
+        }
+      },
+      "alert": {
+        "fields": {
+          "id": "uuid",
+          "title": "string"
+        },
+        "relationships": {
+          "belongsTo": [
+            "client"
+          ]
+        },
+        "api": {
+          "middleware": [
+            "auth:sanctum",
+            "throttle:60,1"
+          ],
+          "filters": [
+            "client_id"
+          ],
+          "sort": [
+            "title"
+          ],
+          "with": [
+            "client"
+          ]
+        }
+      },
+      "tag": {
+        "fields": {
+          "id": "uuid",
+          "label": "string"
+        },
+        "api": {
+          "actions": [
+            "index",
+            "show"
+          ],
+          "middleware": []
+        }
+      }
+    }
+  }
+}
