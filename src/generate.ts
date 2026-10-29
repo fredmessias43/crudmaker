@@ -31,6 +31,13 @@ export type GenerateOptions = {
    */
   existingApiRoutes?: string | null;
   /**
+   * Gera também os seeders (`database/seeders/<Entidade>Seeder.php`, `create-once`, e o `CrudmakerSeeder`, regravado).
+   * Sem isto, nenhum seeder é produzido (as factories saem sempre). Não fica registrado no lock: passe a flag a cada geração.
+   */
+  seeders?: boolean;
+  /** Conteúdo atual do `database/seeders/DatabaseSeeder.php` do destino, ou `null` se não existe; só decide se o aviso de como chamar o `CrudmakerSeeder` aparece. */
+  existingDatabaseSeeder?: string | null;
+  /**
    * Liga ou desliga a normalização de nomes. Quando definida, vale mais que `pkg.normalizeNames`
    * do manifest; omitida, vale o manifest (padrão: ligada).
    */
@@ -136,6 +143,8 @@ export function generate(manifestObj: { [key: string]: any }, options: GenerateO
     existingMigrations: options.existingMigrations,
     foreignMigrations,
     existingApiRoutes: options.existingApiRoutes,
+    seeders: options.seeders,
+    existingDatabaseSeeder: options.existingDatabaseSeeder,
     previousEntities: previousEntities(options.previousLock),
     previousMigrations: lockedMigrations,
     stubs: stubs.stubs,

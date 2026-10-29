@@ -9,6 +9,8 @@ app/Generated/Http/Controllers/Api/BaseGameController.php
 app/Http/Controllers/Api/GameController.php
 app/Generated/Http/Requests/BaseGameRequest.php
 app/Http/Requests/GameRequest.php
+app/Generated/Factories/BaseGameFactory.php
+database/factories/GameFactory.php
 database/migrations/2025_01_02_030405_create_games_table.php
 app/Generated/Enums/GameStatus.php
 app/Generated/Models/BaseAward.php
@@ -21,6 +23,8 @@ app/Generated/Http/Controllers/Api/BaseAwardController.php
 app/Http/Controllers/Api/AwardController.php
 app/Generated/Http/Requests/BaseAwardRequest.php
 app/Http/Requests/AwardRequest.php
+app/Generated/Factories/BaseAwardFactory.php
+database/factories/AwardFactory.php
 database/migrations/2025_01_02_030406_create_awards_table.php
 app/Generated/Models/BasePlayer.php
 app/Models/Player.php
@@ -32,6 +36,8 @@ app/Generated/Http/Controllers/Api/BasePlayerController.php
 app/Http/Controllers/Api/PlayerController.php
 app/Generated/Http/Requests/BasePlayerRequest.php
 app/Http/Requests/PlayerRequest.php
+app/Generated/Factories/BasePlayerFactory.php
+database/factories/PlayerFactory.php
 database/migrations/2025_01_02_030407_create_players_table.php
 app/Generated/Models/BasePlayerInvite.php
 app/Models/PlayerInvite.php
@@ -43,6 +49,8 @@ app/Generated/Http/Controllers/Api/BasePlayerInviteController.php
 app/Http/Controllers/Api/PlayerInviteController.php
 app/Generated/Http/Requests/BasePlayerInviteRequest.php
 app/Http/Requests/PlayerInviteRequest.php
+app/Generated/Factories/BasePlayerInviteFactory.php
+database/factories/PlayerInviteFactory.php
 database/migrations/2025_01_02_030408_create_player_invites_table.php
 app/Generated/Enums/PlayerInviteStatus.php
 app/Generated/Models/BaseCard.php
@@ -55,6 +63,8 @@ app/Generated/Http/Controllers/Api/BaseCardController.php
 app/Http/Controllers/Api/CardController.php
 app/Generated/Http/Requests/BaseCardRequest.php
 app/Http/Requests/CardRequest.php
+app/Generated/Factories/BaseCardFactory.php
+database/factories/CardFactory.php
 database/migrations/2025_01_02_030409_create_cards_table.php
 app/Generated/Models/BaseDrawnNumber.php
 app/Models/DrawnNumber.php
@@ -66,5 +76,7 @@ app/Generated/Http/Controllers/Api/BaseDrawnNumberController.php
 app/Http/Controllers/Api/DrawnNumberController.php
 app/Generated/Http/Requests/BaseDrawnNumberRequest.php
 app/Http/Requests/DrawnNumberRequest.php
+app/Generated/Factories/BaseDrawnNumberFactory.php
+database/factories/DrawnNumberFactory.php
 database/migrations/2025_01_02_030410_create_drawn_numbers_table.php
 routes/crudmaker.php

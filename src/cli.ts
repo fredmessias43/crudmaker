@@ -52,15 +52,17 @@ Opções:
   -v, --version         mostra a versão
 `;
 
-const generateHelp = `Uso: crudmaker generate <manifest> [--out <dir>] [--dry-run] [--normalize-names | --no-normalize-names]
+const generateHelp = `Uso: crudmaker generate <manifest> [--out <dir>] [--dry-run] [--seeders] [--normalize-names | --no-normalize-names]
                                   [--laravel <10|11|12>] [--php <x.y>]
 
-Gera Model, Migration, Controller, Request, Resource e Collection de cada entidade,
+Gera Model, Factory, Migration, Controller, Request, Resource e Collection de cada entidade,
 mais o arquivo de rotas (routes/crudmaker.php), incluído uma única vez no routes/api.php.
 
 Opções:
   -o, --out <dir>   raiz do projeto Laravel de destino (padrão: diretório atual)
   -n, --dry-run     não escreve nada; lista o que seria criado, sobrescrito, preservado ou removido
+  --seeders         gera também os seeders: database/seeders/<Entidade>Seeder.php (criado uma vez) e o CrudmakerSeeder
+                    (regravado), que chama todos na ordem das chaves estrangeiras. Sem a flag, nenhum seeder é gerado.
   --normalize-names     liga a normalização de nomes (entidade singular camelCase, campo snake_case)
   --no-normalize-names  desliga a normalização: os nomes passam como estão (só avisa o que está fora da convenção)
                         As duas flags têm prioridade sobre pkg.normalizeNames do manifest (padrão: ligada).
@@ -81,7 +83,7 @@ Atenção: os demais arquivos existentes (a camada gerada, as migrations, as rot
 inclusive edições feitas à mão. Use --dry-run primeiro e mantenha o projeto de destino sob controle de versão.
 `;
 
-const newHelp = `Uso: crudmaker new <dir> <manifest> [--laravel <10|11|12>] [--php <x.y>] [--db <banco>] [--no-sail] [--skip-generate]
+const newHelp = `Uso: crudmaker new <dir> <manifest> [--laravel <10|11|12>] [--php <x.y>] [--db <banco>] [--no-sail] [--skip-generate] [--seeders]
 
 Cria um projeto Laravel em <dir> e gera nele a API do manifest. Só precisa do Docker: o composer e o
 artisan rodam em containers efêmeros (imagem laravelsail/phpXX-composer, com o seu UID/GID).
@@ -96,6 +98,7 @@ Opções:
                      A versão de cada parte vem, nesta ordem, de: flag, pkg.target do manifest, padrão (Laravel 12, PHP 8.2).
   --db <banco>       banco configurado no Sail: mysql (padrão), pgsql, mariadb ou sqlite
   --no-sail          não instala o Sail (não combina com --db)
+  --seeders          gera também os seeders (veja crudmaker generate --help)
   --skip-generate    cria só o projeto, sem gerar a API (depois: crudmaker generate <manifest> --out <dir>)
   -h, --help         mostra esta ajuda
 
@@ -118,7 +121,7 @@ const stubsPublishHelp = `Uso: crudmaker stubs:publish [tipo...] [--out <dir>] [
 Copia os templates embutidos da camada gerada para ${stubsFolder}/ no projeto de destino.
 Os arquivos dessa pasta têm prioridade, um a um, sobre os embutidos na hora do generate.
 Sem tipos, copia todos; com tipos, só os pedidos. O tipo curto é a base (controller = controller.base);
-tipos: model, resource, collection, controller, request, migration, routes. As classes finais não têm stub.
+tipos: model, resource, collection, controller, request, factory, migration, routes. As classes finais não têm stub.
 
 Opções:
   -o, --out <dir>   raiz do projeto de destino (padrão: diretório atual)
@@ -206,6 +209,7 @@ function runGenerate(args: string[], io: CliIo): number {
     options: {
       out: { type: "string", short: "o" },
       "dry-run": { type: "boolean", short: "n" },
+      seeders: { type: "boolean" },
       "normalize-names": { type: "boolean" },
       "no-normalize-names": { type: "boolean" },
       laravel: { type: "string" },
@@ -232,7 +236,7 @@ function runGenerate(args: string[], io: CliIo): number {
   const outDir = path.resolve(io.cwd, values.out ?? ".");
   const manifestObj = readManifest(manifestPath);
 
-  generateProject(manifestObj, outDir, { dryRun: Boolean(values["dry-run"]), normalizeNames, flags: { laravel: values.laravel, php: values.php } }, io);
+  generateProject(manifestObj, outDir, { dryRun: Boolean(values["dry-run"]), seeders: Boolean(values.seeders), normalizeNames, flags: { laravel: values.laravel, php: values.php } }, io);
   return 0;
 }
 
@@ -240,7 +244,7 @@ function runGenerate(args: string[], io: CliIo): number {
 function generateProject(
   manifestObj: { [key: string]: any },
   outDir: string,
-  options: { dryRun: boolean; normalizeNames?: boolean; flags: { laravel?: string; php?: string } },
+  options: { dryRun: boolean; seeders?: boolean; normalizeNames?: boolean; flags: { laravel?: string; php?: string } },
   io: CliIo,
 ): void {
   const normalizeNames = options.normalizeNames;
@@ -264,6 +268,9 @@ function generateProject(
   const apiRoutesPath = path.join(outDir, "routes/api.php");
   const existingApiRoutes = fs.existsSync(apiRoutesPath) ? fs.readFileSync(apiRoutesPath, "utf8") : null;
 
+  const databaseSeederPath = path.join(outDir, "database/seeders/DatabaseSeeder.php");
+  const existingDatabaseSeeder = fs.existsSync(databaseSeederPath) ? fs.readFileSync(databaseSeederPath, "utf8") : null;
+
   // O lock da geração anterior diz quais entidades existiam; se não dá para lê-lo, só não detecta remoções.
   const lockWarnings: string[] = [];
   let previousLock = null;
@@ -283,6 +290,8 @@ function generateProject(
     existingMigrations,
     unmarkedMigrations,
     existingApiRoutes,
+    seeders: options.seeders,
+    existingDatabaseSeeder,
     normalizeNames,
     previousLock,
     stubs: projectStubs.stubs,
@@ -382,6 +391,7 @@ function runNew(args: string[], io: CliIo): number {
       db: { type: "string" },
       "no-sail": { type: "boolean" },
       "skip-generate": { type: "boolean" },
+      seeders: { type: "boolean" },
       help: { type: "boolean", short: "h" },
     },
   });
@@ -428,7 +438,7 @@ function runNew(args: string[], io: CliIo): number {
 
   if (!values["skip-generate"]) {
     io.stdout("\nGerando a API do manifest\n");
-    generateProject(manifestObj, dir, { dryRun: false, flags: { laravel: values.laravel, php: values.php } }, io);
+    generateProject(manifestObj, dir, { dryRun: false, seeders: Boolean(values.seeders), flags: { laravel: values.laravel, php: values.php } }, io);
   }
 
   io.stdout(newSummary(dir, io.cwd, resolved, { sail, database, generated: !values["skip-generate"], manifestArg: positionals[1] }));

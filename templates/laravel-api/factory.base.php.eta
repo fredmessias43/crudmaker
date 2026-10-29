@@ -1,0 +1,44 @@
+<?php
+
+// ARQUIVO GERADO PELO CRUDMAKER. NÃO EDITE: ele é sobrescrito a cada `crudmaker generate`.
+// Seu código fica em <%~ it.final.fqcn %> (<%~ it.final.path %>), que estende esta classe e nunca é sobrescrita.
+
+namespace <%~ it.namespace %>;
+
+<% for (const use of it.imports) { -%>
+use <%~ use %>;
+<% } -%>
+
+/**
+ * @extends Factory<<%~ it.model %>>
+ */
+abstract class <%~ it.className %> extends <%~ it.extends %>
+{
+	/**
+	 * A model final: é ela que o Laravel usa em <%~ it.model %>::factory() e que esta factory cria.
+	 *
+	 * @var class-string<<%~ it.model %>>
+	 */
+	protected $model = <%~ it.model %>::class;
+<% if (it.usesPassword) { -%>
+
+	/**
+	 * A senha cifrada, reaproveitada entre as instâncias (cifrar é lento).
+	 */
+	protected static ?string $password = null;
+<% } -%>
+
+	/**
+	 * Valores padrão dos atributos, derivados dos campos do manifest.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function definition(): array
+	{
+		return [
+<% for (const attribute of it.attributes) { -%>
+			'<%~ attribute.name %>' => <%~ attribute.expression %>,
+<% } -%>
+		];
+	}
+}

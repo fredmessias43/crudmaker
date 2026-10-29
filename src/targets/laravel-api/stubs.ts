@@ -7,7 +7,7 @@ import { embeddedTemplate, Stubs, validateStub } from "./render";
  * de mudar o comportamento dela é o PHP (hooks), e um stub só valeria para arquivos novos, criando
  * projetos com finais de padrões diferentes.
  */
-export const replaceableTemplates = ["model.base", "resource.base", "collection.base", "controller.base", "request.base", "enum", "migration", "routes"];
+export const replaceableTemplates = ["model.base", "resource.base", "collection.base", "controller.base", "request.base", "factory.base", "enum", "migration", "routes"];
 
 /** Pasta dos stubs no projeto de destino, relativa à raiz do projeto. */
 export const stubsFolder = "stubs/crudmaker/laravel-api";

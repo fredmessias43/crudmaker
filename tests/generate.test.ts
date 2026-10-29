@@ -9,9 +9,9 @@ const snapshotsDir = path.join(__dirname, "__snapshots__");
 // 2025-01-02 03:04:05 (hora local, como o `format` do date-fns usa no nome da migration)
 const now = new Date(2025, 0, 2, 3, 4, 5);
 
-/** Camada de customização: classes finais (fora de `app/Generated`, `database` e `routes`) são `create-once`. */
+/** Camada de customização: classes finais (fora de `app/Generated`) e as factories finais (`database/factories`) são `create-once`. */
 function isCustomLayer(p: string): boolean {
-  return p.startsWith("app/") && !p.startsWith("app/Generated/");
+  return (p.startsWith("app/") && !p.startsWith("app/Generated/")) || p.startsWith("database/factories/");
 }
 
 function loadManifest(name: string) {

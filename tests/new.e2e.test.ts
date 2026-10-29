@@ -123,4 +123,56 @@ describe.skipIf(!enabled)("crudmaker new (Docker de verdade)", () => {
     expect(output).toContain("hidden=ok");
     expect(output).toContain("post-user=ana@example.com");
   });
+
+  it("com --seeders, Post::factory() cria também o autor e o CrudmakerSeeder popula o banco na ordem das FKs", { timeout: 900_000 }, () => {
+    tmp = process.env.CRUDMAKER_E2E_KEEP || fs.mkdtempSync(path.join(os.tmpdir(), "crudmaker-e2e-"));
+    const dir = path.join(tmp, "blog-seeders");
+    let stdout = "";
+    let stderr = "";
+
+    const code = run(["new", dir, manifest, "--laravel", "12", "--php", "8.2", "--db", "sqlite", "--seeders"], {
+      stdout: (t) => (stdout += t),
+      stderr: (t) => (stderr += t),
+      cwd: tmp,
+      now: () => new Date(),
+    });
+    expect(stderr).toBe("");
+    expect(code).toBe(0);
+    expect(fs.existsSync(path.join(dir, "database/factories/PostFactory.php"))).toBe(true);
+    expect(fs.existsSync(path.join(dir, "app/Generated/Factories/BasePostFactory.php"))).toBe(true);
+    expect(fs.existsSync(path.join(dir, "database/seeders/CrudmakerSeeder.php"))).toBe(true);
+    expect(stdout).toContain("chame o CrudmakerSeeder");
+
+    inProject(dir, ["php", "artisan", "migrate", "--force"]);
+
+    const php = (body: string[]) => {
+      fs.writeFileSync(
+        path.join(dir, "crudmaker-e2e.php"),
+        ["<?php", "require __DIR__ . '/vendor/autoload.php';", "$app = require __DIR__ . '/bootstrap/app.php';", "$app->make(Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap();", ...body].join("\n"),
+      );
+      return inProject(dir, ["php", "crudmaker-e2e.php"]);
+    };
+
+    // factory: 5 posts, cada um com o autor criado junto; o enum vira o PHP enum e o e-mail único não repete
+    const factory = php([
+      "$posts = App\\Models\\Post::factory()->count(5)->create();",
+      "echo 'posts=' . App\\Models\\Post::count() . PHP_EOL;",
+      "echo 'authors=' . App\\Models\\Author::count() . PHP_EOL;",
+      "echo 'pai=' . ($posts[0]->author instanceof App\\Models\\Author ? 'ok' : 'no') . PHP_EOL;",
+      "echo 'enum=' . ($posts[0]->status instanceof App\\Generated\\Enums\\PostStatus ? 'ok' : 'no') . PHP_EOL;",
+    ]);
+    expect(factory).toContain("posts=5");
+    expect(factory).toContain("authors=5");
+    expect(factory).toContain("pai=ok");
+    expect(factory).toContain("enum=ok");
+
+    // seeder: db:seed --class=CrudmakerSeeder acrescenta 10 autores e 10 posts, os posts reaproveitando os autores semeados
+    inProject(dir, ["php", "artisan", "db:seed", "--class=CrudmakerSeeder", "--force"]);
+    const seeded = php([
+      "echo 'posts=' . App\\Models\\Post::count() . PHP_EOL;",
+      "echo 'authors=' . App\\Models\\Author::count() . PHP_EOL;",
+    ]);
+    expect(seeded).toContain("posts=15");
+    expect(seeded).toContain("authors=15");
+  });
 });

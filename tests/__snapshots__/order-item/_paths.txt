@@ -9,6 +9,8 @@ app/Generated/Http/Controllers/Api/BaseOrderItemController.php
 app/Http/Controllers/Api/OrderItemController.php
 app/Generated/Http/Requests/BaseOrderItemRequest.php
 app/Http/Requests/OrderItemRequest.php
+app/Generated/Factories/BaseOrderItemFactory.php
+database/factories/OrderItemFactory.php
 database/migrations/2025_01_02_030407_create_order_items_table.php
 app/Generated/Enums/OrderItemStatus.php
 app/Generated/Models/BaseOrder.php
@@ -21,6 +23,8 @@ app/Generated/Http/Controllers/Api/BaseOrderController.php
 app/Http/Controllers/Api/OrderController.php
 app/Generated/Http/Requests/BaseOrderRequest.php
 app/Http/Requests/OrderRequest.php
+app/Generated/Factories/BaseOrderFactory.php
+database/factories/OrderFactory.php
 database/migrations/2025_01_02_030406_create_orders_table.php
 app/Generated/Models/BaseUser.php
 app/Models/User.php
@@ -32,5 +36,7 @@ app/Generated/Http/Controllers/Api/BaseUserController.php
 app/Http/Controllers/Api/UserController.php
 app/Generated/Http/Requests/BaseUserRequest.php
 app/Http/Requests/UserRequest.php
+app/Generated/Factories/BaseUserFactory.php
+database/factories/UserFactory.php
 database/migrations/2025_01_02_030405_create_users_table.php
 routes/crudmaker.php

@@ -169,7 +169,7 @@ fields:
 - O hook `extraRules()` da request final continua valendo por último e pode substituir qualquer regra de um campo (a mesma chave sobrescreve), inclusive as de `rules`.
 
 **`default`**
-- Vai para a migration (`->default(...)`) e fica guardado no modelo normalizado (`entity.fields.<campo>.default`) para a factory usar (ticket 18).
+- Vai para a migration (`->default(...)`), vira o valor do campo na `definition()` da factory (em qualquer tipo, enum incluso) e fica guardado no modelo normalizado (`entity.fields.<campo>.default`) para a factory usar (veja [Factories e seeders](como-usar.md#factories-e-seeders)).
 - Em `enum`, substitui o default de sempre (o primeiro item de `enumItems`); sem `default`, continua o primeiro item.
 - Não muda a request: o campo segue `required` (ou `nullable` com `required: false`) e o `prepareForValidation` não aplica o default. O default vale para quem insere sem informar a coluna (migration/seed/factory), não dispensa o campo na API; para torná-lo opcional na API declare também `required: false`.
 - Compatibilidade com o tipo (a validação do manifest recusa o resto, com o caminho `...fields.<campo>.default`):

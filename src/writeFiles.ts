@@ -92,6 +92,18 @@ export function legacyFinalWarnings(plan: PlannedWrite[]): string[] {
       continue;
     }
 
+    // UserFactory do esqueleto do Laravel: estende Factory direto, não é código de versão antiga do crudmaker.
+    if (file.path === "database/factories/UserFactory.php" && /\bextends\s+Factory\b/.test(content)) {
+      warnings.push(
+        `${file.path}: é a factory do esqueleto do Laravel e estende Factory direto, não a base gerada ${baseName}; o arquivo foi preservado, ` +
+          `mas ${file.generatedBase.path} (valores dos campos do manifest, como as colunas extras de users) fica sem uso, e User::factory() não preenche os campos novos. ` +
+          `Migre: troque "extends Factory" por "extends \\${file.generatedBase.fqcn}", remova o "use Illuminate\\Database\\Eloquent\\Factories\\Factory;", ` +
+          `a propriedade $password e a definition() (a base já preenche name, email, email_verified_at, password e remember_token), ` +
+          `e mantenha só o que é seu, como o estado unverified() (veja "A entidade user" em docs/como-usar.md).`,
+      );
+      continue;
+    }
+
     warnings.push(
       `${file.path}: não estende a base gerada ${baseName}; o arquivo foi preservado, mas ${file.generatedBase.path} fica sem uso ` +
         `e os hooks e as customizações da camada gerada não valem para ele. ` +

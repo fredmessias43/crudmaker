@@ -9,6 +9,8 @@ app/Generated/Http/Controllers/Api/BaseCourseController.php
 app/Http/Controllers/Api/CourseController.php
 app/Generated/Http/Requests/BaseCourseRequest.php
 app/Http/Requests/CourseRequest.php
+app/Generated/Factories/BaseCourseFactory.php
+database/factories/CourseFactory.php
 database/migrations/2025_01_02_030405_create_courses_table.php
 app/Generated/Models/BaseCourseContent.php
 app/Models/CourseContent.php
@@ -20,6 +22,8 @@ app/Generated/Http/Controllers/Api/BaseCourseContentController.php
 app/Http/Controllers/Api/CourseContentController.php
 app/Generated/Http/Requests/BaseCourseContentRequest.php
 app/Http/Requests/CourseContentRequest.php
+app/Generated/Factories/BaseCourseContentFactory.php
+database/factories/CourseContentFactory.php
 database/migrations/2025_01_02_030406_create_course_contents_table.php
 app/Generated/Models/BaseUser.php
 app/Models/User.php
@@ -31,6 +35,8 @@ app/Generated/Http/Controllers/Api/BaseUserController.php
 app/Http/Controllers/Api/UserController.php
 app/Generated/Http/Requests/BaseUserRequest.php
 app/Http/Requests/UserRequest.php
+app/Generated/Factories/BaseUserFactory.php
+database/factories/UserFactory.php
 database/migrations/2025_01_02_030407_create_users_table.php
 app/Generated/Models/BaseUserCourse.php
 app/Models/UserCourse.php
@@ -42,6 +48,8 @@ app/Generated/Http/Controllers/Api/BaseUserCourseController.php
 app/Http/Controllers/Api/UserCourseController.php
 app/Generated/Http/Requests/BaseUserCourseRequest.php
 app/Http/Requests/UserCourseRequest.php
+app/Generated/Factories/BaseUserCourseFactory.php
+database/factories/UserCourseFactory.php
 database/migrations/2025_01_02_030408_create_user_courses_table.php
 app/Generated/Models/BaseClassroom.php
 app/Models/Classroom.php
@@ -53,6 +61,8 @@ app/Generated/Http/Controllers/Api/BaseClassroomController.php
 app/Http/Controllers/Api/ClassroomController.php
 app/Generated/Http/Requests/BaseClassroomRequest.php
 app/Http/Requests/ClassroomRequest.php
+app/Generated/Factories/BaseClassroomFactory.php
+database/factories/ClassroomFactory.php
 database/migrations/2025_01_02_030409_create_classrooms_table.php
 app/Generated/Models/BaseClassLesson.php
 app/Models/ClassLesson.php
@@ -64,6 +74,8 @@ app/Generated/Http/Controllers/Api/BaseClassLessonController.php
 app/Http/Controllers/Api/ClassLessonController.php
 app/Generated/Http/Requests/BaseClassLessonRequest.php
 app/Http/Requests/ClassLessonRequest.php
+app/Generated/Factories/BaseClassLessonFactory.php
+database/factories/ClassLessonFactory.php
 database/migrations/2025_01_02_030410_create_class_lessons_table.php
 app/Generated/Models/BaseClassLessonComment.php
 app/Models/ClassLessonComment.php
@@ -75,6 +87,8 @@ app/Generated/Http/Controllers/Api/BaseClassLessonCommentController.php
 app/Http/Controllers/Api/ClassLessonCommentController.php
 app/Generated/Http/Requests/BaseClassLessonCommentRequest.php
 app/Http/Requests/ClassLessonCommentRequest.php
+app/Generated/Factories/BaseClassLessonCommentFactory.php
+database/factories/ClassLessonCommentFactory.php
 database/migrations/2025_01_02_030411_create_class_lesson_comments_table.php
 app/Generated/Models/BaseClassLessonAttendee.php
 app/Models/ClassLessonAttendee.php
@@ -86,6 +100,8 @@ app/Generated/Http/Controllers/Api/BaseClassLessonAttendeeController.php
 app/Http/Controllers/Api/ClassLessonAttendeeController.php
 app/Generated/Http/Requests/BaseClassLessonAttendeeRequest.php
 app/Http/Requests/ClassLessonAttendeeRequest.php
+app/Generated/Factories/BaseClassLessonAttendeeFactory.php
+database/factories/ClassLessonAttendeeFactory.php
 database/migrations/2025_01_02_030412_create_class_lesson_attendees_table.php
 app/Generated/Models/BaseStudent.php
 app/Models/Student.php
@@ -97,5 +113,7 @@ app/Generated/Http/Controllers/Api/BaseStudentController.php
 app/Http/Controllers/Api/StudentController.php
 app/Generated/Http/Requests/BaseStudentRequest.php
 app/Http/Requests/StudentRequest.php
+app/Generated/Factories/BaseStudentFactory.php
+database/factories/StudentFactory.php
 database/migrations/2025_01_02_030413_create_students_table.php
 routes/crudmaker.php

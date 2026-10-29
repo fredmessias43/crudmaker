@@ -1,18 +1,20 @@
 import { addSeconds, format } from "date-fns";
-import { orderByDependency } from "../../dependencyOrder";
 import { Entity } from "../../models/Entity";
 import { LockMigration } from "../../types";
 import { TargetVersion } from "../../targetVersion";
 import { GeneratedFile, ObsoleteFile } from "../types";
 import { capabilitiesFor } from "./capabilities";
+import { entitiesByDependency } from "./entityOrder";
 import { EntityFileType } from "./fileType";
 import { renderTemplate, Stubs } from "./render";
 import { collectionBaseFile, collectionFinalFile } from "./viewModels/collection";
 import { controllerBaseFile, controllerFinalFile } from "./viewModels/controller";
 import { enumFiles } from "./viewModels/enum";
-import { existingMigration, foreignKeyTable, migrationFile } from "./viewModels/migration";
+import { factoryBaseFile, factoryFinalFile } from "./viewModels/factory";
+import { existingMigration, migrationFile } from "./viewModels/migration";
 import { alterView, alterWarnings, diffEntity, lockChanges } from "./viewModels/migrationAlter";
 import { modelBaseFile, modelFinalFile } from "./viewModels/model";
+import { crudmakerSeeder, CRUDMAKER_SEEDER, entitySeeder } from "./viewModels/seeder";
 import { requestBaseFile, requestFinalFile } from "./viewModels/request";
 import { resourceBaseFile, resourceFinalFile } from "./viewModels/resource";
 import { ensureRoutesInclude, routesPath, routesView } from "./viewModels/routes";
@@ -40,6 +42,10 @@ export type LaravelApiInput = {
   previousMigrations?: LockMigration[];
   /** Stubs do projeto já validados (nome do template → conteúdo), com prioridade sobre os embutidos. */
   stubs?: Stubs;
+  /** Gera também os seeders (um por entidade e o `CrudmakerSeeder`); sem a flag, nenhum seeder sai. */
+  seeders?: boolean;
+  /** Conteúdo atual do `database/seeders/DatabaseSeeder.php` do destino, ou `null`/omitido se ele não existe (só para o aviso de como chamar o `CrudmakerSeeder`). */
+  existingDatabaseSeeder?: string | null;
   /** Versão do Laravel/PHP de destino; vira as capacidades (`it.capabilities`) dos templates. */
   target: TargetVersion;
 };
@@ -56,6 +62,8 @@ const entityFileTypes: EntityFileType[] = [
   controllerFinalFile,
   requestBaseFile,
   requestFinalFile,
+  factoryBaseFile,
+  factoryFinalFile,
   migrationFile,
 ];
 
@@ -67,24 +75,7 @@ const policyByLayer = { generated: "overwrite", migration: "overwrite", custom: 
  * (a tabela referenciada vem antes; empate = ordem do manifest), então a saída é determinística.
  */
 function migrationDates(entities: Entity[], now: Date): Map<Entity, Date> {
-  // Os nós são as posições no manifest (e não a tabela), para duas entidades com a mesma tabela não se confundirem.
-  const indexByTable = new Map<string, number>();
-  entities.forEach((entity, index) => {
-    if (!indexByTable.has(entity.getTableName())) indexByTable.set(entity.getTableName(), index);
-  });
-
-  const { order, cyclic } = orderByDependency(
-    entities.map((entity, index) => ({
-      id: String(index),
-      dependsOn: (entity.relationships?.belongsTo ?? [])
-        .map((relationship) => indexByTable.get(foreignKeyTable(relationship)))
-        .filter((target) => target !== undefined)
-        .map(String),
-    })),
-  );
-
-  // Ciclos já são recusados na validação; o fallback mantém a função total.
-  return new Map([...order, ...cyclic].map((id, position) => [entities[Number(id)], addSeconds(now, position)]));
+  return new Map(entitiesByDependency(entities).map((entity, position) => [entity, addSeconds(now, position)]));
 }
 
 /**
@@ -113,6 +104,11 @@ function obsoleteFiles(previous: Entity[], currentPaths: Set<string>, input: Lar
       if (fileType.layer === "migration" && !existingMigration(entity.getTableName(), context.existingMigrations)) continue;
 
       obsolete.push({ path, kind: fileType.layer });
+    }
+
+    if (input.seeders) {
+      const { path } = entitySeeder(entity);
+      if (!currentPaths.has(path)) obsolete.push({ path, kind: "custom" });
     }
 
     // Enums de campos enum: camada gerada. Campo que deixou de ser enum também deixa o arquivo obsoleto.
@@ -303,6 +299,22 @@ export function generateLaravelApi(input: LaravelApiInput): LaravelApiOutput {
   for (const [table] of previousByTable) {
     const file = existingMigration(table, owned);
     if (!currentTables.has(table) && file !== undefined) migrations.push({ file, table, type: "create" });
+  }
+
+  if (input.seeders) {
+    for (const entity of input.entities) {
+      const { path, view } = entitySeeder(entity);
+      files.push({ path, content: render("seeder", view), policy: "create-once" });
+    }
+    const { path, view } = crudmakerSeeder(input.entities);
+    files.push({ path, content: render("crudmaker-seeder", view), policy: "overwrite" });
+
+    if (!(input.existingDatabaseSeeder ?? "").includes(CRUDMAKER_SEEDER)) {
+      warnings.push(
+        `Seeders gerados. Para usá-los, chame o ${CRUDMAKER_SEEDER} no database/seeders/DatabaseSeeder.php (dentro de run()): ` +
+          `$this->call(\\Database\\Seeders\\${CRUDMAKER_SEEDER}::class); ou rode: php artisan db:seed --class=${CRUDMAKER_SEEDER}.`,
+      );
+    }
   }
 
   files.push({ path: routesPath, content: render("routes", routesView(input.entities)), policy: "overwrite" });

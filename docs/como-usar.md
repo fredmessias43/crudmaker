@@ -45,6 +45,7 @@ Cria o projeto Laravel em `minha-api/` e gera nele a API do manifest. Tudo roda 
 | `--db <banco>` | banco configurado no Sail: `mysql` (padrão), `pgsql`, `mariadb` ou `sqlite`. Não combina com `--no-sail` |
 | `--no-sail` | não instala o Sail |
 | `--skip-generate` | não roda o `generate` no fim (depois: `crudmaker generate manifest.yaml --out minha-api`) |
+| `--seeders` | o `generate` do fim também gera os seeders (veja [Factories e seeders](#factories-e-seeders)) |
 
 A versão segue a mesma prioridade do `generate` (flag, `pkg.target` do manifest, padrão), menos a detecção pelo composer, porque o destino ainda não existe. O resumo mostra a versão usada e de onde veio.
 
@@ -203,6 +204,7 @@ Para cada entidade (`Client`, no exemplo) são escritos dois arquivos por classe
 | Request | `app/Generated/Http/Requests/BaseClientRequest.php` | `app/Http/Requests/ClientRequest.php` |
 | Resource | `app/Generated/Http/Resources/BaseClientResource.php` | `app/Http/Resources/ClientResource.php` |
 | Collection | `app/Generated/Http/Resources/BaseClientCollection.php` | `app/Http/Resources/ClientCollection.php` |
+| Factory | `app/Generated/Factories/BaseClientFactory.php` | `database/factories/ClientFactory.php` |
 
 Cada campo `enum` ainda gera um PHP enum em `app/Generated/Enums/<Entidade><Campo>.php` (`ClientStatus.php`): arquivo único `overwrite`, sem classe final, usado no cast da model e na regra da request (veja [Enums](manifest.md#enums)).
 
@@ -218,6 +220,7 @@ Além disso, são gravados na raiz do destino:
 | `manifest-lock.json` | o manifest já normalizado, para conferir o que o gerador entendeu |
 | `routes/crudmaker.php` | uma `Route::apiResource` por entidade (veja abaixo) |
 | `routes/api.php` | só ganha o include de `routes/crudmaker.php`, uma única vez; o resto fica intacto |
+| `database/seeders/*` | só com `--seeders` (veja [Factories e seeders](#factories-e-seeders)) |
 
 ### Rotas
 
@@ -249,7 +252,7 @@ O gerador não roda o `migrate`. Rode `php artisan migrate`: as migrations já s
 
 ## Duas camadas: onde escrever código
 
-Para model, controller, request, resource e collection, cada classe existe em duas camadas:
+Para model, controller, request, resource, collection e factory, cada classe existe em duas camadas:
 
 - **Base gerada**, em `app/Generated/...` (namespace `App\Generated\...`, nome `Base<Classe>`). É sobrescrita a cada `generate`, é `abstract` e tem no topo o aviso `ARQUIVO GERADO PELO CRUDMAKER. NÃO EDITE`.
 - **Classe final**, no namespace normal (`App\Models\Client`), que **estende a base**. É criada **uma única vez** (política `create-once`), nasce vazia, só com um comentário listando o que dá para sobrescrever, e nunca mais é tocada pelo crudmaker: nenhuma opção da CLI a sobrescreve (`--dry-run`, `--normalize-names`, mudança de manifest...). Se você apagar o arquivo, o próximo `generate` o recria vazio.
@@ -329,6 +332,89 @@ class ClientController extends BaseClientController
 - **Collection** (`ClientCollection`): não tem hook. Cada item da lista sai pela `ClientResource` final, então o `extra()` da resource vale na listagem também. Ajustes só da coleção (`with()`, `paginationInformation()`) vão direto na classe final.
 - **Model** (`Client`): não tem hook; use os recursos do Eloquent na classe final: scopes (inclusive globais), accessors, `$hidden`/`$appends`, relacionamentos extras e eventos em `booted()`. Redeclarar `$casts` ou `$fillable` na final **substitui** os gerados; para somar, use `$this->mergeCasts([...])` e `$this->mergeFillable([...])` num `__construct(array $attributes = [])` que chame `parent::__construct($attributes)`.
 
+## Factories e seeders
+
+Toda entidade ganha uma **factory** (sempre, sem flag). O `HasFactory` da model base já a encontra: `Client::factory()` resolve `Database\Factories\ClientFactory`, a classe final, que estende `App\Generated\Factories\BaseClientFactory`. A base fica em `app/Generated/` (como as outras bases) e traz a `definition()` gerada; a final nasce vazia e é sua (`create-once`), é onde vão os **estados**:
+
+```php
+// database/factories/ClientFactory.php
+class ClientFactory extends BaseClientFactory
+{
+    public function blocked(): static
+    {
+        return $this->state(fn (array $attributes) => ['status' => 'blocked']);
+    }
+}
+
+Client::factory()->count(3)->blocked()->create();
+```
+
+Para trocar um valor padrão, sobrescreva a `definition()` partindo da base: `return array_merge(parent::definition(), ['name' => 'Fixo']);`.
+
+### Valores gerados
+
+O `id` não entra (o `HasUuids` gera o uuid; no `users` do esqueleto o id é do banco). Os demais campos:
+
+| Campo | Valor |
+|---|---|
+| `string` | `fake()->words(3, true)`, ou pelo nome (tabela abaixo) |
+| `text` | `fake()->paragraph()` |
+| `integer` | `fake()->numberBetween(1, 1000)` |
+| `double` | `fake()->randomFloat(2, 0, 1000)` |
+| `boolean` | `fake()->boolean()` |
+| `date` / `datetime` | `fake()->date()` / `fake()->dateTime()` |
+| `json` | `[]` |
+| `uuid` (fora o `id`) | `fake()->uuid()` |
+| `enum` | `fake()->randomElement(ClientStatus::cases())`, usando o PHP enum gerado |
+| FK de `belongsTo` | `Pai::factory()`: o pai é criado junto, em cadeia (`Post::factory()->create()` cria o autor) |
+
+Regras:
+
+- **`default` declarado** no manifest vale para qualquer tipo, enum incluso (o enum sem `default` sorteia, apesar de a migration usar o primeiro item). Quer variar um campo com `default`? Use um estado ou `->state([...])`.
+- **`unique: true`** usa `fake()->unique()` (em `string`, `text`, `integer`, `double`, `date`, `datetime` e `uuid`; em `boolean` e `enum` o conjunto de valores é pequeno demais e o `unique()` do Faker esgotaria).
+- **FK opcional** (`required: false`) também cria o pai; para um filho sem pai, use `Post::factory()->state(['author_id' => null])`. **Auto-referência** (`parent_id` apontando para a própria tabela) fica `null`, senão a factory se chamaria para sempre.
+- Campo opcional (`required: false`) recebe valor como os demais.
+
+Heurísticas por nome, só em campos `string` (nome exato, minúsculas):
+
+| Nome | Faker |
+|---|---|
+| `email`, `*_email` | `safeEmail()` |
+| `name`, `full_name` | `name()` |
+| `first_name`, `last_name`, `username` | `firstName()`, `lastName()`, `userName()` |
+| `phone`, `telephone`, `mobile`, `cellphone`, `*_phone` | `phoneNumber()` |
+| `url`, `website`, `*_url` | `url()` |
+| `city`, `state`, `country` | `city()`, `state()`, `country()` |
+| `zip`, `zip_code`, `postal_code` | `postcode()` |
+| `address`, `street` | `streetAddress()` |
+| `slug`, `color`, `company`, `currency` | `slug()`, `hexColor()`, `company()`, `currencyCode()` |
+| `title`, `description` | `sentence(3)`, `sentence()` |
+| `password` | `static::$password ??= Hash::make('password')` |
+
+Qualquer outro nome cai em `words(3, true)`. Os campos `text` não usam a tabela.
+
+### Seeders (`--seeders`)
+
+```bash
+crudmaker generate manifest.yaml --out ../minha-api --seeders   # também vale para `crudmaker new`
+```
+
+Sem a flag, nenhum seeder é gerado. Com ela:
+
+- `database/seeders/<Entidade>Seeder.php`: **`create-once`** (é seu: mude a quantidade, chame estados da factory, escreva registros fixos). Cria 10 registros com `Client::factory()->count(10)`; em entidade com `belongsTo`, cada registro reaproveita um pai já semeado (`Author::query()->inRandomOrder()->value('id') ?? Author::factory()`), e cria um pela factory se não há nenhum;
+- `database/seeders/CrudmakerSeeder.php`: **`overwrite`** (gerado), chama todos os seeders na ordem de dependência das FKs (o pai antes do filho). Entidades novas entram nele a cada `generate --seeders`.
+
+O crudmaker **não edita o `DatabaseSeeder`** (ele é do projeto e muda entre versões do Laravel). Chame o `CrudmakerSeeder` você mesmo, uma vez, em `database/seeders/DatabaseSeeder.php`:
+
+```php
+public function run(): void
+{
+    $this->call(\Database\Seeders\CrudmakerSeeder::class);
+}
+```
+
+ou rode `php artisan db:seed --class=CrudmakerSeeder`. Enquanto o `DatabaseSeeder` não citar o `CrudmakerSeeder`, o `generate --seeders` imprime um aviso com essa instrução. A flag não fica registrada no lock: sem ela numa regeração, os seeders existentes ficam onde estão, sem atualizar o `CrudmakerSeeder`.
+
 ## Stubs: mudar o padrão de um tipo de arquivo
 
 Cada arquivo gerado vem de um template (`templates/laravel-api/*.php.eta`, parecido com o PHP final). Um **stub** é uma cópia de um desses templates dentro do seu projeto, que tem prioridade sobre o embutido. Serve para mudar o padrão de **todos** os arquivos de um tipo de uma vez (ex.: o envelope de resposta de todos os controllers).
@@ -352,7 +438,7 @@ crudmaker stubs:publish controller --out <projeto>    # só o do controller
 
 Copia os templates embutidos para `stubs/crudmaker/laravel-api/` do projeto (`--out` é a raiz do projeto, padrão: diretório atual) e lista o que copiou. Publique **só os que vai mudar**: o que não estiver na pasta continua vindo do embutido e recebe as melhorias das novas versões do crudmaker.
 
-- **Nomes**: `model`, `resource`, `collection`, `controller` e `request` são a **base** (`controller` = `controller.base`; o sufixo `.base` também é aceito), mais `migration` e `routes`. Não há `*.final`.
+- **Nomes**: `model`, `resource`, `collection`, `controller`, `request` e `factory` são a **base** (`controller` = `controller.base`; o sufixo `.base` também é aceito), mais `migration` e `routes`. Não há `*.final`.
 - **Não sobrescreve**: se o stub já existe, o comando avisa e pula (suas edições ficam). `--force` sobrescreve, mas só stubs (nada fora da pasta de stubs é tocado) e perde suas edições neles.
 - **Editar**: mude o arquivo em `stubs/crudmaker/laravel-api/<nome>.php.eta` e rode `crudmaker generate` (o `--dry-run` mostra o efeito). Versione a pasta `stubs/` junto com o projeto.
 - **Atualizar**: ao publicar, o hash do template embutido vai para `stubs/crudmaker/stubs-lock.json`. Se uma versão nova do crudmaker mudar o embutido, o `generate` mostra na seção `Avisos`: `stub controller.base: foi publicado a partir de uma versão anterior do template embutido...`. Para comparar, publique o embutido atual numa pasta temporária e use o `diff`:
@@ -376,6 +462,7 @@ Os templates usam [Eta](https://eta.js.org): `<%~ it.x %>` imprime sem escape, e
 | `request.base` | `fields`, `rules` (regras de validação por campo) |
 | `resource.base` | `fields` (`key` e `enum`), `relations` (relacionamentos de `api.with`) |
 | `enum` | `namespace`, `className`, `entity`, `field`, `cases` (`name` e `value`, este já como literal PHP); não tem as variáveis de classe (`imports`, `extends`...) |
+| `factory.base` | `model`, `attributes` (`name` e `expression`, esta já como código PHP), `usesPassword` |
 | `collection.base` | `resourceClass` |
 | `controller.base` | `has` (quais actions existem), `hooks` (hooks mantidos), `index` (`with`, filtros, busca, ordenação, `perPage`), `withShow` |
 | `migration` | `table`, `columns`, `foreignKeys`, `uniques`, `imports` |
@@ -442,7 +529,7 @@ Uma entidade `user` (tabela `users`) num projeto criado pelo esqueleto oficial (
   1. troque `extends Authenticatable` por `extends \App\Generated\Models\BaseUser` e remova o `use Illuminate\Foundation\Auth\User as Authenticatable;`;
   2. mantenha só o que é seu (traits como `HasApiTokens`, métodos);
   3. apague `$fillable`, `$hidden` e `$casts`/`casts()` repetidos: redeclarados na final, **substituem** os da base (e o `$fillable` do esqueleto não inclui os campos novos do manifest);
-  4. o mesmo vale para `database/factories/UserFactory.php` e quaisquer outros arquivos do esqueleto que o crudmaker passe a gerar (como a factory do ticket 18): são `create-once`, preservados, e só recebem aviso.
+  4. o mesmo vale para `database/factories/UserFactory.php`: é a final `create-once` da factory e o esqueleto já a criou (estendendo `Factory` direto), então é preservada, com um aviso por `generate`. Para usar a base (`app/Generated/Factories/BaseUserFactory.php`, que preenche os campos do manifest, como `phone`, e `email_verified_at`, `password` e `remember_token` como o esqueleto), troque `extends Factory` por `extends \App\Generated\Factories\BaseUserFactory`, remova o `use ...\Factory;`, a propriedade `$password` e a `definition()`, e mantenha o estado `unverified()` e o que for seu. Enquanto não migrar, `User::factory()` usa a factory do esqueleto (que não conhece as colunas novas);
 - declare `password` no manifest com `hidden: true` (`"password": { "type": "string", "hidden": true }`) para a API aceitar a senha sem devolvê-la; o cast `hashed` a cifra ao salvar. Sem esse campo a API não cria usuários com senha. No Laravel 10, o cast `hashed` exige a versão 10.14 ou mais nova;
 - o login padrão do esqueleto (colunas `password`, `remember_token`, `email_verified_at`) continua funcionando.
 
@@ -497,4 +584,3 @@ Os controllers não têm try/catch: erros chegam ao handler do Laravel e saem co
 
 Os bugs do código gerado e as limitações do manifest estão listados em [manifest.md](manifest.md#limitações-conhecidas) e na spec da v2. Os principais:
 
-- a model usa `HasFactory`, mas nenhuma factory é gerada;

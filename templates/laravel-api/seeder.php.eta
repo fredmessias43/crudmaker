@@ -1,0 +1,30 @@
+<?php
+
+namespace <%~ it.namespace %>;
+
+<% for (const use of it.imports) { -%>
+use <%~ use %>;
+<% } -%>
+
+/**
+ * Seeder de <%~ it.model %>, criado pelo crudmaker (crudmaker generate --seeders) uma única vez.
+ *
+ * Este arquivo é seu e nunca é sobrescrito: mude a quantidade, use os estados da factory
+ * (<%~ it.model %>::factory()->exemplo()) ou escreva registros fixos. A ordem entre os seeders é a do CrudmakerSeeder.
+ */
+class <%~ it.className %> extends Seeder
+{
+	public function run(): void
+	{
+		<%~ it.model %>::factory()
+			->count(<%~ it.count %>)
+<% if (it.parents.length > 0) { -%>
+			->state(fn () => [
+<% for (const parent of it.parents) { -%>
+				'<%~ parent.field %>' => <%~ parent.model %>::query()->inRandomOrder()->value('id') ?? <%~ parent.model %>::factory(),
+<% } -%>
+			])
+<% } -%>
+			->create();
+	}
+}

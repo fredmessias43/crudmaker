@@ -11,11 +11,11 @@
 - [12 — Opções de campo no manifest](../fase-3-arquitetura/12-opcoes-de-campo.md)
 - [24 — Não sobrescrever arquivos do esqueleto do Laravel](../fase-4-modernizar/24-arquivos-do-esqueleto.md)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Critérios de aceite
 
-- [ ] Snapshot de factory com todos os tipos de campo e com `belongsTo`.
-- [ ] O seeder só é gerado com a flag.
-- [ ] As factories seguem a política `create-once`.
-- [ ] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.
+- [x] Snapshot de factory com todos os tipos de campo e com `belongsTo`.
+- [x] O seeder só é gerado com a flag.
+- [x] As factories seguem a política `create-once`.
+- [x] Os `docs/` afetados (e o `CLAUDE.md`, se mudar comando ou estrutura) estão atualizados.

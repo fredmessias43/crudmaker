@@ -14,7 +14,7 @@ export function foreignKeyTable(relationship: RelationshipValue): string {
 }
 
 /** Valor escalar como literal PHP: texto entre aspas simples (com `\` e `'` escapados), número e booleano crus. */
-function phpLiteral(value: string | number | boolean): string {
+export function phpLiteral(value: string | number | boolean): string {
   return typeof value === "string" ? phpString(value) : String(value);
 }
 

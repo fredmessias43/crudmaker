@@ -258,6 +258,7 @@ describe("arquivos obsoletos (entidade que saiu do manifest)", () => {
       "app/Generated/Http/Resources/BaseNoteCollection.php",
       "app/Generated/Http/Controllers/Api/BaseNoteController.php",
       "app/Generated/Http/Requests/BaseNoteRequest.php",
+      "app/Generated/Factories/BaseNoteFactory.php",
     ]);
     expect(obsolete.filter((o) => o.kind === "custom").map((o) => o.path)).toEqual([
       "app/Models/Note.php",
@@ -265,6 +266,7 @@ describe("arquivos obsoletos (entidade que saiu do manifest)", () => {
       "app/Http/Resources/NoteCollection.php",
       "app/Http/Controllers/Api/NoteController.php",
       "app/Http/Requests/NoteRequest.php",
+      "database/factories/NoteFactory.php",
     ]);
     // sem migration existente no destino, não há migration a avisar
     expect(obsolete.some((o) => o.kind === "migration")).toBe(false);
@@ -446,8 +448,8 @@ describe("CLI: regerar com segurança", () => {
     expect(read("app/Http/Requests/ClientRequest.php")).not.toContain("nickname");
     expect(stdout).toMatch(/sobrescritos \(\d+\):[\s\S]*app\/Generated\/Models\/BaseClient\.php/);
     expect(section("preservados")).toContain("app/Http/Controllers/Api/ClientController.php");
-    // as 10 finais e as 2 migrations de criação (imutáveis depois de emitidas); o campo novo de client vira uma migration alter
-    expect(section("preservados")).toHaveLength(12);
+    // as 12 finais (5 classes + factory por entidade) e as 2 migrations de criação (imutáveis depois de emitidas); o campo novo de client vira uma migration alter
+    expect(section("preservados")).toHaveLength(14);
     expect(section("criados")).toHaveLength(1);
     expect(section("criados")[0]).toMatch(/_alter_clients_table\.php$/);
     expect(stdout).not.toContain("não estende a base");
@@ -508,6 +510,7 @@ describe("CLI: regerar com segurança", () => {
       "app/Generated/Http/Resources/BaseNoteCollection.php",
       "app/Generated/Http/Controllers/Api/BaseNoteController.php",
       "app/Generated/Http/Requests/BaseNoteRequest.php",
+      "app/Generated/Factories/BaseNoteFactory.php",
     ]);
     expect(exists("app/Generated/Models/BaseNote.php")).toBe(true);
     const dry = stdout.replace(/^.*\n/, "");
@@ -516,23 +519,24 @@ describe("CLI: regerar com segurança", () => {
     expect(run(["generate", manifest, "--out", out], io())).toBe(0);
 
     expect(stdout.replace(/^.*\n/, "")).toBe(dry);
-    expect(stdout).toContain("(0 criados, 2 sobrescritos, 5 sem mudança, 6 preservados, 5 removidos)");
-    expect(stdout).toMatch(/Total: \d+ arquivos \(.*, 5 removidos\)/);
-    for (const p of ["Models/BaseNote", "Http/Resources/BaseNoteResource", "Http/Resources/BaseNoteCollection", "Http/Controllers/Api/BaseNoteController", "Http/Requests/BaseNoteRequest"]) {
+    expect(stdout).toContain("(0 criados, 2 sobrescritos, 6 sem mudança, 7 preservados, 6 removidos)");
+    expect(stdout).toMatch(/Total: \d+ arquivos \(.*, 6 removidos\)/);
+    for (const p of ["Models/BaseNote", "Http/Resources/BaseNoteResource", "Http/Resources/BaseNoteCollection", "Http/Controllers/Api/BaseNoteController", "Http/Requests/BaseNoteRequest", "Factories/BaseNoteFactory"]) {
       expect(exists(`app/Generated/${p}.php`), p).toBe(false);
     }
     // a camada de customização e a migration ficam, e são listadas
     expect(read("app/Models/Note.php")).toBe("<?php // regra de negócio minha\n");
-    for (const p of ["app/Http/Controllers/Api/NoteController.php", "app/Http/Requests/NoteRequest.php", "app/Http/Resources/NoteResource.php", "app/Http/Resources/NoteCollection.php", `database/migrations/${noteMigration}`]) {
+    for (const p of ["app/Http/Controllers/Api/NoteController.php", "app/Http/Requests/NoteRequest.php", "app/Http/Resources/NoteResource.php", "app/Http/Resources/NoteCollection.php", "database/factories/NoteFactory.php", `database/migrations/${noteMigration}`]) {
       expect(exists(p), p).toBe(true);
     }
-    expect(stdout).toContain("Órfãos (6)");
+    expect(stdout).toContain("Órfãos (7)");
     expect(section("Órfãos")).toEqual([
       "app/Models/Note.php",
       "app/Http/Resources/NoteResource.php",
       "app/Http/Resources/NoteCollection.php",
       "app/Http/Controllers/Api/NoteController.php",
       "app/Http/Requests/NoteRequest.php",
+      "database/factories/NoteFactory.php",
       `database/migrations/${noteMigration}  (migration: crie à mão uma migration que remova a tabela, se for o caso)`,
     ]);
     // a entidade que ficou não é tocada, e as rotas deixam de citar a removida
